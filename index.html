@@ -1,0 +1,3394 @@
+<!DOCTYPE html>
+<html lang="hu" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>SPACE 4X TACTICS - Taktikai Parancsnoki Terminál</title>
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#090e1c">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="icon" type="image/svg+xml" href="/icon.svg">
+  <link rel="apple-touch-icon" href="/icon.svg">
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700;800&family=Inter:wght@400;500;600;700&display=swap');
+    
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: manipulation;
+    }
+    .font-mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+    /* CRT Scanline és tactical glow effekt */
+    .tactical-border {
+      box-shadow: 0 0 15px rgba(6, 182, 212, 0.15), inset 0 0 15px rgba(6, 182, 212, 0.05);
+    }
+    .glow-cyan {
+      text-shadow: 0 0 8px rgba(6, 182, 212, 0.6);
+    }
+    .glow-amber {
+      text-shadow: 0 0 8px rgba(245, 158, 11, 0.6);
+    }
+    .glow-red {
+      text-shadow: 0 0 8px rgba(239, 68, 68, 0.6);
+    }
+    /* Custom Scrollbars */
+    ::-webkit-scrollbar {
+      width: 4px;
+      height: 4px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #090d16;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #1e293b;
+      border-radius: 2px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #0ea5e9;
+    }
+  </style>
+</head>
+<body class="bg-[#050811] text-slate-100 flex flex-col h-screen w-screen overflow-hidden text-sm">
+
+  <!-- ========================================================================= -->
+  <!-- 1. FELSŐ SÁV (HUD) - NYERSANYAGOK ÉS TICK VEZÉRLÉS -->
+  <!-- ========================================================================= -->
+  <header class="bg-[#090e1c] border-b border-cyan-950/70 px-3 py-2 flex flex-wrap items-center justify-between gap-2 z-20 shrink-0">
+    <!-- Nyersanyag számlálók -->
+    <div class="flex items-center gap-3 md:gap-5 overflow-x-auto text-xs md:text-sm font-mono py-1">
+      <div class="flex items-center gap-1.5 bg-slate-900/80 px-2.5 py-1 rounded border border-slate-800">
+        <span class="text-slate-400 font-bold">FÉM:</span>
+        <span id="res-metal" class="text-cyan-400 font-bold">1,420</span>
+        <span id="rate-metal" class="text-emerald-400 text-[11px]">(+85/h)</span>
+      </div>
+      <div class="flex items-center gap-1.5 bg-slate-900/80 px-2.5 py-1 rounded border border-slate-800" id="res-energy-container">
+        <span class="text-slate-400 font-bold">ENERGIA:</span>
+        <span id="res-energy" class="text-amber-400 font-bold">310</span>
+        <span id="rate-energy" class="text-emerald-400 text-[11px]">(+15/h)</span>
+      </div>
+      <div class="flex items-center gap-1.5 bg-slate-900/80 px-2.5 py-1 rounded border border-slate-800">
+        <span class="text-slate-400 font-bold">IZOTÓP:</span>
+        <span id="res-isotope" class="text-purple-400 font-bold">45</span>
+        <span id="rate-isotope" class="text-purple-400 text-[11px]">(+5/h)</span>
+      </div>
+      <div class="flex items-center gap-1.5 bg-slate-900/80 px-2.5 py-1 rounded border border-slate-800">
+        <span class="text-slate-400 font-bold">ADAT:</span>
+        <span id="res-data" class="text-sky-400 font-bold">120</span>
+        <span id="rate-data" class="text-sky-400 text-[11px]">(+10/h)</span>
+      </div>
+      <div class="flex items-center gap-1.5 bg-amber-950/80 px-2.5 py-1 rounded border border-amber-700/80" title="Dicsőség Pontok (PVP és Portyák)">
+        <span class="text-amber-400 font-bold">🏆 DICSŐSÉG:</span>
+        <span id="res-glory" class="text-yellow-300 font-bold">0</span>
+      </div>
+      <div class="flex items-center gap-1.5 bg-cyan-950/80 px-2.5 py-1 rounded border border-cyan-700/80" title="Ősi Ereklyék (Boss Citadellákhoz)">
+        <span class="text-cyan-400 font-bold">🏺 EREKLYÉK:</span>
+        <span id="res-artifacts" class="text-cyan-200 font-bold">0/3</span>
+      </div>
+    </div>
+
+    <!-- Tick és Időzítő vezérlők -->
+    <div class="flex items-center gap-2">
+      <!-- Aktív Parancsnok / Frakcióváltó gomb (PvP) -->
+      <button id="btn-commander-badge" onclick="openCommanderSelectModal()" class="px-2.5 py-1.5 rounded text-xs font-mono font-bold bg-sky-950 text-sky-300 border border-sky-600 flex items-center gap-1.5 shadow-md shadow-sky-950/80 hover:bg-sky-900 active:scale-95 transition-all" title="Kattints a frakcióváltáshoz (PvP)">
+        <span id="header-commander-icon" class="text-sm">🔵</span>
+        <span id="header-commander-name" class="hidden sm:inline">KRONOS (KÉK)</span>
+        <span class="text-[9px] px-1 py-0.2 rounded bg-sky-900 text-sky-200 border border-sky-700 font-normal">VÁLTÁS</span>
+      </button>
+
+      <!-- Szerver státusz badge -->
+      <div id="server-status-badge" class="px-2 py-1 rounded text-[10px] font-mono font-bold bg-emerald-950/80 text-emerald-400 border border-emerald-800 flex items-center gap-1.5">
+        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+        <span id="server-status-text">SZERVER: CSATLAKOZÁS...</span>
+      </div>
+
+      <div class="text-right font-mono mr-1 hidden sm:block">
+        <div class="text-[10px] text-slate-400 uppercase tracking-wider">Kör / Tick</div>
+        <div class="text-cyan-400 font-bold text-sm">#<span id="current-tick">1</span> (<span id="tick-timer">59:45</span>)</div>
+      </div>
+      <button id="btn-tech-tree" onclick="openTechTreeModal()" class="bg-indigo-950 hover:bg-indigo-900 active:scale-95 text-indigo-200 border border-indigo-500 font-mono text-xs font-bold px-2.5 py-1.5 rounded flex items-center gap-1.5 shadow-lg shadow-indigo-950 transition-all">
+        <span>🔬</span>
+        <span class="hidden md:inline">TECH FA</span>
+        <span id="header-data-badge" class="bg-indigo-900 px-1.5 py-0.5 rounded text-[10px] text-cyan-300 font-mono border border-indigo-700">0 DAT</span>
+      </button>
+      <button id="btn-shipyard-refit" onclick="openShipyardRefitModal()" class="bg-cyan-950/90 hover:bg-cyan-900 active:scale-95 text-cyan-200 border border-cyan-500 font-mono text-xs font-bold px-2.5 py-1.5 rounded flex items-center gap-1.5 shadow-lg shadow-cyan-950 transition-all">
+        <span>🛠️</span>
+        <span class="hidden md:inline">HAJÓDOKK</span>
+        <span id="header-refit-badge" class="bg-cyan-900 px-1.5 py-0.5 rounded text-[10px] text-cyan-300 font-mono border border-cyan-700">10/30 Szint</span>
+      </button>
+      <button id="btn-boss" onclick="openBossModal()" class="bg-red-950/90 hover:bg-red-900 active:scale-95 text-red-200 border border-red-600 font-mono text-xs font-bold px-2.5 py-1.5 rounded flex items-center gap-1.5 shadow-lg shadow-red-950 transition-all" title="3 Fő Boss Bolygó Citadella">
+        <span class="animate-pulse">☠️</span>
+        <span class="hidden md:inline">3 BOSS CITADELLA</span>
+      </button>
+      <button id="btn-next-tick" onclick="advanceTick()" class="bg-cyan-600 hover:bg-cyan-500 active:scale-95 text-white font-mono text-xs font-bold px-3 py-1.5 rounded border border-cyan-400 flex items-center gap-1 shadow-lg shadow-cyan-950 transition-all">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7"></path></svg>
+        <span>+1 ÓRA (TICK)</span>
+      </button>
+      <button id="btn-auto-tick" onclick="toggleAutoTick()" class="bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-300 font-mono text-xs px-2.5 py-1.5 rounded border border-slate-700 flex items-center gap-1 transition-all" title="Gyorsított automatikus léptetés (3 mp / kör)">
+        <span id="auto-tick-icon">▶</span>
+        <span class="hidden md:inline">AUTO</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- MI AKCIÓK CSÍK (TICKER) -->
+  <div id="ai-action-ticker" class="hidden bg-red-950/80 border-b border-red-800/80 px-3 py-1 text-xs font-mono text-red-200 flex items-center justify-between z-20">
+    <div class="flex items-center gap-2 overflow-hidden">
+      <span class="bg-red-900 text-red-200 text-[10px] font-bold px-1.5 py-0.5 rounded">MI INTEL</span>
+      <span id="ai-action-text" class="truncate">Vektor-9 kolonizációt indított.</span>
+    </div>
+    <button onclick="document.getElementById('ai-action-ticker').classList.add('hidden')" class="text-red-400 hover:text-white text-xs">✕</button>
+  </div>
+
+  <!-- AKTÍV BIRODALMI BÓNUSZOK (BUFFS TICKER) -->
+  <div id="active-buffs-ticker" class="hidden bg-emerald-950/90 border-b border-emerald-800 px-3 py-1 text-xs font-mono text-emerald-200 flex items-center justify-between z-20">
+    <div class="flex items-center gap-2 overflow-x-auto py-0.5" id="active-buffs-list">
+      <!-- Dinamikus buff kártyák -->
+    </div>
+    <div class="text-[10px] text-emerald-400 font-mono shrink-0 ml-2">⚡ AKTÍV BÓNUSZOK</div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- 2. FŐ KÉPERNYŐTÉR: 2D CANVÁS CSILLAGTÉRKÉP + HUD INFORMÁCIÓK -->
+  <!-- ========================================================================= -->
+  <main class="relative flex-1 w-full h-full overflow-hidden bg-[#03060d]">
+    <!-- Canvas térkép -->
+    <canvas id="galaxy-canvas" class="w-full h-full cursor-grab active:cursor-grabbing block"></canvas>
+
+    <!-- Térkép lebegő navigációs vezérlők -->
+    <div class="absolute top-3 left-3 flex flex-col gap-1.5 z-10">
+      <div class="bg-slate-900/90 backdrop-blur border border-cyan-900/80 rounded px-2.5 py-1 font-mono text-[11px] text-slate-300 flex items-center gap-2">
+        <span class="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
+        <span>KOORDINÁTA: <span id="hover-coords" class="text-cyan-400 font-bold">X: 0, Y: 0</span></span>
+      </div>
+      <div class="flex gap-1">
+        <button onclick="zoomMap(1.2)" class="w-7 h-7 bg-slate-900/90 border border-slate-700 hover:border-cyan-500 rounded text-slate-200 font-bold font-mono text-sm flex items-center justify-center transition-all">+</button>
+        <button onclick="zoomMap(0.8)" class="w-7 h-7 bg-slate-900/90 border border-slate-700 hover:border-cyan-500 rounded text-slate-200 font-bold font-mono text-sm flex items-center justify-center transition-all">-</button>
+        <button onclick="resetMapView()" class="px-2 h-7 bg-slate-900/90 border border-slate-700 hover:border-cyan-500 rounded text-slate-300 font-mono text-[10px] flex items-center justify-center transition-all">CENTRÁL</button>
+      </div>
+
+      <!-- Aktuális Küldetés Kártya (Mission Tracker) -->
+      <div id="mission-hud-card" class="bg-slate-900/95 backdrop-blur border border-amber-500/60 rounded p-2.5 max-w-[260px] font-mono text-[11px] shadow-xl text-slate-200 space-y-1.5 mt-1">
+        <div class="flex items-center justify-between">
+          <span class="text-amber-400 font-bold uppercase tracking-wider text-[10px] flex items-center gap-1">
+            <span>🎯</span> KÜLDETÉS
+          </span>
+          <span id="mission-status-badge" class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-950 text-amber-300 border border-amber-800">AKTÍV</span>
+        </div>
+        <div id="mission-title" class="font-bold text-white text-xs">Bázisfejlesztés</div>
+        <div id="mission-desc" class="text-slate-400 text-[10px] leading-tight">Fejleszd a Kronos-IV bolygó Ipari Központját Lv.2-re!</div>
+        <div class="text-[10px] text-emerald-400 flex items-center justify-between pt-1 border-t border-slate-800">
+          <span>Jutalom:</span>
+          <span id="mission-reward" class="font-bold">+150 Fém, +50 Energia</span>
+        </div>
+        <button id="btn-claim-mission" onclick="claimActiveMission()" class="hidden w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-1 rounded text-center text-[10px] animate-pulse">
+          ✓ JUTALOM BEVÁLTÁSA!
+        </button>
+      </div>
+    </div>
+
+    <!-- Térképi jelmagyarázat (Legend) -->
+    <div class="absolute bottom-3 left-3 bg-slate-900/85 backdrop-blur border border-slate-800 rounded p-2 text-[10px] font-mono text-slate-400 space-y-1 hidden md:block z-10 pointer-events-none">
+      <div class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-cyan-500 inline-block"></span> Saját Birodalom</div>
+      <div class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-red-500 inline-block"></span> Ellenséges Sektor (Vektor-9)</div>
+      <div class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-slate-500 inline-block"></span> Semleges Bolygó</div>
+      <div class="flex items-center gap-1.5"><span class="text-cyan-400 font-bold">▲ ◆ ⬟</span> Mozgó / Állomásozó Flotta</div>
+    </div>
+
+    <!-- FIGYELMEZTETÉSI SÁV (Upkeep hiány vagy riadó) -->
+    <div id="alert-banner" class="hidden absolute top-3 right-3 max-w-sm bg-red-950/90 border border-red-500 text-red-200 px-3 py-2 rounded text-xs font-mono flex items-start gap-2 shadow-xl z-20">
+      <span class="text-red-400 font-bold text-sm">⚠</span>
+      <div>
+        <div class="font-bold text-red-300">RIADÓ / DEFIZIT</div>
+        <div id="alert-message">Negatív energiamérleg! Flották sebessége és tűzereje 50%-ra csökkentve.</div>
+      </div>
+    </div>
+  </main>
+
+  <!-- ========================================================================= -->
+  <!-- 3. ALSÓ GYORSMENÜSOR -->
+  <!-- ========================================================================= -->
+  <footer class="bg-[#090e1c] border-t border-cyan-950/80 px-2 py-1.5 flex items-center justify-around z-20 shrink-0 font-mono text-xs">
+    <button onclick="setActiveTab('map')" id="tab-map" class="px-3 py-1.5 rounded text-cyan-400 bg-cyan-950/50 border border-cyan-800 flex items-center gap-1.5">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path></svg>
+      <span>TÉRKÉP</span>
+    </button>
+    <button onclick="openPlanetsModal()" class="px-3 py-1.5 rounded text-slate-300 hover:text-cyan-300 hover:bg-slate-800/60 flex items-center gap-1.5 transition-colors">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+      <span>BOLYGÓK</span>
+    </button>
+    <button onclick="openFleetsModal()" class="px-3 py-1.5 rounded text-slate-300 hover:text-cyan-300 hover:bg-slate-800/60 flex items-center gap-1.5 transition-colors">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
+      <span>FLOTTÁK</span>
+    </button>
+    <button onclick="openTechModal()" class="px-3 py-1.5 rounded text-slate-300 hover:text-cyan-300 hover:bg-slate-800/60 flex items-center gap-1.5 transition-colors">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
+      <span>KUTATÁS</span>
+    </button>
+    <button onclick="openLogsModal()" class="px-3 py-1.5 rounded text-slate-300 hover:text-cyan-300 hover:bg-slate-800/60 flex items-center gap-1.5 transition-colors relative">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+      <span>NAPLÓK</span>
+      <span id="log-badge" class="hidden absolute top-0.5 right-0.5 w-2 h-2 rounded-full bg-cyan-400"></span>
+    </button>
+  </footer>
+
+  <!-- ========================================================================= -->
+  <!-- 4. MODÁLOK ÉS OLDALSÓ ADATLAPOK -->
+  <!-- ========================================================================= -->
+
+  <!-- BOLYGÓ RÉSZLETEZŐ PANEL (Oldalról becsúszó letisztult adatlap) -->
+  <div id="planet-drawer" class="hidden fixed inset-y-0 right-0 w-full sm:w-96 bg-[#080d1a] border-l border-cyan-900/80 shadow-2xl z-30 flex flex-col font-mono text-xs overflow-y-auto">
+    <div class="p-3 bg-slate-900/90 border-b border-cyan-950 flex items-center justify-between sticky top-0 z-10 backdrop-blur">
+      <div>
+        <div class="text-[10px] text-cyan-400 font-bold uppercase tracking-wider">Bolygó Adatlap</div>
+        <div id="drawer-planet-name" class="text-base font-bold text-white">KRONOS-IV</div>
+      </div>
+      <button onclick="closePlanetDrawer()" class="p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-white">✕</button>
+    </div>
+
+    <div class="p-4 space-y-4 flex-1">
+      <!-- Státusz & Koordináta -->
+      <div class="bg-slate-950/60 p-3 rounded border border-slate-800 space-y-1">
+        <div class="flex justify-between"><span class="text-slate-400">KOORDINÁTÁK:</span> <span id="drawer-coords" class="text-cyan-300 font-bold">[X: 142, Y: 88]</span></div>
+        <div class="flex justify-between"><span class="text-slate-400">IRÁNYÍTÁS:</span> <span id="drawer-owner" class="text-cyan-400 font-bold">Te (Birodalom)</span></div>
+        <div class="flex justify-between"><span class="text-slate-400">SLOT KAPACITÁS:</span> <span id="drawer-slots-info" class="text-slate-200">3 / 4 slot</span></div>
+      </div>
+
+      <!-- Termelési adatok -->
+      <div class="bg-slate-950/60 p-3 rounded border border-slate-800 space-y-1.5">
+        <div class="text-[11px] font-bold text-cyan-400 border-b border-slate-800 pb-1">ÓRÁNKÉNTI TERMELÉS ÉS ENERGIAHÁLÓZAT</div>
+        <div class="flex justify-between"><span>• Fémtermelés:</span> <span id="drawer-prod-metal" class="text-emerald-400 font-bold">+35/óra</span></div>
+        <div class="flex justify-between"><span>• Energiahálózat:</span> <span id="drawer-prod-energy" class="text-amber-400 font-bold">-5/óra</span></div>
+        <div class="flex justify-between"><span>• Planetáris Pajzs:</span> <span id="drawer-shield-hp" class="text-sky-400">0 / 0 HP</span></div>
+      </div>
+
+      <!-- Kiépített Struktúrák (Slot választás) -->
+      <div class="space-y-2">
+        <div class="text-[11px] font-bold text-slate-300">FEJLESZTÉSI SLrequest_feedbackOTOK</div>
+        <div id="drawer-slots-container" class="space-y-2">
+          <!-- Dinamikusan renderelt slot elemek -->
+        </div>
+      </div>
+
+      <!-- Állomásozó Flotta és Hajógyár gombok -->
+      <div class="bg-slate-950/60 p-3 rounded border border-slate-800 space-y-3">
+        <div class="text-[11px] font-bold text-cyan-400 border-b border-slate-800 pb-1 flex justify-between items-center">
+          <span>ÁLLOMÁSOZÓ FLOTTA</span>
+          <span id="drawer-fleet-count" class="text-slate-400 text-[10px]">14 Hajó</span>
+        </div>
+        <div id="drawer-fleet-composition" class="space-y-1 text-slate-300">
+          <div>• Felderítő (⌖): <span id="dfc-scout" class="text-cyan-300 font-bold">0</span> db</div>
+          <div>• Korvett (▲): <span id="dfc-corvette" class="text-cyan-300 font-bold">12</span> db</div>
+          <div>• Kolóniahajó (⚲): <span id="dfc-colony_ship" class="text-cyan-300 font-bold">0</span> db</div>
+          <div>• Romboló (◆): <span id="dfc-destroyer" class="text-cyan-300 font-bold">2</span> db</div>
+          <div>• Csatahajó (⬟): <span id="dfc-battleship" class="text-cyan-300 font-bold">0</span> db</div>
+        </div>
+
+        <div id="drawer-own-actions" class="grid grid-cols-2 gap-2 pt-1">
+          <button onclick="openShipyardModal()" class="w-full bg-cyan-700 hover:bg-cyan-600 text-white py-1.5 rounded font-bold transition-all text-center">
+            + HAJÓ ÉPÍTÉSE
+          </button>
+          <button onclick="openDispatchModal()" class="w-full bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-cyan-800 py-1.5 rounded font-bold transition-all text-center">
+            FLOTTA INDÍTÁSA
+          </button>
+        </div>
+        <div id="drawer-target-actions" class="hidden pt-1">
+          <button onclick="targetPlanetForAttack(STATE.selectedPlanetId)" class="w-full bg-red-700 hover:bg-red-600 active:scale-95 text-white py-2 rounded font-bold transition-all text-center flex items-center justify-center gap-1.5 shadow-lg shadow-red-950">
+            <span>⚔️</span>
+            <span>TÁMADÓ / EXPEDÍCIÓS FLOTTA INDÍTÁSA ERRE A BOLYGÓRA</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- HAJÓGYÁR MODÁL -->
+  <div id="modal-shipyard" class="hidden fixed inset-0 bg-black/75 backdrop-blur-sm z-40 flex items-center justify-center p-3 font-mono text-xs">
+    <div class="bg-[#090e1c] border border-cyan-900 rounded-lg max-w-md w-full p-4 space-y-4 shadow-2xl max-h-[85vh] overflow-y-auto">
+      <div class="flex justify-between items-center border-b border-slate-800 pb-2">
+        <div class="text-sm font-bold text-cyan-400">HAJÓGYÁR - EGYSÉGEK GYÁRTÁSA</div>
+        <button onclick="closeModal('modal-shipyard')" class="text-slate-400 hover:text-white">✕</button>
+      </div>
+
+      <div id="shipyard-cards-container" class="space-y-2 max-h-[65vh] overflow-y-auto pr-1">
+        <!-- Dinamikusan renderelve mind a 10 hajóosztályhoz -->
+      </div>
+    </div>
+  </div>
+
+  <!-- FLOTTA INDÍTÁSI MODÁL -->
+  <div id="modal-dispatch" class="hidden fixed inset-0 bg-black/75 backdrop-blur-sm z-40 flex items-center justify-center p-3 font-mono text-xs">
+    <div class="bg-[#090e1c] border border-cyan-900 rounded-lg max-w-md w-full p-4 space-y-4 shadow-2xl max-h-[85vh] overflow-y-auto">
+      <div class="flex justify-between items-center border-b border-slate-800 pb-2">
+        <div class="text-sm font-bold text-cyan-400">FLOTTA BEVETÉSE ÉS INDÍTÁSA</div>
+        <button onclick="closeModal('modal-dispatch')" class="text-slate-400 hover:text-white">✕</button>
+      </div>
+
+      <!-- Célpont választás -->
+      <div>
+        <label class="block text-slate-400 mb-1 text-[11px]">CÉLPONT BOLYGÓ:</label>
+        <select id="dispatch-target-select" onchange="updateDispatchCalculations()" class="w-full bg-slate-900 border border-slate-700 text-slate-200 rounded p-2 focus:border-cyan-500 outline-none">
+          <!-- Opciók dinamikusan -->
+        </select>
+      </div>
+
+      <!-- Egységek kijelölése -->
+      <div class="space-y-1.5">
+        <div class="text-slate-400 text-[11px]">HAJÓK HOZZÁRENDELÉSE A FLOTTÁHOZ:</div>
+        <div id="dispatch-sliders-container" class="space-y-1.5 max-h-[35vh] overflow-y-auto pr-1">
+          <!-- JS generálja mind a 10 hajóosztályhoz -->
+        </div>
+      </div>
+
+      <!-- Költség és Menetidő előrejelzés -->
+      <div class="bg-slate-950 p-3 rounded border border-slate-800 space-y-1">
+        <div class="flex justify-between text-slate-400"><span>Távolság:</span> <span id="disp-dist" class="text-slate-200">0 egység</span></div>
+        <div class="flex justify-between text-slate-400"><span>Leglassabb sebesség:</span> <span id="disp-speed" class="text-slate-200">5.0 /h</span></div>
+        <div class="flex justify-between text-slate-400"><span>Becsült menetidő:</span> <span id="disp-time" class="text-cyan-300 font-bold">0 óra (0 tick)</span></div>
+        <div class="flex justify-between text-slate-400"><span>Szükséges Izotóp üzemanyag:</span> <span id="disp-fuel" class="text-purple-400 font-bold">0</span></div>
+      </div>
+
+      <button id="btn-confirm-dispatch" onclick="confirmDispatch()" class="w-full bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-2 rounded text-center transition-all">
+        PARANCS KIADÁSA ÉS FLOTTA INDÍTÁSA
+      </button>
+    </div>
+  </div>
+
+  <!-- CSATANAPLÓ / COMBAT LOG MODÁL -->
+  <div id="modal-combat-log" class="hidden fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-3 font-mono text-xs">
+    <div class="bg-[#070b14] border border-cyan-800 rounded-lg max-w-2xl w-full flex flex-col max-h-[85vh] shadow-2xl">
+      <div class="p-3 bg-slate-900 border-b border-cyan-900 flex justify-between items-center">
+        <div class="flex items-center gap-2">
+          <span class="w-2.5 h-2.5 rounded-full bg-red-500 animate-ping"></span>
+          <span class="font-bold text-red-400 uppercase tracking-wider">TAKTIKAI CSATANAPLÓ</span>
+        </div>
+        <button onclick="closeModal('modal-combat-log')" class="text-slate-400 hover:text-white px-2">✕ BEZÁRÁS</button>
+      </div>
+      <div class="p-4 overflow-y-auto flex-1 bg-black/60 font-mono text-[11px] leading-relaxed text-slate-200 space-y-1 whitespace-pre-wrap select-text" id="combat-log-content">
+        <!-- Dinamikus harci napló szöveg -->
+      </div>
+      <div class="p-3 bg-slate-900 border-t border-slate-800 flex justify-end">
+        <button onclick="closeModal('modal-combat-log')" class="bg-cyan-700 hover:bg-cyan-600 text-white font-bold px-4 py-1.5 rounded">Rendben</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TECHNOLÓGIAI FA (TECH TREE) MODÁL -->
+  <div id="modal-tech" class="hidden fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-2 sm:p-4 font-mono text-xs">
+    <div class="bg-[#060a16] border border-cyan-800 rounded-xl max-w-6xl w-full flex flex-col max-h-[94vh] shadow-2xl overflow-hidden">
+      <!-- Modal Fejléc -->
+      <div class="p-3 sm:p-4 bg-slate-900/95 border-b border-cyan-900/80 flex justify-between items-center shrink-0">
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded bg-indigo-950 border border-indigo-500 flex items-center justify-center text-lg shadow-lg shadow-indigo-950">🔬</div>
+          <div>
+            <div class="text-xs sm:text-sm font-bold text-cyan-300 tracking-wider flex items-center gap-2">
+              <span>BIRODALMI KUTATÁSI KÖZPONT & TECH FA</span>
+              <span class="text-[9px] px-1.5 py-0.5 rounded bg-cyan-950 text-cyan-400 border border-cyan-700">4 STRATÉGIAI ÁG • 13 TECHNOLÓGIA</span>
+            </div>
+            <div class="text-[10px] text-slate-400 flex items-center gap-3 mt-0.5">
+              <span>Rendelkezésre áll: <b id="tech-modal-data" class="text-cyan-300 font-bold">0</b> DAT</span>
+              <span>•</span>
+              <span>Sötét Izotóp: <b id="tech-modal-iso" class="text-purple-300 font-bold">0</b> ISO</span>
+            </div>
+          </div>
+        </div>
+        <button onclick="closeModal('modal-tech')" class="text-slate-400 hover:text-white text-base px-2 py-1 rounded hover:bg-slate-800 transition-colors">✕</button>
+      </div>
+
+      <!-- Aktív Kutatási Sor Banner (Active Research Queue) -->
+      <div id="active-research-banner" class="px-3 sm:px-4 py-2.5 bg-slate-950/90 border-b border-cyan-950/80 shrink-0">
+        <!-- Dinamikusan renderelt aktív kutatás státusz -->
+      </div>
+
+      <!-- Tech Fa Rács (4 Oszlop a 4 Ágnak) -->
+      <div class="p-3 sm:p-4 overflow-y-auto flex-1 space-y-4 bg-slate-950/40">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-3.5" id="tech-branches-grid">
+          <!-- Dinamikusan renderelt ágak és technológiák -->
+        </div>
+      </div>
+
+      <!-- Modal Lábléc -->
+      <div class="p-3 bg-slate-900/90 border-t border-slate-800 flex flex-wrap justify-between items-center gap-2 text-[10px] text-slate-400 shrink-0">
+        <div>💡 <i>A kutatások 1-5 körig tartanak a Központi Laborban. A bónuszok a befejezés után azonnal érvényesülnek!</i></div>
+        <button onclick="closeModal('modal-tech')" class="bg-slate-800 hover:bg-slate-700 text-slate-200 px-4 py-1.5 rounded font-bold transition-all">Bezárás</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- NAPLÓK TÖRTÉNETE MODÁL -->
+  <div id="modal-logs" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-40 flex items-center justify-center p-3 font-mono text-xs">
+    <div class="bg-[#090e1c] border border-cyan-900 rounded-lg max-w-xl w-full p-4 space-y-3 shadow-2xl max-h-[85vh] flex flex-col">
+      <div class="flex justify-between items-center border-b border-slate-800 pb-2">
+        <div class="text-sm font-bold text-cyan-400">ESEMÉNY ÉS HARCI ARCHÍVUM</div>
+        <button onclick="closeModal('modal-logs')" class="text-slate-400 hover:text-white">✕</button>
+      </div>
+      <div id="logs-history-list" class="space-y-2 overflow-y-auto flex-1 text-slate-300">
+        <!-- Dinamikusan tárolt korábbi csatanaplók -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- MODÁL: FRAKCIÓ & PARANCSNOK VÁLASZTÓ (PvP Terminal) -->
+  <!-- ========================================================================= -->
+  <div id="modal-commander-select" class="hidden fixed inset-0 bg-black/90 backdrop-blur-md z-50 flex items-center justify-center p-3 font-mono text-xs">
+    <div class="bg-[#080d1a] border border-cyan-500/80 rounded-xl max-w-xl w-full p-4 sm:p-6 shadow-2xl space-y-4">
+      <div class="flex justify-between items-center border-b border-cyan-900/80 pb-3">
+        <div class="flex items-center gap-2">
+          <span class="text-2xl animate-pulse">🛰️</span>
+          <div>
+            <h2 class="text-sm sm:text-base font-bold text-white tracking-wide">GALAKTIKUS PARANCSNOKSÁG // BELÉPÉS</h2>
+            <div class="text-[10px] text-cyan-400">Válaszd ki az irányítani kívánt birodalmat a szektorban (PvP Mód)</div>
+          </div>
+        </div>
+        <button onclick="closeModal('modal-commander-select')" class="text-slate-400 hover:text-white text-base">✕</button>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-1">
+        <!-- 1. KÉK: KRONOS PARANCSNOKSÁG -->
+        <div class="bg-gradient-to-b from-sky-950/80 to-slate-950 p-4 rounded-xl border-2 border-sky-600/80 flex flex-col justify-between space-y-3 shadow-lg shadow-sky-950/50 hover:border-sky-400 transition-all">
+          <div class="space-y-2">
+            <div class="flex items-center justify-between">
+              <span class="text-xl">🔵</span>
+              <span class="text-[9px] px-1.5 py-0.5 rounded bg-sky-900 text-sky-200 border border-sky-700 font-bold">KÉK BIRODALOM</span>
+            </div>
+            <h3 class="text-sm font-bold text-sky-300">Kronos Parancsnokság</h3>
+            <p class="text-[11px] text-slate-300">Főváros: <b>Kronos-IV</b>. Ipari bányászat, defenzív pajzs-hálózat és kiegyensúlyozott flotta-infrastruktúra.</p>
+          </div>
+          <button onclick="selectCommander('player')" class="w-full bg-sky-600 hover:bg-sky-500 active:scale-95 text-white font-bold py-2 rounded shadow-md shadow-sky-950 transition-all flex items-center justify-center gap-1.5">
+            <span>🚀</span>
+            <span>Belépés Kék Parancsnokként</span>
+          </button>
+        </div>
+
+        <!-- 2. PIROS: VEKTOR-9 SZINDIKÁTUS -->
+        <div class="bg-gradient-to-b from-red-950/80 to-slate-950 p-4 rounded-xl border-2 border-red-600/80 flex flex-col justify-between space-y-3 shadow-lg shadow-red-950/50 hover:border-red-400 transition-all">
+          <div class="space-y-2">
+            <div class="flex items-center justify-between">
+              <span class="text-xl">🔴</span>
+              <span class="text-[9px] px-1.5 py-0.5 rounded bg-red-900 text-red-200 border border-red-700 font-bold">PIROS FRAKCIÓ</span>
+            </div>
+            <h3 class="text-sm font-bold text-red-300">Vektor-9 Szindikátus</h3>
+            <p class="text-[11px] text-slate-300">Főváros: <b>Vektor-9</b>. Agresszív terjeszkedés, nagy tűzerejű Csatahajó és Ostrom-Romboló arzenál, gyors rajtaütések.</p>
+          </div>
+          <button onclick="selectCommander('enemy')" class="w-full bg-red-600 hover:bg-red-500 active:scale-95 text-white font-bold py-2 rounded shadow-md shadow-red-950 transition-all flex items-center justify-center gap-1.5">
+            <span>⚔️</span>
+            <span>Belépés Piros Hadúrként</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="bg-slate-900/60 p-2.5 rounded border border-slate-800 text-[10px] text-slate-400 flex items-center justify-between">
+        <span>💡 <i>Két böngészőben (vagy inkognitó ablakban) megnyitva mindkét oldal élőben játszható egymás ellen!</i></span>
+        <button onclick="selectCommander('spectator')" class="text-slate-400 hover:text-white underline ml-2">Megfigyelő mód</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- LEBEGŐ GALAKTIKUS CSET GOMB ÉS ABLAK (PvP Comms) -->
+  <button id="btn-comms-toggle" onclick="toggleCommsDrawer()" class="fixed bottom-4 right-4 z-40 bg-indigo-950/90 hover:bg-indigo-900 border border-indigo-500 text-indigo-200 px-3.5 py-2 rounded-full font-mono text-xs font-bold shadow-2xl flex items-center gap-2 transition-all active:scale-95">
+    <span>💬</span>
+    <span class="hidden sm:inline">GALAKTIKUS CSET</span>
+    <span id="chat-count-badge" class="bg-indigo-600 text-white text-[10px] px-1.5 rounded-full font-mono">0</span>
+  </button>
+
+  <div id="comms-drawer" class="hidden fixed bottom-16 right-4 z-40 w-80 sm:w-96 bg-[#070b16] border border-indigo-600/80 rounded-xl shadow-2xl flex flex-col font-mono text-xs overflow-hidden backdrop-blur-md">
+    <div class="p-2.5 bg-indigo-950/90 border-b border-indigo-800 flex justify-between items-center">
+      <div class="flex items-center gap-2">
+        <span>📡</span>
+        <span class="font-bold text-indigo-200">GALAKTIKUS KOMMUNIKÁCIÓ</span>
+      </div>
+      <button onclick="toggleCommsDrawer()" class="text-slate-400 hover:text-white text-xs px-1">✕</button>
+    </div>
+
+    <div id="comms-messages-list" class="p-3 h-60 overflow-y-auto space-y-2 bg-[#040711]">
+      <div class="text-[10px] text-slate-500 text-center py-2">-- Galaktikus rádiócsatorna aktív --</div>
+    </div>
+
+    <div class="p-2 bg-slate-900/90 border-t border-indigo-950 flex gap-1.5">
+      <input id="comms-input" type="text" placeholder="Üzenet a másik parancsnoknak..." onkeydown="if(event.key==='Enter') sendChatMessage()" class="flex-1 bg-slate-950 border border-slate-700 rounded px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-indigo-400">
+      <button onclick="sendChatMessage()" class="bg-indigo-600 hover:bg-indigo-500 active:scale-95 text-white font-bold px-3 py-1.5 rounded text-xs">Küldés</button>
+    </div>
+  </div>
+
+  <!-- OMEGA-PROTOKOLL: 3 FŐ BOSS CITADELLA MODÁL -->
+  <div id="modal-boss" class="hidden fixed inset-0 bg-black/90 backdrop-blur-md z-50 flex items-center justify-center p-2 sm:p-4 font-mono text-xs">
+    <div class="bg-[#090514] border border-red-600 rounded-xl max-w-2xl w-full flex flex-col max-h-[92vh] shadow-2xl overflow-hidden shadow-red-950/80">
+      <!-- Modal Fejléc -->
+      <div class="p-3 sm:p-4 bg-gradient-to-r from-red-950 to-slate-900 border-b border-red-800 flex justify-between items-center shrink-0">
+        <div class="flex items-center gap-2.5">
+          <div class="w-9 h-9 rounded bg-red-950 border border-red-500 flex items-center justify-center text-xl shadow-lg shadow-red-950 animate-pulse">☠️</div>
+          <div>
+            <div class="text-xs sm:text-sm font-bold text-red-400 tracking-wider flex items-center gap-2">
+              <span id="boss-header-title">3 FŐ BOSS BOLYGÓ CITADELLA</span>
+              <span id="boss-status-pill" class="text-[9px] px-1.5 py-0.5 rounded bg-red-950 text-red-300 border border-red-700 animate-pulse">AKTÍV</span>
+            </div>
+            <div id="boss-header-desc" class="text-[10px] text-slate-400">Ősi Precursor Védelmi Bástyák • Győzd le mindhárom citadellát az Ark-0 végső uralmáért!</div>
+          </div>
+        </div>
+        <button onclick="closeModal('modal-boss')" class="text-slate-400 hover:text-white text-base px-2 py-1 rounded hover:bg-slate-800 transition-colors">✕</button>
+      </div>
+
+      <!-- 3 Boss Választó Fülek -->
+      <div class="flex items-center gap-2 p-2.5 bg-black/70 border-b border-red-950/80 px-4">
+        <button id="boss-tab-boss_1" onclick="selectBoss('boss_1')" class="flex-1 py-1.5 px-2 rounded font-mono text-[11px] font-bold border transition-all text-center flex items-center justify-center gap-1.5 bg-red-950/80 border-red-500 text-white">
+          <span>🏰</span>
+          <span class="truncate">1. Cygnus Bastion</span>
+          <span id="boss-tab-badge-boss_1" class="text-[9px] px-1 py-0.2 rounded bg-slate-900 text-slate-400">...</span>
+        </button>
+        <button id="boss-tab-boss_2" onclick="selectBoss('boss_2')" class="flex-1 py-1.5 px-2 rounded font-mono text-[11px] font-bold border transition-all text-center flex items-center justify-center gap-1.5 bg-slate-900/70 border-slate-800 text-slate-400 hover:text-slate-200">
+          <span>🌌</span>
+          <span class="truncate">2. Void Citadel</span>
+          <span id="boss-tab-badge-boss_2" class="text-[9px] px-1 py-0.2 rounded bg-slate-900 text-slate-400">...</span>
+        </button>
+        <button id="boss-tab-boss_3" onclick="selectBoss('boss_3')" class="flex-1 py-1.5 px-2 rounded font-mono text-[11px] font-bold border transition-all text-center flex items-center justify-center gap-1.5 bg-slate-900/70 border-slate-800 text-slate-400 hover:text-slate-200">
+          <span>☠️</span>
+          <span class="truncate">3. Omega Leviatán</span>
+          <span id="boss-tab-badge-boss_3" class="text-[9px] px-1 py-0.2 rounded bg-slate-900 text-slate-400">...</span>
+        </button>
+      </div>
+
+      <!-- Boss Adatlap & Életerő csíkok -->
+      <div class="p-4 bg-slate-950/90 border-b border-red-950/80 space-y-3 shrink-0">
+        <div class="grid grid-cols-2 gap-3 text-[11px]">
+          <!-- Pajzs csík -->
+          <div class="bg-slate-900/80 p-2.5 rounded border border-purple-900/60">
+            <div class="flex justify-between text-purple-300 mb-1 font-bold">
+              <span>KVANTUM-TORZÍTÓ PAJZS</span>
+              <span id="boss-shield-text">3,000 / 3,000</span>
+            </div>
+            <div class="w-full bg-slate-950 h-2.5 rounded-full overflow-hidden border border-purple-950">
+              <div id="boss-shield-bar" class="bg-gradient-to-r from-purple-600 to-indigo-400 h-full rounded-full transition-all duration-500" style="width: 100%"></div>
+            </div>
+          </div>
+          <!-- Hull csík -->
+          <div class="bg-slate-900/80 p-2.5 rounded border border-red-900/60">
+            <div class="flex justify-between text-red-400 mb-1 font-bold">
+              <span>TITÁN HAJÓTEST</span>
+              <span id="boss-hull-text">6,000 / 6,000</span>
+            </div>
+            <div class="w-full bg-slate-950 h-2.5 rounded-full overflow-hidden border border-red-950">
+              <div id="boss-hull-bar" class="bg-gradient-to-r from-red-600 to-amber-500 h-full rounded-full transition-all duration-500" style="width: 100%"></div>
+            </div>
+          </div>
+        </div>
+
+        <div id="boss-stats-summary" class="flex flex-wrap items-center justify-between gap-2 text-[10px] text-slate-400 bg-slate-900/60 p-2 rounded border border-slate-800">
+          <span>💥 Fegyverzet: <b id="boss-stat-dmg" class="text-red-400 font-bold">550 DMG</b></span>
+          <span>🌀 Típus: <b id="boss-stat-type" class="text-purple-400 font-bold">Precursor Bástya</b></span>
+          <span>⚡ Regeneráció: <b id="boss-stat-reg" class="text-amber-400 font-bold">+400 Pajzs/kör</b></span>
+        </div>
+      </div>
+
+      <!-- Végjáték Kritérium Ellenőrzőlista (Checklist) -->
+      <div class="p-4 overflow-y-auto flex-1 space-y-3 bg-[#07030e]">
+        <div class="text-[11px] font-bold text-red-300 tracking-wider uppercase border-b border-red-950 pb-1 flex items-center justify-between">
+          <span>MEGTÁMADÁSI FELTÉTELEK (KRITÉRIUMLISTA)</span>
+          <span class="text-[10px] font-normal text-slate-400">Dicsőség • Ereklyék • Tech • Flotta • Költség</span>
+        </div>
+
+        <div id="boss-criteria-list" class="space-y-2">
+          <!-- Dinamikusan renderelt feltételek -->
+        </div>
+      </div>
+
+      <!-- Modal Lábléc / Támadás gomb -->
+      <div class="p-3.5 bg-slate-900/95 border-t border-red-900 flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0">
+        <div class="text-[10px] text-slate-400">
+          ⚠️ <i>A támadással a birodalmi flotta összecsap az ősi védelmi rendszerrel. Győzelemért dicsőség és zsákmány jár!</i>
+        </div>
+        <div class="flex items-center gap-2 w-full sm:w-auto">
+          <button onclick="closeModal('modal-boss')" class="w-full sm:w-auto bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-2 rounded font-bold transition-all">Mégse</button>
+          <button id="btn-attack-boss" onclick="launchBossAttack()" class="w-full sm:w-auto bg-red-700 hover:bg-red-600 active:scale-95 text-white font-bold px-4 py-2 rounded border border-red-500 shadow-lg shadow-red-950/80 transition-all flex items-center justify-center gap-2">
+            <span>🚨</span>
+            <span id="btn-attack-boss-text">TÁMADÁS INDÍTÁSA</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- VÉGSŐ GYŐZELMI KÉPERNYŐ (VICTORY MODAL) -->
+  <div id="modal-victory" class="hidden fixed inset-0 bg-black/95 backdrop-blur-xl z-50 flex items-center justify-center p-3 font-mono text-xs">
+    <div class="bg-gradient-to-b from-[#0a192f] to-[#040813] border-2 border-emerald-400 rounded-2xl max-w-xl w-full p-6 space-y-5 shadow-2xl text-center shadow-emerald-950/80">
+      <div class="text-5xl animate-bounce">🏆</div>
+      <div>
+        <div class="text-xs font-bold text-emerald-400 tracking-widest uppercase">GALAKTIKUS SIKER</div>
+        <h2 class="text-xl sm:text-2xl font-extrabold text-white tracking-wider mt-1">TELJES GYŐZELEM!</h2>
+        <div class="text-xs text-slate-300 mt-2 leading-relaxed">
+          Az <b class="text-red-400">ARK-0 Kronos-Leviatán</b> reaktormagja összeomlott. A Kvantum-Torzító Mező eloszlott, a szektor birodalmai felszabadultak az ősi fenyegetés alól!
+        </div>
+      </div>
+
+      <!-- Statisztikai Összesítő Kártya -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 bg-slate-950/80 p-3 rounded-lg border border-cyan-900/60 text-center">
+        <div>
+          <div class="text-[9px] text-slate-400 uppercase">Eltelt Idő</div>
+          <div id="vic-tick" class="text-cyan-400 font-bold text-sm">#1</div>
+        </div>
+        <div>
+          <div class="text-[9px] text-slate-400 uppercase">Fém Zsákmány</div>
+          <div class="text-emerald-400 font-bold text-sm">+2,000</div>
+        </div>
+        <div>
+          <div class="text-[9px] text-slate-400 uppercase">Izotóp Prémium</div>
+          <div class="text-purple-400 font-bold text-sm">+1,000</div>
+        </div>
+        <div>
+          <div class="text-[9px] text-slate-400 uppercase">Státusz</div>
+          <div class="text-amber-400 font-bold text-sm">LEGENDÁS</div>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-center gap-3 pt-2">
+        <button onclick="closeModal('modal-victory')" class="bg-cyan-600 hover:bg-cyan-500 text-white font-bold px-6 py-2.5 rounded-lg shadow-lg shadow-cyan-950 transition-all">Dicsőségfal Bezárása & Szabad Játék</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- 4/F. HAJÓDOKK ÉS TESTRESZABÁS MODAL (SHIPYARD REFIT MODAL) -->
+  <!-- 60%-os Plafon (max 3/5 modul) & Fokozatos Foglalat Feloldás -->
+  <!-- ========================================================================= -->
+  <div id="modal-shipyard-refit" class="hidden fixed inset-0 bg-black/90 backdrop-blur-md z-50 flex items-center justify-center p-2 sm:p-4 font-mono text-xs">
+    <div class="bg-[#090e1c] border-2 border-cyan-500 rounded-xl max-w-4xl w-full max-h-[92vh] flex flex-col shadow-2xl shadow-cyan-950/80 overflow-hidden">
+      <!-- Modal Fejléc -->
+      <div class="p-3.5 bg-slate-900/90 border-b border-cyan-950 flex items-center justify-between shrink-0">
+        <div class="flex items-center gap-2.5">
+          <span class="text-2xl">🛠️</span>
+          <div>
+            <h2 class="text-sm sm:text-base font-bold text-cyan-400 tracking-wider flex items-center gap-2">
+              <span>BIRODALMI HAJÓDOKK & MODULÁRIS TESTRESZABÁS</span>
+              <span class="text-[10px] bg-cyan-950 border border-cyan-700 text-cyan-300 px-2 py-0.5 rounded font-bold">60% MAX LIMIT (30/50 SZINT)</span>
+            </h2>
+            <div class="text-[11px] text-slate-400">
+              Mind az <b class="text-cyan-300">5 alrendszer szabadon használható</b>! Az 50 szintből legfeljebb <b class="text-amber-300">30 szint (60%)</b> osztható szét hajónként, fokozatosan nyíló kerettel (10 ➔ 20 ➔ 30 szint)!
+            </div>
+          </div>
+        </div>
+        <button onclick="closeModal('modal-shipyard-refit')" class="text-slate-400 hover:text-white text-base px-2 py-1 rounded hover:bg-slate-800 transition-colors">✕</button>
+      </div>
+
+      <!-- Hajóosztály Választó Fülek (Tabs) -->
+      <div class="flex border-b border-cyan-950/80 bg-slate-950/70 px-3 py-2 gap-1.5 overflow-x-auto shrink-0" id="refit-ship-tabs">
+        <!-- JS generálja: [⌖ Szonda] [▲ Korvett] [⚲ Kolónia] [◆ Romboló] [⬟ Csatahajó] -->
+      </div>
+
+      <!-- Modal Törzs -->
+      <div class="flex-1 overflow-y-auto p-3 sm:p-4 space-y-4">
+        <!-- Kapacitás és Foglalat Csík (Progressive Slot Status) -->
+        <div id="refit-capacity-bar" class="bg-slate-900/90 border border-cyan-800/60 rounded-lg p-2.5 sm:p-3 flex flex-wrap items-center justify-between gap-3">
+          <!-- JS generálja: 3 socket állapota, 60% MAX limit csík -->
+        </div>
+
+        <!-- FELSŐ SZEKCIÓ: INTERAKTÍV MŰSZAKI TERVRAJZ (BLUEPRINT VIEWPORT) -->
+        <div class="relative bg-[#060b14] rounded-xl border-2 border-cyan-500/80 overflow-hidden shadow-2xl shadow-cyan-950/80">
+          <!-- Műszaki CAD Rács és Keret Fejléc -->
+          <div class="px-3 py-1.5 bg-slate-950/85 backdrop-blur border-b border-cyan-900/80 flex items-center justify-between text-[10px] text-cyan-300 font-mono select-none">
+            <div class="flex items-center gap-2">
+              <span class="inline-block w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
+              <span class="font-bold tracking-widest text-cyan-200">CAD SCHEMATIC // 2D ORTHOGRAPHIC BLUEPRINT</span>
+            </div>
+            <div class="flex items-center gap-3 text-slate-400">
+              <span id="refit-blueprint-scale">SKÁLA: 1:100</span>
+              <span id="refit-blueprint-dim" class="hidden sm:inline">16:9 ELEVATION</span>
+              <span class="text-amber-300 font-bold">KATTINTS A RAJZON LÉVŐ JELÖLŐKRE!</span>
+            </div>
+          </div>
+
+          <!-- A Hajó Rajz Képmegjelenítője -->
+          <div class="relative w-full aspect-[16/9] max-h-[380px] flex items-center justify-center bg-[#070d1a] overflow-hidden select-none">
+            <img id="refit-ship-img" src="/assets/light_corvette.jpg" alt="Spaceship Blueprint" class="w-full h-full object-contain filter contrast-110 brightness-105 pointer-events-none">
+
+            <!-- Finom Mérnöki Koordinátarács Overlay -->
+            <div class="absolute inset-0 bg-[linear-gradient(to_right,#00ffff08_1px,transparent_1px),linear-gradient(to_bottom,#00ffff08_1px,transparent_1px)] bg-[size:24px_24px] pointer-events-none"></div>
+
+            <!-- Interaktív Hotspot Pontok Rétege (A rajzon elhelyezett kattintható alkatrészek) -->
+            <div id="refit-hotspots-container" class="absolute inset-0">
+              <!-- JS generálja az 5 kattintható pontot a képre -->
+            </div>
+          </div>
+
+          <!-- Alsó infósáv a tervrajzon -->
+          <div class="px-3 py-1.5 bg-slate-950/90 border-t border-cyan-950 flex flex-wrap items-center justify-between text-[11px] gap-2">
+            <div class="flex items-center gap-2">
+              <span id="refit-ship-name" class="font-bold text-white text-xs sm:text-sm glow-cyan drop-shadow-md">KÖNNYŰ KORVETT</span>
+              <span id="refit-active-count-badge" class="bg-cyan-900/90 border border-cyan-400 text-cyan-200 text-[10px] font-bold px-2 py-0.5 rounded shadow">0 / 3 AKTÍV (0%)</span>
+            </div>
+            <div class="text-[10px] text-slate-400 flex items-center gap-1.5">
+              <span>🎯 Kijelölt alkatrész:</span>
+              <b id="refit-selected-slot-badge" class="text-cyan-300 font-bold uppercase">💥 FŐ FEGYVERZET</b>
+            </div>
+          </div>
+        </div>
+
+        <!-- ALSÓ SZEKCIÓ: 2 OSZLOPOS VEZÉRLŐ ÉS STATISZTIKA -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+          <!-- Bal Oszlop: Kijelölt Alrendszer Részletes Vezérlője (Subsystem Controller) (7 cols) -->
+          <div class="lg:col-span-7 bg-slate-900/90 border border-cyan-800/80 rounded-xl p-3.5 space-y-3 shadow-lg shadow-cyan-950/50" id="refit-selected-controller">
+            <!-- JS tölti fel az aktuális alrendszer szintjeivel, gombjaival, stat-jaival -->
+          </div>
+
+          <!-- Jobb Oszlop: Gyors Alrendszer Választó & Hajó Harcértékek (5 cols) -->
+          <div class="lg:col-span-5 flex flex-col gap-3">
+            <!-- 5 Alrendszer gomb lista -->
+            <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-3 space-y-2">
+              <div class="text-[10px] uppercase font-bold text-slate-400 tracking-wider flex items-center justify-between">
+                <span>Alrendszer Gyorsválasztó</span>
+                <span class="text-[9px] text-cyan-400">Max 3 aktív (60%)</span>
+              </div>
+              <div class="grid grid-cols-1 gap-1.5" id="refit-subsystems-quicklist">
+                <!-- JS generálja a gyorsgombokat a képpel szinkronban -->
+              </div>
+            </div>
+
+            <!-- Élő Összesített Statisztikák -->
+            <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-3 space-y-2">
+              <div class="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Hajó Összesített Harcértékei</div>
+              <div class="space-y-1.5 text-[11px]" id="refit-stat-comparison">
+                <!-- JS generálja: HP, Pajzs, Sebzés, Sebesség, Kitérés -->
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal Lábléc -->
+      <div class="p-3 bg-slate-900/95 border-t border-cyan-950 flex flex-wrap items-center justify-between gap-2 shrink-0">
+        <div class="text-[10px] text-slate-400 flex items-center gap-2">
+          <span>ℹ️</span>
+          <span>A modulok ki- és beszerelése azonnal érvénybe lép minden új gyártásnál és flottaakciónál!</span>
+        </div>
+        <button onclick="closeModal('modal-shipyard-refit')" class="bg-cyan-700 hover:bg-cyan-600 text-white font-bold px-4 py-1.5 rounded transition-all">
+          Kész / Dokk Elhagyása
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- 5. JÁTÉKMOTOR ÉS LOGIKAI SCRIPT -->
+  <!-- ========================================================================= -->
+  <script>
+    // --- HANGSZINTETIZÁTOR (Web Audio API - Zéró külső hangfájl!) ---
+    class TacticalAudio {
+      constructor() {
+        this.ctx = null;
+      }
+      init() {
+        if (!this.ctx) {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          if (AudioContext) this.ctx = new AudioContext();
+        }
+      }
+      playBeep(freq = 880, duration = 0.05, type = 'sine') {
+        try {
+          this.init();
+          if (!this.ctx) return;
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = type;
+          osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+          gain.gain.setValueAtTime(0.08, this.ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start();
+          osc.stop(this.ctx.currentTime + duration);
+        } catch(e) {}
+      }
+      playAlarm() {
+        try {
+          this.init();
+          if (!this.ctx) return;
+          this.playBeep(440, 0.15, 'sawtooth');
+          setTimeout(() => this.playBeep(330, 0.25, 'sawtooth'), 160);
+        } catch(e) {}
+      }
+      playVictory() {
+        try {
+          this.init();
+          if (!this.ctx) return;
+          [523.25, 659.25, 783.99, 1046.50].forEach((f, i) => {
+            setTimeout(() => this.playBeep(f, 0.12, 'triangle'), i * 120);
+          });
+        } catch(e) {}
+      }
+      playSelect() {
+        this.playBeep(660, 0.05, 'sine');
+      }
+    }
+    const audio = new TacticalAudio();
+
+    // --- TECHNOLÓGIA MEGNEVEZÉSEK ---
+    const TECH_FRIENDLY_NAMES = {
+      deep_mining: 'Mélyfúrási Technológia',
+      energy_grid: 'Továbbfejlesztett Energiahálózat',
+      dark_matter_reactor: 'Sötét Anyag Reaktor',
+      plasma_mining: 'Plazmavágó Bányászat',
+      zero_point_extractor: 'Zéróponti Energia-Kivonó',
+      kinetic_calibration: 'Kinetikus Fegyver Kalibráció',
+      extended_shielding: 'Kiterjesztett Védőpajzsok',
+      siege_warheads: 'Ostrom-Robbanófejek',
+      tachyon_lance: 'Tachion Lándzsa Technológia',
+      antimatter_bombardment: 'Antianyag Bombázó Rendszer',
+      automated_dock: 'Automatizált Gyártódokk',
+      ion_thrusters: 'Ion Hajtóművek',
+      heavy_metallurgy: 'Nehéz Fémötvözetek',
+      hyperspace_gate: 'Hipersugár Kapu Technológia',
+      omega_core_disruptor: 'Omega Mag Disszipátor',
+      antimatter_containment: 'Antianyag Tárolók'
+    };
+
+    // Alapértelmezett hajógyártási technológiai követelmények
+    const SHIP_TECH_REQUIREMENTS = {
+      scout: null,
+      corvette: null,
+      freighter: null,
+      interceptor: 'ion_thrusters',
+      colony_ship: 'automated_dock',
+      frigate: 'extended_shielding',
+      destroyer: 'heavy_metallurgy',
+      heavy_destroyer: 'siege_warheads',
+      cruiser: 'antimatter_containment',
+      battleship: 'hyperspace_gate'
+    };
+
+    // --- JÁTÉK ÁLLAPOT (GAME STATE) ---
+    const STATE = {
+      currentPlayerId: localStorage.getItem('space4x_player_id') || 'player',
+      tick: 1,
+      secondsToNextTick: 3600,
+      autoTickActive: false,
+      autoTickTimer: null,
+      resources: {
+        metal: 1420,
+        energy: 310,
+        isotope: 45,
+        data: 120
+      },
+      gloryPoints: 0,
+      activeBuffs: [],
+      artifacts: [],
+      allBosses: [],
+      bossPrereqsByBoss: {},
+      selectedBossId: 'boss_1',
+      shipTechRequirements: Object.assign({}, SHIP_TECH_REQUIREMENTS),
+      unlockedTechs: new Set(),
+      researchedTechs: [],
+      activeResearch: null,
+      boss: null,
+      bossPrereqs: null,
+      techTree: null,
+      combatLogsHistory: [],
+      selectedPlanetId: 'p1',
+      camera: { x: 0, y: 0, zoom: 1.0 },
+      isDragging: false,
+      lastMouse: { x: 0, y: 0 },
+      
+      // Bolygók adatai
+      planets: [
+        {
+          id: 'p1',
+          name: 'KRONOS-IV',
+          x: 140,
+          y: 120,
+          radius: 20,
+          owner: 'player',
+          slotsCount: 4,
+          structures: [
+            { type: 'industrial_hub', name: 'Ipari Központ Lv.2', branch: 'economy', level: 2, bonus: '+50% Fém' },
+            { type: 'planetary_shield', name: 'Planetáris Pajzs', branch: 'defense', level: 1, bonus: '500 HP' },
+            { type: 'automated_dock', name: 'Automatizált Dokk', branch: 'infrastructure', level: 1, bonus: '+Gyors gyártás' }
+          ],
+          baseMetal: 35,
+          baseEnergy: -5,
+          shieldHp: 500,
+          maxShieldHp: 500,
+          stationedFleet: { corvette: 12, destroyer: 3, battleship: 0 }
+        },
+        {
+          id: 'p2',
+          name: 'ZEPHYR-7',
+          x: 320,
+          y: 80,
+          radius: 16,
+          owner: 'neutral',
+          slotsCount: 3,
+          structures: [],
+          baseMetal: 20,
+          baseEnergy: 10,
+          shieldHp: 0,
+          maxShieldHp: 0,
+          stationedFleet: { corvette: 0, destroyer: 0, battleship: 0 }
+        },
+        {
+          id: 'p3',
+          name: 'NEXUS-ALPHA',
+          x: 220,
+          y: 310,
+          radius: 24,
+          owner: 'neutral',
+          slotsCount: 5,
+          structures: [],
+          baseMetal: 45,
+          baseEnergy: 15,
+          shieldHp: 0,
+          maxShieldHp: 0,
+          stationedFleet: { corvette: 0, destroyer: 0, battleship: 0 }
+        },
+        {
+          id: 'p4',
+          name: 'VEKTOR-9 (ELLENSÉG)',
+          x: 420,
+          y: 350,
+          radius: 22,
+          owner: 'enemy',
+          slotsCount: 4,
+          structures: [
+            { type: 'orbital_railgun', name: 'Orbitális Railgun', branch: 'defense', level: 1, bonus: '450 Dmg' }
+          ],
+          baseMetal: 40,
+          baseEnergy: 20,
+          shieldHp: 300,
+          maxShieldHp: 300,
+          stationedFleet: { corvette: 6, destroyer: 4, battleship: 2 }
+        }
+      ],
+
+      // Mozgásban lévő flották
+      movingFleets: []
+    };
+
+    // --- HAJÓ SPECIFIKÁCIÓK ÉS HARCI FORMULÁK ---
+    const ALL_SHIPS = [
+      'scout', 'interceptor', 'corvette', 'freighter', 'colony_ship',
+      'frigate', 'destroyer', 'heavy_destroyer', 'cruiser', 'battleship'
+    ];
+
+    const SHIP_SPECS = {
+      scout: { name: 'Felderítő Szonda', sym: '⌖', hull: 40, shield: 0, dmg: 0, acc: 0.50, eva: 0.50, speed: 9.0, upkeep: 0.5, metal: 30, energy: 10, iso: 10, ability: 'EMP Zavarmag & Felderítés' },
+      interceptor: { name: 'Gyors Elfogóvadász', sym: '⚡', hull: 70, shield: 25, dmg: 45, acc: 0.85, eva: 0.35, speed: 10.0, upkeep: 0.8, metal: 45, energy: 15, iso: 8, ability: 'Villámcsapás (1. kör +25% dmg)' },
+      corvette: { name: 'Könnyű Korvett', sym: '▲', hull: 120, shield: 40, dmg: 35, acc: 0.80, eva: 0.25, speed: 5.5, upkeep: 1.0, metal: 60, energy: 20, iso: 5, ability: 'Zavarómező (Csatahajó -40% acc)' },
+      freighter: { name: 'Nehéz Teherszállító', sym: '📦', hull: 350, shield: 60, dmg: 20, acc: 0.60, eva: 0.05, speed: 4.0, upkeep: 2.0, metal: 180, energy: 60, iso: 15, ability: 'Raktér & +50% Roncsmentés' },
+      colony_ship: { name: 'Kolóniahajó', sym: '⚲', hull: 200, shield: 50, dmg: 0, acc: 0.50, eva: 0.05, speed: 3.0, upkeep: 3.0, metal: 300, energy: 150, iso: 60, ability: 'Bioszféra Kolonizáció' },
+      frigate: { name: 'Lopakodó Torpedó Fregatt', sym: '🗡️', hull: 280, shield: 120, dmg: 85, acc: 0.80, eva: 0.18, speed: 4.5, upkeep: 2.5, metal: 140, energy: 50, iso: 18, ability: 'Pajzs-Átütő Torpedók (30% Hull dmg)' },
+      destroyer: { name: 'Romboló Cirkáló', sym: '◆', hull: 450, shield: 200, dmg: 110, acc: 0.75, eva: 0.10, speed: 3.5, upkeep: 4.0, metal: 220, energy: 80, iso: 20, ability: 'Pajzs-Szinkronizáció (>=3 db: +15%)' },
+      heavy_destroyer: { name: 'Ostrom-Romboló', sym: '💥', hull: 950, shield: 70, dmg: 260, acc: 0.70, eva: 0.02, speed: 2.4, upkeep: 7.0, metal: 480, energy: 140, iso: 40, ability: 'Ostromágyú & Sérülékeny Pajzs' },
+      cruiser: { name: 'Drón-Hordozó Cirkáló', sym: '🛸', hull: 800, shield: 400, dmg: 75, acc: 0.75, eva: 0.08, speed: 3.0, upkeep: 8.0, metal: 450, energy: 180, iso: 50, ability: 'Drónraj Kíséret & ECM Mátrix' },
+      battleship: { name: 'Csatahajó', sym: '⬟', hull: 1600, shield: 800, dmg: 380, acc: 0.65, eva: 0.00, speed: 2.0, upkeep: 15.0, metal: 800, energy: 300, iso: 80, ability: 'Spinalis Railgun & Termelés Blokád' }
+    };
+
+    // --- CANVAS TÉRKÉP RAJZOLÁS ÉS INTERAKCIÓK ---
+    const canvas = document.getElementById('galaxy-canvas');
+    const ctx = canvas.getContext('2d');
+
+    function resizeCanvas() {
+      canvas.width = canvas.parentElement.clientWidth;
+      canvas.height = canvas.parentElement.clientHeight;
+      drawGalaxy();
+    }
+    window.addEventListener('resize', resizeCanvas);
+
+    function resetMapView() {
+      STATE.camera.zoom = 1.0;
+      STATE.camera.x = canvas.width / 2 - 250;
+      STATE.camera.y = canvas.height / 2 - 200;
+      drawGalaxy();
+    }
+
+    function zoomMap(factor) {
+      STATE.camera.zoom = Math.max(0.5, Math.min(2.5, STATE.camera.zoom * factor));
+      drawGalaxy();
+    }
+
+    // Egér és érintés vezérlés
+    canvas.addEventListener('mousedown', e => {
+      STATE.isDragging = true;
+      STATE.lastMouse = { x: e.clientX, y: e.clientY };
+    });
+    window.addEventListener('mouseup', () => STATE.isDragging = false);
+    canvas.addEventListener('mousemove', e => {
+      if (STATE.isDragging) {
+        STATE.camera.x += (e.clientX - STATE.lastMouse.x);
+        STATE.camera.y += (e.clientY - STATE.lastMouse.y);
+        STATE.lastMouse = { x: e.clientX, y: e.clientY };
+        drawGalaxy();
+      }
+
+      // Koordináta hover kiszámítása
+      const rect = canvas.getBoundingClientRect();
+      const worldX = Math.round((e.clientX - rect.left - STATE.camera.x) / STATE.camera.zoom);
+      const worldY = Math.round((e.clientY - rect.top - STATE.camera.y) / STATE.camera.zoom);
+      document.getElementById('hover-coords').innerText = `X: ${worldX}, Y: ${worldY}`;
+    });
+
+    canvas.addEventListener('wheel', e => {
+      e.preventDefault();
+      const zoomFactor = e.deltaY < 0 ? 1.1 : 0.9;
+      zoomMap(zoomFactor);
+    });
+
+    // Bolygóra vagy Boss anomáliára kattintás detektálás
+    canvas.addEventListener('click', e => {
+      if (STATE.isDragging) return;
+      const rect = canvas.getBoundingClientRect();
+      const clickX = (e.clientX - rect.left - STATE.camera.x) / STATE.camera.zoom;
+      const clickY = (e.clientY - rect.top - STATE.camera.y) / STATE.camera.zoom;
+
+      // Boss anomália vizsgálat
+      const bossX = (STATE.boss && STATE.boss.pos_x) || 280;
+      const bossY = (STATE.boss && STATE.boss.pos_y) || 200;
+      if (Math.hypot(bossX - clickX, bossY - clickY) <= 32) {
+        audio.playAlarm();
+        openBossModal();
+        return;
+      }
+
+      for (const p of STATE.planets) {
+        const dist = Math.hypot(p.x - clickX, p.y - clickY);
+        if (dist <= p.radius + 10) {
+          audio.playBeep(600, 0.05);
+          openPlanetDrawer(p.id);
+          return;
+        }
+      }
+    });
+
+    // Térkép Render ciklus
+    function drawGalaxy() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      ctx.save();
+      ctx.translate(STATE.camera.x, STATE.camera.y);
+      ctx.scale(STATE.camera.zoom, STATE.camera.zoom);
+
+      // Halvány háttér koordinátarács
+      ctx.strokeStyle = '#0d1829';
+      ctx.lineWidth = 1;
+      const gridSize = 50;
+      for (let x = -500; x <= 1000; x += gridSize) {
+        ctx.beginPath(); ctx.moveTo(x, -500); ctx.lineTo(x, 1000); ctx.stroke();
+      }
+      for (let y = -500; y <= 1000; y += gridSize) {
+        ctx.beginPath(); ctx.moveTo(-500, y); ctx.lineTo(1000, y); ctx.stroke();
+      }
+
+      // Mozgó flották útvonalvektorai
+      STATE.movingFleets.forEach(fleet => {
+        ctx.strokeStyle = fleet.owner === 'player' ? 'rgba(6, 182, 212, 0.4)' : 'rgba(239, 68, 68, 0.4)';
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([4, 4]);
+        ctx.beginPath();
+        ctx.moveTo(fleet.startX, fleet.startY);
+        ctx.lineTo(fleet.targetX, fleet.targetY);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // Mozgó flotta ikonja
+        ctx.fillStyle = fleet.owner === 'player' ? '#06b6d4' : '#ef4444';
+        ctx.beginPath();
+        ctx.arc(fleet.currentX, fleet.currentY, 6, 0, Math.PI * 2);
+        ctx.fill();
+
+        // ETA címke
+        ctx.fillStyle = '#94a3b8';
+        ctx.font = '10px monospace';
+        ctx.fillText(`ETA: ${Math.ceil(fleet.remainingHours)}h`, fleet.currentX + 10, fleet.currentY - 6);
+      });
+
+      // Bolygók kirajzolása
+      STATE.planets.forEach(p => {
+        // Bolygó színe
+        let fillColor = '#64748b'; // neutral
+        let strokeColor = '#334155';
+        if (p.owner === 'player') {
+          fillColor = '#0284c7';
+          strokeColor = '#38bdf8';
+        } else if (p.owner === 'enemy') {
+          fillColor = '#dc2626';
+          strokeColor = '#f87171';
+        }
+
+        // Kiválasztott fényudvar
+        if (STATE.selectedPlanetId === p.id) {
+          ctx.strokeStyle = '#22d3ee';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.radius + 8, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+
+        // Planetáris pajzs gyűrű
+        if (p.shieldHp > 0) {
+          ctx.strokeStyle = 'rgba(56, 189, 248, 0.5)';
+          ctx.lineWidth = 2;
+          ctx.setLineDash([2, 3]);
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.radius + 4, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.setLineDash([]);
+        }
+
+        // Bolygó test
+        ctx.fillStyle = fillColor;
+        ctx.strokeStyle = strokeColor;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        // Bolygó neve és adatai
+        ctx.fillStyle = '#f1f5f9';
+        ctx.font = 'bold 11px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText(p.name, p.x, p.y + p.radius + 15);
+
+        // Állomásozó hajók jelölése
+        const totalShips = p.stationedFleet.corvette + p.stationedFleet.destroyer + p.stationedFleet.battleship;
+        if (totalShips > 0) {
+          ctx.fillStyle = p.owner === 'player' ? '#38bdf8' : '#f87171';
+          ctx.font = '10px monospace';
+          ctx.fillText(`▲ ${totalShips}`, p.x, p.y - p.radius - 8);
+        }
+      });
+
+      // ARK-0 KRONOS-LEVIATÁN (ŐS-KOLOSSZUS BOSS) KIRAJZOLÁSA
+      const bossX = (STATE.boss && STATE.boss.pos_x) || 280;
+      const bossY = (STATE.boss && STATE.boss.pos_y) || 200;
+      const bossDefeated = STATE.boss && STATE.boss.state === 'defeated';
+
+      if (bossDefeated) {
+        // Semlegesített kozmikus roncsmező
+        ctx.strokeStyle = '#475569';
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([3, 4]);
+        ctx.beginPath();
+        ctx.arc(bossX, bossY, 22, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        ctx.fillStyle = '#1e293b';
+        ctx.beginPath();
+        ctx.arc(bossX, bossY, 15, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#10b981';
+        ctx.font = 'bold 10px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText('✓ ARK-0 SEMLEGESÍTVE', bossX, bossY + 32);
+      } else {
+        // Aktív pulzáló szingularitás és Kvantum-Torzító Mező
+        const pulse = (Date.now() % 2000) / 2000;
+        const outerR = 24 + pulse * 8;
+
+        // Külső torzító aura
+        const grad = ctx.createRadialGradient(bossX, bossY, 6, bossX, bossY, outerR);
+        grad.addColorStop(0, 'rgba(239, 68, 68, 0.7)');
+        grad.addColorStop(0.5, 'rgba(168, 85, 247, 0.3)');
+        grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(bossX, bossY, outerR, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Gravitációs védelmi gyűrűk
+        ctx.strokeStyle = 'rgba(239, 68, 68, 0.8)';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([4, 4]);
+        ctx.beginPath();
+        ctx.arc(bossX, bossY, 24, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // Sötét mag
+        ctx.fillStyle = '#0b0318';
+        ctx.strokeStyle = '#dc2626';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(bossX, bossY, 16, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        // Ikon és felirat
+        ctx.fillStyle = '#ef4444';
+        ctx.font = 'bold 12px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText('☠️', bossX, bossY + 4);
+
+        ctx.fillStyle = '#f87171';
+        ctx.font = 'bold 10px monospace';
+        ctx.fillText('ARK-0 LEVIATÁN', bossX, bossY + 32);
+
+        ctx.fillStyle = '#c084fc';
+        ctx.font = '9px monospace';
+        ctx.fillText('[OMEGA ANOMÁLIA]', bossX, bossY + 44);
+      }
+
+      ctx.restore();
+    }
+
+    // --- HUD ÉS GAZDASÁGI SZÁMÍTÁSOK FRISSÍTÉSE ---
+    function updateHUD() {
+      document.getElementById('res-metal').innerText = Math.floor(STATE.resources.metal).toLocaleString();
+      document.getElementById('res-energy').innerText = Math.floor(STATE.resources.energy).toLocaleString();
+      document.getElementById('res-isotope').innerText = Math.floor(STATE.resources.isotope).toLocaleString();
+      document.getElementById('res-data').innerText = Math.floor(STATE.resources.data).toLocaleString();
+      
+      const gloryEl = document.getElementById('res-glory');
+      if (gloryEl) gloryEl.innerText = Math.floor(STATE.gloryPoints || 0).toLocaleString();
+      const artEl = document.getElementById('res-artifacts');
+      if (artEl) artEl.innerText = `${(STATE.artifacts || []).length}/3`;
+
+      // Aktív birodalmi bónuszok (Buffok) ticker frissítése
+      const buffsTicker = document.getElementById('active-buffs-ticker');
+      const buffsList = document.getElementById('active-buffs-list');
+      if (buffsTicker && buffsList) {
+        const buffs = STATE.activeBuffs || [];
+        if (buffs.length > 0) {
+          buffsTicker.classList.remove('hidden');
+          buffsList.innerHTML = buffs.map(b => {
+            const rem = Math.max(0, (b.expires_at_tick || 0) - STATE.tick);
+            return `<div class="flex items-center gap-1.5 px-2 py-0.5 rounded bg-emerald-900/80 border border-emerald-600/80 text-[11px] font-bold text-emerald-200">
+              <span>${b.icon || '✨'}</span>
+              <span>${b.name}</span>
+              <span class="text-amber-300 font-mono text-[10px]">(${rem} kör)</span>
+            </div>`;
+          }).join('');
+        } else {
+          buffsTicker.classList.add('hidden');
+        }
+      }
+
+      // Óránkénti kalkuláció
+      let netMetal = 0;
+      let netEnergy = 0;
+      let netData = 0;
+
+      STATE.planets.filter(p => p.owner === 'player').forEach(p => {
+        let m = p.baseMetal;
+        if (STATE.unlockedTechs.has('deep_mining')) m *= 1.25;
+        netMetal += m;
+        netEnergy += p.baseEnergy;
+      });
+
+      // Hajók Upkeep levonása mind a 10 hajóosztályra
+      let totalUpkeep = 0;
+      STATE.planets.filter(p => p.owner === 'player').forEach(p => {
+        for (const st of ALL_SHIPS) {
+          const spec = SHIP_SPECS[st];
+          if (spec && p.stationedFleet && p.stationedFleet[st]) {
+            totalUpkeep += p.stationedFleet[st] * (spec.upkeep || 1.0);
+          }
+        }
+      });
+      STATE.movingFleets.filter(f => f.owner === 'player').forEach(f => {
+        for (const st of ALL_SHIPS) {
+          const spec = SHIP_SPECS[st];
+          if (spec && f.ships && f.ships[st]) {
+            totalUpkeep += f.ships[st] * (spec.upkeep || 1.0);
+          }
+        }
+      });
+      netEnergy -= totalUpkeep;
+      netData += 10;
+
+      document.getElementById('rate-metal').innerText = `(+${Math.round(netMetal)}/h)`;
+      document.getElementById('rate-energy').innerText = `(${netEnergy >= 0 ? '+' : ''}${Math.round(netEnergy)}/h)`;
+      document.getElementById('rate-data').innerText = `(+${Math.round(netData)}/h)`;
+
+      // Negatív energia riadó
+      const alertBanner = document.getElementById('alert-banner');
+      if (STATE.resources.energy < 0) {
+        alertBanner.classList.remove('hidden');
+        document.getElementById('res-energy').classList.add('text-red-500');
+      } else {
+        alertBanner.classList.add('hidden');
+        document.getElementById('res-energy').classList.remove('text-red-500');
+      }
+    }
+
+    // --- BOLYGÓ ADATLAP RENDERELÉSE ---
+    function openPlanetDrawer(planetId) {
+      STATE.selectedPlanetId = planetId;
+      const p = STATE.planets.find(x => x.id === planetId);
+      if (!p) return;
+
+      document.getElementById('drawer-planet-name').innerText = p.name;
+      document.getElementById('drawer-coords').innerText = `[X: ${p.x}, Y: ${p.y}]`;
+      const myId = STATE.currentPlayerId || 'player';
+      const isMine = (p.owner === myId) || (p.owner_id === myId);
+      const isOpponent = (p.owner && p.owner !== 'neutral' && p.owner !== myId) || (p.owner_id && p.owner_id !== 'neutral' && p.owner_id !== myId);
+
+      document.getElementById('drawer-owner').innerText = isMine ? 'Saját Birodalmad Bázisa' : (isOpponent ? 'Ellenséges Frakció Bázisa' : 'Semleges Világ');
+      document.getElementById('drawer-owner').className = isMine ? 'text-cyan-400 font-bold' : (isOpponent ? 'text-red-400 font-bold' : 'text-slate-400 font-bold');
+
+      const ownActionsEl = document.getElementById('drawer-own-actions');
+      const targetActionsEl = document.getElementById('drawer-target-actions');
+      if (ownActionsEl && targetActionsEl) {
+        if (isMine) {
+          ownActionsEl.classList.remove('hidden');
+          targetActionsEl.classList.add('hidden');
+        } else {
+          ownActionsEl.classList.add('hidden');
+          targetActionsEl.classList.remove('hidden');
+        }
+      }
+      document.getElementById('drawer-slots-info').innerText = `${p.structures.length} / ${p.slotsCount} slot`;
+
+      document.getElementById('drawer-prod-metal').innerText = `+${p.baseMetal}/óra`;
+      document.getElementById('drawer-prod-energy').innerText = `${p.baseEnergy >= 0 ? '+' : ''}${p.baseEnergy}/óra`;
+      document.getElementById('drawer-shield-hp').innerText = `${p.shieldHp} / ${p.maxShieldHp} HP`;
+
+      // Flotta összetétel mind a 10 hajóosztályra
+      const sf = p.stationedFleet || {};
+      const totalShips = ALL_SHIPS.reduce((sum, st) => sum + (sf[st] || 0), 0);
+      document.getElementById('drawer-fleet-count').innerText = `${totalShips} Hajó`;
+      const compEl = document.getElementById('drawer-fleet-composition');
+      if (compEl) {
+        compEl.innerHTML = ALL_SHIPS.map(st => {
+          const count = sf[st] || 0;
+          const spec = SHIP_SPECS[st] || { sym: '▲', name: st };
+          return `<div class="flex justify-between items-center text-[11px] py-0.5 border-b border-slate-900/60">
+            <span>• ${spec.name} (${spec.sym}):</span>
+            <span class="font-bold font-mono ${count > 0 ? 'text-cyan-300' : 'text-slate-500'}">${count} db</span>
+          </div>`;
+        }).join('');
+      }
+
+      // Slotok listázása
+      const slotsContainer = document.getElementById('drawer-slots-container');
+      slotsContainer.innerHTML = '';
+
+      for (let i = 0; i < p.slotsCount; i++) {
+        const slotEl = document.createElement('div');
+        slotEl.className = 'bg-slate-950 p-2.5 rounded border border-slate-800 flex justify-between items-center';
+        
+        if (i < p.structures.length) {
+          const s = p.structures[i];
+          const lvl = s.level || 1;
+          const upgradeCost = lvl === 1 ? 120 : 250;
+          slotEl.innerHTML = `
+            <div>
+              <div class="font-bold text-slate-200 flex items-center gap-1.5">
+                <span>[${i+1}] ${s.name}</span>
+                <span class="px-1.5 py-0.2 rounded text-[9px] font-bold bg-cyan-950 text-cyan-300 border border-cyan-800">Lv.${lvl}</span>
+              </div>
+              <div class="text-[10px] text-cyan-400">${s.bonus}</div>
+            </div>
+            <div class="flex items-center gap-1">
+              ${p.owner === 'player' && lvl < 3 ? `<button onclick="upgradeStructure('${p.id}', ${i})" class="bg-amber-900/60 hover:bg-amber-800 text-amber-300 border border-amber-700 px-2 py-1 rounded text-[10px] font-bold">Fejlesztés (${upgradeCost} Fém)</button>` : `<span class="text-[10px] text-emerald-400 font-bold">${lvl >= 3 ? 'MAX' : 'AKTÍV'}</span>`}
+            </div>
+          `;
+        } else {
+          slotEl.innerHTML = `
+            <div>
+              <div class="font-bold text-slate-400">[${i+1}] Üres Fejlesztési Slot</div>
+              <div class="text-[10px] text-slate-500">Új struktúra építhető</div>
+            </div>
+            ${p.owner === 'player' ? `<button onclick="buildStructure('${p.id}', ${i})" class="bg-cyan-900/60 hover:bg-cyan-800 text-cyan-300 border border-cyan-700 px-2 py-1 rounded text-[10px] font-bold">+ Építés</button>` : ''}
+          `;
+        }
+        slotsContainer.appendChild(slotEl);
+      }
+
+      document.getElementById('planet-drawer').classList.remove('hidden');
+      drawGalaxy();
+    }
+
+    function closePlanetDrawer() {
+      document.getElementById('planet-drawer').classList.add('hidden');
+    }
+
+    async function upgradeStructure(planetId, slotIdx) {
+      if (SERVER_ONLINE) {
+        try {
+          const res = await fetch(`${API_BASE}/api/upgrade-structure`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-Player-Id': STATE.currentPlayerId || 'player' },
+            body: JSON.stringify({ planetId, slotIndex: slotIdx, playerId: STATE.currentPlayerId || 'player' })
+          });
+          const data = await res.json();
+          if (res.ok) {
+            audio.playBeep(750, 0.1);
+            await checkServerConnection();
+            openPlanetDrawer(planetId);
+            return;
+          } else {
+            audio.playAlarm();
+            alert(data.error || "Hiba a fejlesztés során!");
+            return;
+          }
+        } catch(e) {}
+      }
+      const p = STATE.planets.find(x => x.id === planetId);
+      if (!p || p.owner !== 'player') return;
+      const s = p.structures[slotIdx];
+      if (!s || (s.level || 1) >= 3) return;
+      const cost = (s.level || 1) === 1 ? 120 : 250;
+      if (STATE.resources.metal < cost) {
+        alert(`Nincs elég Fém! (${cost} Fém szükséges)`);
+        return;
+      }
+      STATE.resources.metal -= cost;
+      s.level = (s.level || 1) + 1;
+      audio.playBeep(750, 0.1);
+      updateHUD();
+      openPlanetDrawer(planetId);
+    }
+
+    function buildStructure(planetId, slotIdx) {
+      const p = STATE.planets.find(x => x.id === planetId);
+      if (!p || p.owner !== 'player') return;
+      if (STATE.resources.metal < 150) {
+        alert("Nincs elég Fém az építkezéshez (150 Fém szükséges)!");
+        return;
+      }
+      STATE.resources.metal -= 150;
+      p.structures.push({
+        type: 'sensor_array',
+        name: 'Szenzorállomás Lv.1',
+        branch: 'infrastructure',
+        level: 1,
+        bonus: '+3 órás előrejelzés'
+      });
+      audio.playBeep(750, 0.08);
+      openPlanetDrawer(planetId);
+      updateHUD();
+    }
+
+    // --- HAJÓ ÉPÍTÉSE (SHIPYARD) ---
+    function openShipyardModal() {
+      const container = document.getElementById('shipyard-cards-container');
+      const reqs = STATE.shipTechRequirements || SHIP_TECH_REQUIREMENTS;
+      const researched = STATE.researchedTechs || [];
+
+      if (container) {
+        container.innerHTML = ALL_SHIPS.map(st => {
+          const spec = SHIP_SPECS[st];
+          const reqTech = reqs[st];
+          const isLocked = reqTech && !researched.includes(reqTech);
+          const techName = reqTech ? (TECH_FRIENDLY_NAMES[reqTech] || reqTech) : '';
+
+          return `
+            <div class="p-2.5 rounded-lg border transition-all flex items-center justify-between gap-2.5 ${isLocked ? 'bg-slate-950/70 border-slate-900 opacity-80' : 'bg-slate-900/90 border-slate-800 hover:border-cyan-800/80'}">
+              <div class="flex-1">
+                <div class="font-bold flex items-center gap-1.5 text-xs ${isLocked ? 'text-slate-400' : 'text-cyan-300'}">
+                  <span class="text-base">${spec.sym}</span>
+                  <span>${spec.name}</span>
+                  ${isLocked ? `<span class="text-[9px] px-1.5 py-0.2 rounded bg-red-950 text-red-300 border border-red-800 font-mono">🔒 KUTATÁS SZÜKSÉGES</span>` : ''}
+                </div>
+                <div class="text-[10px] text-amber-300 font-medium mt-0.5">⭐ ${spec.ability}</div>
+                ${isLocked ? `
+                  <div class="text-[10px] text-red-400 font-mono mt-0.5 font-bold">
+                    🔒 Feloldó kutatás: ${techName} (Tech Fa)
+                  </div>
+                ` : ''}
+                <div class="text-[9px] text-slate-400 mt-0.5 flex flex-wrap gap-2">
+                  <span>HP: ${spec.hull}</span>
+                  <span>Pajzs: ${spec.shield}</span>
+                  <span>Dmg: ${spec.dmg}</span>
+                  <span>Sebesség: ${spec.speed.toFixed(1)}/h</span>
+                </div>
+                <div class="text-[10px] text-slate-300 font-mono mt-1">
+                  Költség: <b class="text-cyan-400">${spec.metal} F</b> | <b class="text-amber-400">${spec.energy} E</b>${spec.iso > 0 ? ` | <b class="text-purple-400">${spec.iso} Iso</b>` : ''}
+                </div>
+              </div>
+              ${isLocked ? `
+                <button disabled class="bg-slate-950 border border-slate-800 text-slate-500 font-bold text-xs px-3.5 py-2 rounded cursor-not-allowed whitespace-nowrap" title="Előbb kutasd ki a Tech Fában: ${techName}">
+                  🔒 Zárolva
+                </button>
+              ` : `
+                <button onclick="buildShip('${st}')" class="bg-gradient-to-r from-cyan-600 to-cyan-500 hover:from-cyan-500 hover:to-cyan-400 text-white font-bold text-xs px-3.5 py-2 rounded shadow-md shadow-cyan-950 active:scale-95 transition-all whitespace-nowrap">
+                  Építés
+                </button>
+              `}
+            </div>
+          `;
+        }).join('');
+      }
+      document.getElementById('modal-shipyard').classList.remove('hidden');
+    }
+
+    async function buildShip(type) {
+      if (SERVER_ONLINE) {
+        try {
+          const res = await fetch(`${API_BASE}/api/build-ship`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-Player-Id': STATE.currentPlayerId || 'player' },
+            body: JSON.stringify({ planetId: STATE.selectedPlanetId, shipType: type, playerId: STATE.currentPlayerId || 'player' })
+          });
+          const data = await res.json();
+          if (res.ok) {
+            audio.playBeep(880, 0.1);
+            await checkServerConnection();
+            openPlanetDrawer(STATE.selectedPlanetId);
+            return;
+          } else {
+            audio.playAlarm();
+            alert(data.error || "Hiba a gyártás során!");
+            return;
+          }
+        } catch(e) {}
+      }
+
+      const spec = SHIP_SPECS[type];
+      const p = STATE.planets.find(x => x.id === STATE.selectedPlanetId);
+      if (!p || p.owner !== 'player') {
+        alert("Csak saját bolygón építhetsz hajót!");
+        return;
+      }
+
+      if (STATE.resources.metal < spec.metal || STATE.resources.energy < spec.energy || STATE.resources.isotope < spec.iso) {
+        audio.playAlarm();
+        alert(`Nincs elég nyersanyag! Szükséges: ${spec.metal} Fém, ${spec.energy} Energia, ${spec.iso} Izotóp.`);
+        return;
+      }
+
+      STATE.resources.metal -= spec.metal;
+      STATE.resources.energy -= spec.energy;
+      STATE.resources.isotope -= spec.iso;
+
+      p.stationedFleet[type]++;
+      audio.playBeep(880, 0.1);
+      updateHUD();
+      openPlanetDrawer(p.id);
+      drawGalaxy();
+    }
+
+    // --- FLOTTA INDÍTÁS (DISPATCH) MIND A 10 HAJÓOSZTÁLYRA ---
+    function openDispatchModal() {
+      const p = STATE.planets.find(x => x.id === STATE.selectedPlanetId);
+      if (!p || p.owner !== 'player') {
+        alert("Csak saját bolygóról indíthatsz flottát!");
+        return;
+      }
+
+      const sel = document.getElementById('dispatch-target-select');
+      sel.innerHTML = '';
+      STATE.planets.filter(x => x.id !== p.id).forEach(target => {
+        const opt = document.createElement('option');
+        opt.value = target.id;
+        opt.innerText = `${target.name} (Táv: ${Math.round(Math.hypot(target.x - p.x, target.y - p.y))} egység) [${target.owner}]`;
+        sel.appendChild(opt);
+      });
+
+      const sf = p.stationedFleet || {};
+      const container = document.getElementById('dispatch-sliders-container');
+      if (container) {
+        container.innerHTML = ALL_SHIPS.map(st => {
+          const spec = SHIP_SPECS[st];
+          const available = sf[st] || 0;
+          return `
+            <div class="flex items-center justify-between bg-slate-950/80 p-1.5 rounded border border-slate-800">
+              <span class="text-xs">${spec.sym} ${spec.name} (${available} db):</span>
+              <div class="flex items-center gap-2">
+                <input type="range" id="send-${st}" min="0" max="${available}" value="${available}" oninput="updateDispatchCalculations()" class="w-24 accent-cyan-400">
+                <span id="send-${st}-val" class="w-8 text-right font-bold text-cyan-300 font-mono">${available}</span>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+
+      updateDispatchCalculations();
+      document.getElementById('modal-dispatch').classList.remove('hidden');
+    }
+
+    function updateDispatchCalculations() {
+      const origin = STATE.planets.find(x => x.id === STATE.selectedPlanetId);
+      const targetId = document.getElementById('dispatch-target-select')?.value;
+      const target = STATE.planets.find(x => x.id === targetId);
+      if (!origin || !target) return;
+
+      let speeds = [];
+      let totalFuelWeight = 0;
+      let totalShips = 0;
+
+      for (const st of ALL_SHIPS) {
+        const el = document.getElementById(`send-${st}`);
+        const val = el ? parseInt(el.value) || 0 : 0;
+        const valEl = document.getElementById(`send-${st}-val`);
+        if (valEl) valEl.innerText = val;
+
+        if (val > 0) {
+          totalShips += val;
+          const spec = SHIP_SPECS[st];
+          speeds.push(spec.speed);
+          totalFuelWeight += val * (spec.fuel_weight || 1.0);
+        }
+      }
+
+      const dist = Math.hypot(target.x - origin.x, target.y - origin.y);
+      let minSpeed = speeds.length > 0 ? Math.min(...speeds) : 5.0;
+
+      if (STATE.researchedTechs && STATE.researchedTechs.includes('ion_thrusters')) minSpeed *= 1.25;
+      if (STATE.resources && STATE.resources.energy < 0) minSpeed *= 0.50;
+
+      const hours = minSpeed > 0 ? (dist / minSpeed) : 0;
+      const fuelMultiplier = (STATE.researchedTechs && STATE.researchedTechs.includes('isotope_compression')) ? 0.70 : 1.0;
+      const fuelCost = Math.ceil(totalFuelWeight * dist * 0.05 * fuelMultiplier);
+
+      document.getElementById('disp-dist').innerText = `${Math.round(dist)} koordináta egység`;
+      document.getElementById('disp-speed').innerText = `${minSpeed.toFixed(1)} egység / óra`;
+      document.getElementById('disp-time').innerText = `${Math.ceil(hours)} óra (${Math.ceil(hours)} tick)`;
+      document.getElementById('disp-fuel').innerText = `${fuelCost} Izotóp`;
+    }
+
+    async function confirmDispatch() {
+      const origin = STATE.planets.find(x => x.id === STATE.selectedPlanetId);
+      const targetId = document.getElementById('dispatch-target-select').value;
+      const target = STATE.planets.find(x => x.id === targetId);
+
+      const ships = {};
+      let totalCount = 0;
+      for (const st of ALL_SHIPS) {
+        const val = parseInt(document.getElementById(`send-${st}`)?.value) || 0;
+        ships[st] = val;
+        totalCount += val;
+      }
+
+      if (totalCount === 0) {
+        alert("Válassz ki legalább 1 hajót!");
+        return;
+      }
+
+      if (SERVER_ONLINE) {
+        try {
+          const res = await fetch(`${API_BASE}/api/dispatch-fleet`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-Player-Id': STATE.currentPlayerId || 'player' },
+            body: JSON.stringify({
+              originPlanetId: origin.id,
+              targetPlanetId: target.id,
+              ships: ships,
+              playerId: STATE.currentPlayerId || 'player'
+            })
+          });
+          const data = await res.json();
+          if (res.ok) {
+            audio.playBeep(520, 0.12);
+            closeModal('modal-dispatch');
+            await checkServerConnection();
+            openPlanetDrawer(origin.id);
+            return;
+          } else {
+            audio.playAlarm();
+            alert(data.error || "Hiba a flotta indításakor!");
+            return;
+          }
+        } catch(e) {}
+      }
+
+      const dist = Math.hypot(target.x - origin.x, target.y - origin.y);
+      let speeds = [];
+      if (c > 0) speeds.push(SHIP_SPECS.corvette.speed);
+      if (d > 0) speeds.push(SHIP_SPECS.destroyer.speed);
+      if (b > 0) speeds.push(SHIP_SPECS.battleship.speed);
+      let minSpeed = Math.min(...speeds);
+      if (STATE.unlockedTechs.has('ion_engine')) minSpeed *= 1.20;
+      if (STATE.resources.energy < 0) minSpeed *= 0.50;
+
+      const hours = dist / minSpeed;
+      const fuelCost = Math.ceil((c * 1.0 + d * 2.5 + b * 6.0) * dist * 0.05);
+
+      if (STATE.resources.isotope < fuelCost) {
+        audio.playAlarm();
+        alert(`Nincs elég Izotóp üzemanyag! Szükséges: ${fuelCost}, van: ${Math.floor(STATE.resources.isotope)}`);
+        return;
+      }
+
+      // Erőforrás és hajó levonása
+      STATE.resources.isotope -= fuelCost;
+      origin.stationedFleet.corvette -= c;
+      origin.stationedFleet.destroyer -= d;
+      origin.stationedFleet.battleship -= b;
+
+      // Új mozgó flotta
+      STATE.movingFleets.push({
+        id: 'fleet_' + Date.now(),
+        owner: 'player',
+        originPlanetId: origin.id,
+        targetPlanetId: target.id,
+        startX: origin.x,
+        startY: origin.y,
+        currentX: origin.x,
+        currentY: origin.y,
+        targetX: target.x,
+        targetY: target.y,
+        speed: minSpeed,
+        totalHours: hours,
+        remainingHours: hours,
+        ships: { corvette: c, destroyer: d, battleship: b }
+      });
+
+      audio.playBeep(520, 0.12);
+      closeModal('modal-dispatch');
+      openPlanetDrawer(origin.id);
+      if (data.recentChat) {
+        STATE.recentChat = data.recentChat;
+        const countBadge = document.getElementById('chat-count-badge');
+        if (countBadge) countBadge.innerText = data.recentChat.length;
+        const drawer = document.getElementById('comms-drawer');
+        if (drawer && !drawer.classList.contains('hidden')) renderChatMessages();
+      }
+
+      updateCommanderBadge();
+      updateHUD();
+      drawGalaxy();
+    }
+
+    // --- CSATASZIMULÁCIÓS MOTOR ÉS COMBAT LOG GENERÁTOR ---
+    function simulateCombat(attackerFleet, defenderFleet, locationName) {
+      let log = [];
+      log.push(`=================== CSATANAPLÓ ===================`);
+      log.push(`Helyszín: ${locationName} | Kör #${STATE.tick}`);
+      log.push(`Résztvevők:`);
+      log.push(`  [TÁMADÓ] Te (${attackerFleet.corvette} Korvett, ${attackerFleet.destroyer} Romboló, ${attackerFleet.battleship} Csatahajó)`);
+      log.push(`  [VÉDŐ] Ellenség (${defenderFleet.corvette} Korvett, ${defenderFleet.destroyer} Romboló, ${defenderFleet.battleship} Csatahajó)`);
+      log.push(`--------------------------------------------------`);
+
+      let attShips = [];
+      for (let i = 0; i < attackerFleet.corvette; i++) attShips.push({ type: 'corvette', hp: 120, sh: 40, maxSh: 40, alive: true });
+      for (let i = 0; i < attackerFleet.destroyer; i++) attShips.push({ type: 'destroyer', hp: 450, sh: 200, maxSh: 200, alive: true });
+      for (let i = 0; i < attackerFleet.battleship; i++) attShips.push({ type: 'battleship', hp: 1600, sh: 800, maxSh: 800, alive: true });
+
+      let defShips = [];
+      for (let i = 0; i < defenderFleet.corvette; i++) defShips.push({ type: 'corvette', hp: 120, sh: 40, maxSh: 40, alive: true });
+      for (let i = 0; i < defenderFleet.destroyer; i++) defShips.push({ type: 'destroyer', hp: 450, sh: 200, maxSh: 200, alive: true });
+      for (let i = 0; i < defenderFleet.battleship; i++) defShips.push({ type: 'battleship', hp: 1600, sh: 800, maxSh: 800, alive: true });
+
+      let round = 1;
+      while (round <= 5 && attShips.some(s => s.alive) && defShips.some(s => s.alive)) {
+        log.push(`FORDULÓ ${round}:`);
+
+        // Támadó tüzel
+        let attDodges = 0;
+        let defCasualties = 0;
+        attShips.filter(s => s.alive).forEach(att => {
+          const targets = defShips.filter(s => s.alive);
+          if (targets.length === 0) return;
+          const target = targets[Math.floor(Math.random() * targets.length)];
+
+          // Találati képlet
+          let hitChance = SHIP_SPECS[att.type].acc - SHIP_SPECS[target.type].eva;
+          if (target.type === 'corvette' && att.type === 'battleship') hitChance -= 0.40; // Zavarómező
+          hitChance = Math.max(0.10, Math.min(0.95, hitChance));
+
+          if (Math.random() > hitChance) {
+            attDodges++;
+            return;
+          }
+
+          let dmg = SHIP_SPECS[att.type].dmg;
+          if (STATE.resources.energy < 0) dmg *= 0.5;
+
+          if (target.sh >= dmg) target.sh -= dmg;
+          else {
+            target.hp -= (dmg - target.sh);
+            target.sh = 0;
+            if (target.hp <= 0) { target.alive = false; defCasualties++; }
+          }
+        });
+
+        // Védő tüzel
+        let defDodges = 0;
+        let attCasualties = 0;
+        defShips.filter(s => s.alive).forEach(def => {
+          const targets = attShips.filter(s => s.alive);
+          if (targets.length === 0) return;
+          const target = targets[Math.floor(Math.random() * targets.length)];
+
+          let hitChance = SHIP_SPECS[def.type].acc - SHIP_SPECS[target.type].eva;
+          if (target.type === 'corvette' && def.type === 'battleship') hitChance -= 0.40;
+          hitChance = Math.max(0.10, Math.min(0.95, hitChance));
+
+          if (Math.random() > hitChance) {
+            defDodges++;
+            return;
+          }
+
+          let dmg = SHIP_SPECS[def.type].dmg;
+          if (target.sh >= dmg) target.sh -= dmg;
+          else {
+            target.hp -= (dmg - target.sh);
+            target.sh = 0;
+            if (target.hp <= 0) { target.alive = false; attCasualties++; }
+          }
+        });
+
+        if (defDodges > 0) log.push(` • Saját Zavarómező: ${defDodges} ellenséges lövedéket térített el.`);
+        if (attCasualties > 0) log.push(` • Ellenséges tüzérség megsemmisített ${attCasualties} saját hajót.`);
+        if (defCasualties > 0) log.push(` • Saját tüzérséged megsemmisített ${defCasualties} ellenséges hajót.`);
+
+        // Romboló pajzs-szinkronizáció
+        const attDestroyers = attShips.filter(s => s.alive && s.type === 'destroyer').length;
+        if (attDestroyers >= 3) {
+          let regen = 0;
+          attShips.filter(s => s.alive).forEach(s => {
+            const missing = s.maxSh - s.sh;
+            if (missing > 0) { s.sh += missing * 0.15; regen += missing * 0.15; }
+          });
+          log.push(` • Rombolóid Pajzs-szinkronizációja visszatöltött ${Math.round(regen)} pajzsot.`);
+        }
+
+        round++;
+      }
+
+      const attAlive = attShips.filter(s => s.alive).length;
+      const defAlive = defShips.filter(s => s.alive).length;
+
+      let won = false;
+      log.push(`--------------------------------------------------`);
+      if (attAlive > 0 && defAlive === 0) {
+        won = true;
+        log.push(`EREDMÉNY: TELJES GYŐZELEM! Az ellenséges flotta megsemmisült.`);
+        audio.playVictory();
+      } else if (defAlive > 0 && attAlive === 0) {
+        log.push(`EREDMÉNY: VERESÉG! Flottád megsemmisült.`);
+        audio.playAlarm();
+      } else {
+        log.push(`EREDMÉNY: DÖNTETLEN / TAKTIKAI MEGTORPANÁS.`);
+      }
+
+      // Zsákmány
+      const salvageMetal = Math.round(defenderFleet.corvette * 12 + defenderFleet.destroyer * 44 + defenderFleet.battleship * 160);
+      const salvageIso = Math.round(defenderFleet.corvette * 1 + defenderFleet.destroyer * 4 + defenderFleet.battleship * 16);
+      if (won) {
+        STATE.resources.metal += salvageMetal;
+        STATE.resources.isotope += salvageIso;
+        log.push(`RONCSMENTÉS: +${salvageMetal} Fém, +${salvageIso} Izotóp zsákmányolva.`);
+      }
+      log.push(`==================================================`);
+
+      const logText = log.join('\n');
+      STATE.combatLogsHistory.unshift({ tick: STATE.tick, text: logText, won });
+      document.getElementById('log-badge').classList.remove('hidden');
+
+      showCombatLogModal(logText);
+      return { won, survivingAttacker: {
+        corvette: attShips.filter(s => s.alive && s.type === 'corvette').length,
+        destroyer: attShips.filter(s => s.alive && s.type === 'destroyer').length,
+        battleship: attShips.filter(s => s.alive && s.type === 'battleship').length
+      }};
+    }
+
+    function showCombatLogModal(text) {
+      document.getElementById('combat-log-content').innerText = text;
+      document.getElementById('modal-combat-log').classList.remove('hidden');
+    }
+
+    // --- TICK LÉPTETÉS (+1 ÓRA SZIMULÁCIÓ) ---
+    async function advanceTick() {
+      if (SERVER_ONLINE) {
+        try {
+          const res = await fetch(`${API_BASE}/api/tick`, { method: 'POST' });
+          if (res.ok) {
+            audio.playBeep(980, 0.08);
+            await checkServerConnection();
+            if (document.getElementById('planet-drawer').classList.contains('hidden') === false) {
+              openPlanetDrawer(STATE.selectedPlanetId);
+            }
+            return;
+          }
+        } catch(e) {}
+      }
+
+      STATE.tick++;
+      document.getElementById('current-tick').innerText = STATE.tick;
+      audio.playBeep(980, 0.08);
+
+      // 1. Gazdaság: Termelés jóváírása
+      let netMetal = 0;
+      let netEnergy = 0;
+      STATE.planets.filter(p => p.owner === 'player').forEach(p => {
+        let m = p.baseMetal;
+        if (STATE.unlockedTechs.has('deep_mining')) m *= 1.25;
+        netMetal += m;
+        netEnergy += p.baseEnergy;
+      });
+
+      // Upkeep levonások
+      let totalUpkeep = 0;
+      STATE.planets.filter(p => p.owner === 'player').forEach(p => {
+        totalUpkeep += p.stationedFleet.corvette * SHIP_SPECS.corvette.upkeep;
+        totalUpkeep += p.stationedFleet.destroyer * SHIP_SPECS.destroyer.upkeep;
+        totalUpkeep += p.stationedFleet.battleship * SHIP_SPECS.battleship.upkeep;
+      });
+      STATE.movingFleets.filter(f => f.owner === 'player').forEach(f => {
+        totalUpkeep += f.ships.corvette * SHIP_SPECS.corvette.upkeep;
+        totalUpkeep += f.ships.destroyer * SHIP_SPECS.destroyer.upkeep;
+        totalUpkeep += f.ships.battleship * SHIP_SPECS.battleship.upkeep;
+      });
+
+      netEnergy -= totalUpkeep;
+      STATE.resources.metal += netMetal;
+      STATE.resources.energy += netEnergy;
+      STATE.resources.data += 10;
+      STATE.resources.isotope += 3;
+
+      // 2. Mozgó flották léptetése
+      const remainingFleets = [];
+      for (const fleet of STATE.movingFleets) {
+        fleet.remainingHours -= 1;
+        const progress = 1 - (fleet.remainingHours / fleet.totalHours);
+
+        if (fleet.remainingHours <= 0) {
+          // Flotta célba ért!
+          fleet.currentX = fleet.targetX;
+          fleet.currentY = fleet.targetY;
+          const targetPlanet = STATE.planets.find(x => x.id === fleet.targetPlanetId);
+
+          if (targetPlanet) {
+            if (targetPlanet.owner === 'player') {
+              // Saját bolygó: flotta egyesítés
+              targetPlanet.stationedFleet.corvette += fleet.ships.corvette;
+              targetPlanet.stationedFleet.destroyer += fleet.ships.destroyer;
+              targetPlanet.stationedFleet.battleship += fleet.ships.battleship;
+            } else if (targetPlanet.owner === 'neutral') {
+              // Semleges bolygó: azonnali kolonizáció
+              targetPlanet.owner = 'player';
+              targetPlanet.stationedFleet = { ...fleet.ships };
+              audio.playVictory();
+              alert(`KOLONIZÁCIÓ SIKERES! ${targetPlanet.name} immár a birodalmad része.`);
+            } else if (targetPlanet.owner === 'enemy') {
+              // Ellenséges bolygó: Harc szimuláció!
+              const battleResult = simulateCombat(fleet.ships, targetPlanet.stationedFleet, targetPlanet.name);
+              if (battleResult.won) {
+                targetPlanet.owner = 'player';
+                targetPlanet.stationedFleet = battleResult.survivingAttacker;
+              } else {
+                targetPlanet.stationedFleet = { corvette: 1, destroyer: 2, battleship: 1 };
+              }
+            }
+          }
+        } else {
+          // Menetben van
+          fleet.currentX = fleet.startX + (fleet.targetX - fleet.startX) * Math.min(1, Math.max(0, progress));
+          fleet.currentY = fleet.startY + (fleet.targetY - fleet.startY) * Math.min(1, Math.max(0, progress));
+          remainingFleets.push(fleet);
+        }
+      }
+      STATE.movingFleets = remainingFleets;
+
+      updateHUD();
+      if (document.getElementById('planet-drawer').classList.contains('hidden') === false) {
+        openPlanetDrawer(STATE.selectedPlanetId);
+      }
+      drawGalaxy();
+    }
+
+    // --- AUTO-TICK GYORSÍTOTT DEMÓ MÓD ---
+    function toggleAutoTick() {
+      STATE.autoTickActive = !STATE.autoTickActive;
+      const btn = document.getElementById('btn-auto-tick');
+      const icon = document.getElementById('auto-tick-icon');
+
+      if (STATE.autoTickActive) {
+        btn.classList.add('bg-cyan-800', 'text-cyan-200');
+        icon.innerText = '⏸';
+        STATE.autoTickTimer = setInterval(advanceTick, 3000); // 3 mp / óra tick
+      } else {
+        btn.classList.remove('bg-cyan-800', 'text-cyan-200');
+        icon.innerText = '▶';
+        clearInterval(STATE.autoTickTimer);
+      }
+    }
+
+    // --- TECHNOLÓGIA FELOLDÁS ÉS KUTATÁSI FA ---
+    function openTechModal() {
+      openTechTreeModal();
+    }
+
+    function openTechTreeModal() {
+      audio.playSelect();
+      renderTechTree();
+      document.getElementById('modal-tech').classList.remove('hidden');
+    }
+
+    function renderTechTree() {
+      if (!STATE.techTree) return;
+      const dataEl = document.getElementById('tech-modal-data');
+      const isoEl = document.getElementById('tech-modal-iso');
+      if (dataEl) dataEl.innerText = Math.floor(STATE.resources.data);
+      if (isoEl) isoEl.innerText = Math.floor(STATE.resources.isotope);
+
+      // 1. Aktív Kutatási Sor Banner kiértékelése
+      const bannerEl = document.getElementById('active-research-banner');
+      if (bannerEl) {
+        if (STATE.activeResearch) {
+          const act = STATE.activeResearch;
+          const techSpec = (STATE.techTree && STATE.techTree[act.tech_id]) || { name: act.tech_id, icon: '🔬', duration_ticks: act.duration_ticks };
+          const pct = Math.round((act.progress || 0) * 100);
+          const remaining = act.remaining_ticks !== undefined ? act.remaining_ticks : Math.max(0, act.finish_tick - STATE.tick);
+          bannerEl.innerHTML = `
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 bg-cyan-950/40 border border-cyan-500/60 rounded-lg p-2.5 shadow-md shadow-cyan-950/40">
+              <div class="flex items-center gap-2.5">
+                <span class="text-2xl">${techSpec.icon || '🔬'}</span>
+                <div>
+                  <div class="flex items-center gap-2">
+                    <span class="text-[9px] font-bold text-cyan-300 uppercase tracking-wider bg-cyan-900/80 px-1.5 py-0.5 rounded border border-cyan-700 animate-pulse">FOLYAMATBAN LÉVŐ KUTATÁS</span>
+                    <span class="text-xs font-bold text-white">${techSpec.name}</span>
+                  </div>
+                  <div class="text-[10px] text-slate-300 mt-0.5">
+                    Várható befejezés: <b class="text-cyan-300 font-mono">#${act.finish_tick}. kör</b> • Hátralévő idő: <b class="text-amber-400 font-mono">${remaining} kör</b> (összidő: ${act.duration_ticks} kör)
+                  </div>
+                </div>
+              </div>
+              <div class="w-full sm:w-56 flex flex-col justify-center">
+                <div class="flex justify-between text-[9px] font-mono text-cyan-300 mb-1">
+                  <span>LABOR KAPACITÁS: 1/1</span>
+                  <span>${pct}% KÉSZ</span>
+                </div>
+                <div class="w-full bg-slate-900 h-2.5 rounded-full overflow-hidden border border-cyan-800">
+                  <div class="bg-gradient-to-r from-cyan-500 via-sky-400 to-emerald-400 h-full rounded-full transition-all duration-500" style="width: ${Math.max(6, pct)}%"></div>
+                </div>
+              </div>
+            </div>
+          `;
+        } else {
+          bannerEl.innerHTML = `
+            <div class="flex items-center justify-between bg-slate-900/60 border border-slate-800 rounded-lg p-2 text-slate-400 text-xs">
+              <div class="flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+                <span>Központi Kutatóbázis: <b class="text-emerald-400">KÉSZENLÉTBEN</b>. Válassz egy szabad projektet a fejlesztés megkezdéséhez.</span>
+              </div>
+              <span class="text-[10px] text-slate-500 font-mono hidden sm:inline">1 egyidejű kutatás / birodalom</span>
+            </div>
+          `;
+        }
+      }
+
+      // 2. A 4 Fő Kutatási Ág Definiálása
+      const branches = [
+        { id: 'economy', name: 'Ipar & Anyag', icon: '⛏️', color: 'amber' },
+        { id: 'energy', name: 'Energia & Reaktorok', icon: '⚡', color: 'yellow' },
+        { id: 'military', name: 'Haditechnika & Fegyver', icon: '🎯', color: 'red' },
+        { id: 'propulsion', name: 'Hajtómű & Logisztika', icon: '🚀', color: 'cyan' }
+      ];
+
+      const grid = document.getElementById('tech-branches-grid');
+      if (!grid) return;
+
+      grid.innerHTML = branches.map(branch => {
+        const branchTechs = Object.values(STATE.techTree).filter(t => t.branch === branch.id).sort((a,b) => a.tier - b.tier);
+
+        return `
+          <div class="bg-slate-900/90 border border-slate-800 rounded-lg p-3 flex flex-col gap-2.5">
+            <div class="flex items-center gap-2 border-b border-slate-800 pb-2">
+              <span class="text-base">${branch.icon}</span>
+              <span class="font-bold text-${branch.color}-400 text-xs uppercase tracking-wider">${branch.name}</span>
+            </div>
+
+            <div class="space-y-3 flex-1">
+              ${branchTechs.map((tech, idx) => {
+                const isUnlocked = STATE.researchedTechs && STATE.researchedTechs.includes(tech.id);
+                const isCurrentActive = STATE.activeResearch && STATE.activeResearch.tech_id === tech.id;
+                const prereqs = tech.prerequisites || (tech.prerequisite ? [tech.prerequisite] : []);
+                const missingPrereqs = prereqs.filter(pId => !(STATE.researchedTechs && STATE.researchedTechs.includes(pId)));
+                const prereqsMet = missingPrereqs.length === 0;
+                const canAfford = STATE.resources.data >= tech.cost_data && STATE.resources.isotope >= tech.cost_isotope;
+                const isQueueBusy = !!STATE.activeResearch;
+
+                let cardClass = "p-2.5 rounded border transition-all relative ";
+                let buttonHtml = "";
+
+                if (isUnlocked) {
+                  cardClass += "bg-emerald-950/40 border-emerald-600/80 shadow-md shadow-emerald-950";
+                  buttonHtml = `<div class="w-full text-center py-1 rounded bg-emerald-900/60 border border-emerald-600 text-emerald-300 font-bold text-[10px]">✓ KIFEJLESZTVE</div>`;
+                } else if (isCurrentActive) {
+                  cardClass += "bg-cyan-950/60 border-cyan-400 shadow-lg shadow-cyan-950/80 animate-pulse";
+                  const rem = STATE.activeResearch.remaining_ticks !== undefined ? STATE.activeResearch.remaining_ticks : Math.max(0, STATE.activeResearch.finish_tick - STATE.tick);
+                  buttonHtml = `<div class="w-full text-center py-1 rounded bg-cyan-900/80 border border-cyan-400 text-cyan-200 font-bold text-[10px]">⏳ KUTATÁS ALATT (${rem} KÖR VAN HÁTRA)</div>`;
+                } else if (!prereqsMet) {
+                  cardClass += "bg-slate-950/40 border-slate-800 opacity-60";
+                  const missingNames = missingPrereqs.map(p => STATE.techTree[p]?.name || p).join(', ');
+                  buttonHtml = `<button disabled class="w-full py-1 rounded bg-slate-900 text-slate-500 text-[9px] border border-slate-800 cursor-not-allowed">🔒 Zárolva (${missingNames})</button>`;
+                } else if (isQueueBusy) {
+                  cardClass += "bg-slate-950/70 border-slate-700";
+                  buttonHtml = `<button disabled class="w-full py-1 rounded bg-slate-900 text-slate-400 text-[10px] border border-slate-800 cursor-not-allowed">⏳ Kutatóbázis foglalt</button>`;
+                } else {
+                  cardClass += "bg-slate-950/90 border-cyan-500/60 shadow-lg shadow-cyan-950/50 hover:border-cyan-400";
+                  if (canAfford) {
+                    buttonHtml = `<button onclick="researchTech('${tech.id}')" class="w-full py-1.5 rounded bg-cyan-600 hover:bg-cyan-500 active:scale-95 text-white font-bold text-[10px] transition-all shadow-md shadow-cyan-950">⚡ INDÍTÁS (${tech.duration_ticks} KÖR)</button>`;
+                  } else {
+                    buttonHtml = `<button disabled class="w-full py-1 rounded bg-slate-800/80 text-amber-400/80 text-[10px] border border-slate-700 cursor-not-allowed">Kevés nyersanyag</button>`;
+                  }
+                }
+
+                // Előfeltételek vizuális listája
+                let prereqHtml = '';
+                if (prereqs.length > 0) {
+                  prereqHtml = `
+                    <div class="mb-2 pt-1 border-t border-slate-800/60">
+                      <div class="text-[8px] text-slate-400 font-bold uppercase tracking-wider mb-1">Előfeltételek:</div>
+                      <div class="flex flex-wrap gap-1">
+                        ${prereqs.map(pId => {
+                          const pTech = STATE.techTree[pId];
+                          const pName = pTech ? pTech.name : pId;
+                          const met = STATE.researchedTechs && STATE.researchedTechs.includes(pId);
+                          return `<span class="text-[8px] px-1 py-0.5 rounded font-mono ${met ? 'bg-emerald-950 text-emerald-300 border border-emerald-800' : 'bg-red-950/80 text-red-300 border border-red-800'}">${met ? '✓' : '✗'} ${pName}</span>`;
+                        }).join('')}
+                      </div>
+                    </div>
+                  `;
+                }
+
+                return `
+                  ${idx > 0 ? '<div class="text-center text-slate-600 -my-1.5 text-xs font-bold leading-none">↓</div>' : ''}
+                  <div class="${cardClass}">
+                    <div class="flex items-center justify-between gap-1 mb-1">
+                      <div class="font-bold text-white text-[11px] flex items-center gap-1.5">
+                        <span>${tech.icon}</span>
+                        <span>${tech.name}</span>
+                      </div>
+                      <div class="flex items-center gap-1">
+                        <span class="text-[9px] px-1 py-0.2 rounded font-mono bg-cyan-950 text-cyan-300 border border-cyan-800">⏱️ ${tech.duration_ticks} kör</span>
+                        <span class="text-[9px] px-1 py-0.2 rounded font-mono ${isUnlocked ? 'bg-emerald-950 text-emerald-300 border border-emerald-700' : 'bg-slate-800 text-slate-400'}">T${tech.tier}</span>
+                      </div>
+                    </div>
+                    <div class="text-slate-300 text-[10px] mb-2 leading-tight">${tech.effect_desc}</div>
+                    ${prereqHtml}
+                    <div class="flex items-center justify-between text-[9px] text-slate-400 mb-2 border-t border-slate-800/80 pt-1">
+                      <span>Költség:</span>
+                      <span class="${canAfford || isUnlocked ? 'text-cyan-300' : 'text-red-400'} font-bold">${tech.cost_data} DAT • ${tech.cost_isotope} ISO</span>
+                    </div>
+                    ${buttonHtml}
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    async function researchTech(techId) {
+      if (SERVER_ONLINE) {
+        try {
+          const res = await fetch(`${API_BASE}/api/research-tech`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ techId })
+          });
+          const data = await res.json();
+          if (res.ok && data.success) {
+            audio.playSelect();
+            await checkServerConnection();
+            renderTechTree();
+            return;
+          } else {
+            alert(data.error || "Hiba történt a kutatás során!");
+          }
+        } catch(e) {
+          console.error(e);
+        }
+      }
+    }
+
+    // --- 3 FŐ BOSS CITADELLA VEZÉRLÉS ---
+    function selectBoss(bossId) {
+      STATE.selectedBossId = bossId;
+      renderBossModal();
+    }
+
+    function openBossModal() {
+      audio.playSelect();
+      if (!STATE.selectedBossId) STATE.selectedBossId = 'boss_1';
+      renderBossModal();
+      document.getElementById('modal-boss').classList.remove('hidden');
+    }
+
+    function renderBossModal() {
+      const selectedId = STATE.selectedBossId || 'boss_1';
+      const allBosses = STATE.allBosses || [];
+      const currentBoss = allBosses.find(b => (b.bossId || b.id) === selectedId) || STATE.boss || {
+        bossId: selectedId,
+        name: selectedId === 'boss_1' ? 'Cygnus Bastion (Ősi Előőrs)' : (selectedId === 'boss_2' ? 'Void Citadel (Üresség Fellegvár)' : 'Omega Leviatán (Kronos-Leviatán)'),
+        hull: selectedId === 'boss_1' ? 2500 : (selectedId === 'boss_2' ? 4500 : 6000),
+        max_hull: selectedId === 'boss_1' ? 2500 : (selectedId === 'boss_2' ? 4500 : 6000),
+        shield: selectedId === 'boss_1' ? 1200 : (selectedId === 'boss_2' ? 2200 : 3000),
+        max_shield: selectedId === 'boss_1' ? 1200 : (selectedId === 'boss_2' ? 2200 : 3000),
+        damage: selectedId === 'boss_1' ? 250 : (selectedId === 'boss_2' ? 420 : 550),
+        state: 'dormant'
+      };
+
+      const prereqsByBoss = STATE.bossPrereqsByBoss || {};
+      const prereqs = prereqsByBoss[selectedId] || STATE.bossPrereqs || { canAttack: false, criteria: {} };
+
+      // Fülek (Tabs) vizuális frissítése
+      ['boss_1', 'boss_2', 'boss_3'].forEach(bId => {
+        const tabEl = document.getElementById('boss-tab-' + bId);
+        const badgeEl = document.getElementById('boss-tab-badge-' + bId);
+        const bObj = allBosses.find(b => (b.bossId || b.id) === bId);
+        const bPrereq = prereqsByBoss[bId];
+
+        if (tabEl) {
+          if (bId === selectedId) {
+            tabEl.className = 'flex-1 py-1.5 px-2 rounded font-mono text-[11px] font-bold border transition-all text-center flex items-center justify-center gap-1.5 bg-red-950/90 border-red-500 text-white shadow-md shadow-red-950';
+          } else {
+            tabEl.className = 'flex-1 py-1.5 px-2 rounded font-mono text-[11px] font-bold border transition-all text-center flex items-center justify-center gap-1.5 bg-slate-900/70 border-slate-800 text-slate-400 hover:text-slate-200';
+          }
+        }
+
+        if (badgeEl) {
+          if (bObj && bObj.state === 'defeated') {
+            badgeEl.className = 'text-[9px] px-1 py-0.2 rounded bg-emerald-950 text-emerald-300 border border-emerald-700';
+            badgeEl.innerText = 'LEGYŐZVE';
+          } else if (bPrereq && bPrereq.canAttack) {
+            badgeEl.className = 'text-[9px] px-1 py-0.2 rounded bg-amber-950 text-amber-300 border border-amber-700 animate-pulse';
+            badgeEl.innerText = 'KÉSZ';
+          } else {
+            badgeEl.className = 'text-[9px] px-1 py-0.2 rounded bg-slate-950 text-slate-500 border border-slate-800';
+            badgeEl.innerText = 'ZÁRVA';
+          }
+        }
+      });
+
+      // Fejléc információk
+      const headerTitle = document.getElementById('boss-header-title');
+      if (headerTitle) headerTitle.innerText = currentBoss.name;
+
+      const headerDesc = document.getElementById('boss-header-desc');
+      if (headerDesc) {
+        if (selectedId === 'boss_1') headerDesc.innerText = '1. Fő Boss: Ősi felderítő állomás a Cygnus-peremen • Alacsonyabb belépési küszöb.';
+        else if (selectedId === 'boss_2') headerDesc.innerText = '2. Fő Boss: Mélyűri Precursor fellegvár • Jelentős védőpajzsok és fegyverzet.';
+        else headerDesc.innerText = '3. Fő Boss: Végzetes Szingularitás Kolosszus • A végső űruralkodás kulcsa!';
+      }
+
+      // Hull & Shield csíkok
+      const hullPct = Math.round((currentBoss.hull / (currentBoss.max_hull || 1)) * 100);
+      const shieldPct = Math.round((currentBoss.shield / (currentBoss.max_shield || 1)) * 100);
+
+      const shieldText = document.getElementById('boss-shield-text');
+      const shieldBar = document.getElementById('boss-shield-bar');
+      if (shieldText) shieldText.innerText = `${Math.round(currentBoss.shield).toLocaleString()} / ${(currentBoss.max_shield||0).toLocaleString()}`;
+      if (shieldBar) shieldBar.style.width = `${Math.max(0, shieldPct)}%`;
+
+      const hullText = document.getElementById('boss-hull-text');
+      const hullBar = document.getElementById('boss-hull-bar');
+      if (hullText) hullText.innerText = `${Math.round(currentBoss.hull).toLocaleString()} / ${(currentBoss.max_hull||0).toLocaleString()}`;
+      if (hullBar) hullBar.style.width = `${Math.max(0, hullPct)}%`;
+
+      const statDmg = document.getElementById('boss-stat-dmg');
+      if (statDmg) statDmg.innerText = `${currentBoss.damage || 400} DMG`;
+      const statReg = document.getElementById('boss-stat-reg');
+      if (statReg) statReg.innerText = selectedId === 'boss_1' ? '+150 Pajzs/kör' : (selectedId === 'boss_2' ? '+250 Pajzs/kör' : '+400 Pajzs/kör');
+
+      const statusPill = document.getElementById('boss-status-pill');
+      if (statusPill) {
+        if (currentBoss.state === 'defeated') {
+          statusPill.className = 'text-[9px] px-1.5 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-700';
+          statusPill.innerText = 'SEMLEGESÍTVE (LEGYŐZVE)';
+        } else {
+          statusPill.className = 'text-[9px] px-1.5 py-0.5 rounded bg-red-950 text-red-300 border border-red-700 animate-pulse';
+          statusPill.innerText = 'AKTÍV FENYEGETÉS';
+        }
+      }
+
+      // Kritériumlista renderelése (5 feltétel: glory, artifacts, tech, fleet, resources)
+      const listEl = document.getElementById('boss-criteria-list');
+      if (listEl && prereqs.criteria) {
+        const critKeys = ['glory', 'artifacts', 'tech', 'fleet', 'resources'];
+        listEl.innerHTML = critKeys.map(key => {
+          const c = prereqs.criteria[key];
+          if (!c) return '';
+          return `
+            <div class="flex items-start gap-3 p-2.5 rounded border ${c.met ? 'bg-emerald-950/30 border-emerald-700/60' : 'bg-red-950/30 border-red-900/60'}">
+              <div class="text-sm mt-0.5">${c.met ? '✅' : '🔒'}</div>
+              <div class="flex-1">
+                <div class="flex justify-between items-center">
+                  <span class="font-bold ${c.met ? 'text-emerald-300' : 'text-red-300'} text-[11px]">${c.title}</span>
+                  <span class="text-[9px] font-mono px-1.5 py-0.2 rounded ${c.met ? 'bg-emerald-900 text-emerald-200' : 'bg-red-900/80 text-red-200'}">${c.met ? 'TELJESÍTVE' : 'HIÁNYZIK'}</span>
+                </div>
+                <div class="text-[10px] text-slate-300 mt-0.5">${c.details}</div>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+
+      // Támadás gomb állapot
+      const btn = document.getElementById('btn-attack-boss');
+      const btnTxt = document.getElementById('btn-attack-boss-text');
+      const costText = selectedId === 'boss_1' ? '50 ISO + 100 DAT' : (selectedId === 'boss_2' ? '100 ISO + 200 DAT' : '150 ISO + 300 DAT');
+
+      if (btn && btnTxt) {
+        if (currentBoss.state === 'defeated') {
+          btn.disabled = true;
+          btn.className = 'w-full sm:w-auto bg-emerald-900 text-emerald-200 font-bold px-4 py-2 rounded cursor-not-allowed border border-emerald-600';
+          btnTxt.innerText = '✓ CITADELLA LEGYŐZVE';
+        } else if (prereqs.canAttack) {
+          btn.disabled = false;
+          btn.className = 'w-full sm:w-auto bg-red-600 hover:bg-red-500 active:scale-95 text-white font-bold px-4 py-2 rounded border border-red-400 shadow-lg shadow-red-950 animate-pulse flex items-center justify-center gap-2 cursor-pointer';
+          btnTxt.innerText = `🚨 TÁMADÁS INDÍTÁSA (${costText})`;
+        } else {
+          btn.disabled = true;
+          btn.className = 'w-full sm:w-auto bg-slate-900 text-slate-500 font-bold px-4 py-2 rounded border border-slate-800 cursor-not-allowed flex items-center justify-center gap-2';
+          btnTxt.innerText = '🔒 UGRÓFOLYOSÓ ZÁROLVA';
+        }
+      }
+    }
+
+    async function launchBossAttack() {
+      const selectedId = STATE.selectedBossId || 'boss_1';
+      const allBosses = STATE.allBosses || [];
+      const currentBoss = allBosses.find(b => (b.bossId || b.id) === selectedId) || { name: 'Citadella' };
+
+      if (!confirm(`BIZTOSAN MEGINDÍTOD A TÁMADÁST A(Z) ${currentBoss.name.toUpperCase()} ELLEN?\n\nA harc megkezdésével a szükséges ugrási költség levonásra kerül!`)) return;
+
+      try {
+        const res = await fetch(`${API_BASE}/api/attack-boss`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ bossId: selectedId })
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          closeModal('modal-boss');
+          await checkServerConnection();
+          if (data.won) {
+            audio.playVictory();
+            if (selectedId === 'boss_3' || (data.bossState && data.bossState.allDefeated)) {
+              document.getElementById('vic-tick').innerText = '#' + STATE.tick;
+              document.getElementById('modal-victory').classList.remove('hidden');
+            } else {
+              alert(`🏆 GYŐZELEM!\nA(z) ${currentBoss.name} sikeresen elesett! Jelentős dicsőség pontokat szereztél a birodalmadnak!`);
+            }
+          } else {
+            audio.playAlarm();
+            showCombatLogModal(data.combatLog);
+          }
+        } else {
+          alert(data.error || "Hiba történt a támadás során!");
+        }
+      } catch(e) {
+        console.error(e);
+        alert("Szerver hiba történt a támadás indításakor!");
+      }
+    }
+
+    // --- HAJÓDOKK ÉS TESTRESZABÁS (SHIPYARD REFIT) ---
+        const SHIP_LORE = {
+      scout: {
+        name: 'FELDERÍTŐ SZONDA',
+        symbol: '⌖',
+        image: '/assets/scout_probe.jpg',
+        role: 'Könnyű autonóm felderítő drón tachion szenzormaggal és EMP zavarással. Nem tud harcolni, de szupergyorsan derít fel szektorokat és gyengíti az ellenség pontosságát.'
+      },
+      interceptor: {
+        name: 'GYORS ELFOGÓVADÁSZ',
+        symbol: '⚡',
+        image: '/assets/interceptor.svg',
+        role: 'Kicsi és villámgyors (10.0/h) csapásmérő elfogóvadász. A legkevesebb kör az utazása, az 1. harci körben +25% Villámcsapás sebzéssel és kiemelkedő pontossággal.'
+      },
+      corvette: {
+        name: 'KÖNNYŰ KORVETT',
+        symbol: '▲',
+        image: '/assets/light_corvette.jpg',
+        role: 'Agilis, nagy manőverezőképességű lopakodó vadászhajó kinetikus gépágyúkkal és plazmafúvókákkal. Elektronikai zavarómezejével (25% kitérés) hatékonyan kitér a csatahajók elől.'
+      },
+      freighter: {
+        name: 'NEHÉZ TEHERSZÁLLÍTÓ',
+        symbol: '📦',
+        image: '/assets/freighter.svg',
+        role: 'Ipari logisztikai és nyersanyagszállító hajó önvédelmi tüzérséggel. Hatalmas raktérrel bír és a csaták után +50% extra roncsmentési zsákmányt (Fém & Izotóp) biztosít.'
+      },
+      colony_ship: {
+        name: 'KOLÓNIAHAJÓ',
+        symbol: '⚲',
+        image: '/assets/colony_ark.jpg',
+        role: 'Kolosszális generációs telepes bárka zárt bioszférákkal. Feláldozza magát új világok birodalmi kolonizálásakor, és telepítéskor azonnali kezdő nyersanyagbónuszt ad.'
+      },
+      frigate: {
+        name: 'LOPAKODÓ TORPEDÓ FREGATT',
+        symbol: '🗡️',
+        image: '/assets/frigate.svg',
+        role: 'Középkategóriás orgyilkos hadihajó kvantum-torpedókkal. Különleges képessége, hogy a sebzés 30%-át az ellenséges pajzsot megkerülve közvetlenül a hajótestbe (Hull) juttatja!'
+      },
+      destroyer: {
+        name: 'ROMBOLÓ CIRKÁLÓ',
+        symbol: '◆',
+        image: '/assets/destroyer_cruiser.jpg',
+        role: 'Ék alakú nehézfegyverzetű vonalcirkáló Gauss-ágyúkkal és rakétasilókkal. Taktikai pajzs-szinkronizációja (>=3 db esetén) folyamatosan regenerálja a flotta védőmezőit.'
+      },
+      heavy_destroyer: {
+        name: 'OSTROM-ROMBOLÓ',
+        symbol: '💥',
+        image: '/assets/heavy_destroyer.svg',
+        role: 'Brutális nehéz romboló: gigantikus tűzerő (260 DMG) és páncélzat (950 HP), de lassú és rendkívül sérülékeny vékony pajzzsal rendelkezik (+50% pajzssérülés). Tripla ostromsebzés!'
+      },
+      cruiser: {
+        name: 'DRÓN-HORDOZÓ CIRKÁLÓ',
+        symbol: '🛸',
+        image: '/assets/cruiser.svg',
+        role: 'Flottatámogató hordozó autonóm drónrajokkal és zavarórendszerrel. +15% flotta-szintű védelmet nyújt és 15%-kal gyengíti a támadó ellenség tűzerejét.'
+      },
+      battleship: {
+        name: 'CSATAHAJÓ',
+        symbol: '⬟',
+        image: '/assets/dreadnought_battleship.jpg',
+        role: 'A birodalom legfelsőbb dreadnought hadihajója monumentális gerinc-railgunnal és rétegzett erődpajzsokkal. A flotta ostromökle és megsemmisítő blokádfegyvere.'
+      }
+    };
+
+    STATE.selectedRefitShip = 'corvette';
+    STATE.selectedSubsystemSlot = 'weapon';
+
+    async function openShipyardRefitModal() {
+      audio.playSelect();
+      try {
+        const res = await fetch(`${API_BASE}/api/ship-upgrades`);
+        if (res.ok) {
+          const data = await res.json();
+          STATE.shipSubsystems = data.subsystems;
+          STATE.subsystemHotspots = data.hotspots;
+          STATE.shipUpgradeModules = data.modules;
+          if (data.bonusTables) STATE.bonusTables = data.bonusTables;
+          STATE.shipUpgrades = data.upgrades;
+          STATE.shipUpgradeSlots = data.slots;
+          STATE.slotsByShip = data.slotsByShip;
+          STATE.allShipTypes = data.allShipTypes;
+          if (data.specs) STATE.shipSpecs = data.specs;
+          if (data.player) {
+            STATE.metal = data.player.metal;
+            STATE.energy = data.player.energy;
+            STATE.isotope = data.player.isotope;
+            STATE.dataPoints = data.player.data_points;
+          }
+        }
+      } catch(e) {
+        console.error(e);
+      }
+      renderShipyardRefit();
+      document.getElementById('modal-shipyard-refit').classList.remove('hidden');
+    }
+
+    function selectRefitShipTab(shipType) {
+      STATE.selectedRefitShip = shipType;
+      if (!STATE.selectedSubsystemSlot) STATE.selectedSubsystemSlot = 'weapon';
+      audio.playSelect();
+      renderShipyardRefit();
+    }
+
+    function selectRefitSubsystem(slotKey) {
+      STATE.selectedSubsystemSlot = slotKey;
+      audio.playSelect();
+      renderShipyardRefit();
+    }
+
+    function renderShipyardRefit() {
+      const shipType = STATE.selectedRefitShip || 'corvette';
+      const slotKey = STATE.selectedSubsystemSlot || 'weapon';
+      const lore = SHIP_LORE[shipType] || SHIP_LORE.corvette;
+      const spec = (STATE.shipSpecs && STATE.shipSpecs[shipType]) || {
+        hull: shipType === 'scout' ? 40 : (shipType === 'corvette' ? 120 : (shipType === 'colony_ship' ? 200 : (shipType === 'destroyer' ? 450 : 1600))),
+        shield: shipType === 'scout' ? 0 : (shipType === 'corvette' ? 40 : (shipType === 'colony_ship' ? 50 : (shipType === 'destroyer' ? 200 : 800))),
+        damage: shipType === 'scout' ? 0 : (shipType === 'corvette' ? 35 : (shipType === 'colony_ship' ? 0 : (shipType === 'destroyer' ? 110 : 380))),
+        accuracy: shipType === 'scout' ? 0.5 : (shipType === 'corvette' ? 0.8 : (shipType === 'colony_ship' ? 0.5 : (shipType === 'destroyer' ? 0.75 : 0.65))),
+        evasion: shipType === 'scout' ? 0.5 : (shipType === 'corvette' ? 0.25 : (shipType === 'colony_ship' ? 0.05 : (shipType === 'destroyer' ? 0.10 : 0.0))),
+        speed: shipType === 'scout' ? 8 : (shipType === 'corvette' ? 5 : (shipType === 'colony_ship' ? 3 : (shipType === 'destroyer' ? 3.5 : 2.0)))
+      };
+
+      const allUpgrades = STATE.shipUpgrades || {};
+      const shipLevels = Object.assign({ weapon: 0, hull: 0, shield: 0, engine: 0, avionics: 0 }, allUpgrades[shipType] || {});
+      const totalLevels = Object.values(shipLevels).reduce((sum, lvl) => sum + (lvl || 0), 0);
+      const activeCount = Object.values(shipLevels).filter(lvl => lvl > 0).length;
+      const slots = (STATE.slotsByShip && STATE.slotsByShip[shipType]) || STATE.shipUpgradeSlots || { maxLevelBudget: 10, maxSlots: 5, unlockedSlots: 5, maxCapPercentage: 20, maxTotalCap: 30, totalPossibleLevels: 50, tierReached: 1, explanation: '' };
+      
+      const subsystemsForShip = (STATE.shipSubsystems && STATE.shipSubsystems[shipType]) || {};
+      const hotspotsForShip = (STATE.subsystemHotspots && STATE.subsystemHotspots[shipType]) || {};
+      const selectedSlotDef = subsystemsForShip[slotKey] || subsystemsForShip.weapon || {
+        slotKey: 'weapon',
+        name: 'Fő Fegyverzet',
+        icon: '💥',
+        levels: []
+      };
+      const curLvl = shipLevels[selectedSlotDef.slotKey] || 0;
+
+      // 1. Fülek (Tabs) mind a 10 hajóosztályhoz
+      const tabsEl = document.getElementById('refit-ship-tabs');
+      if (tabsEl) {
+        tabsEl.innerHTML = ALL_SHIPS.map(key => {
+          const l = SHIP_LORE[key] || { symbol: '▲', name: key };
+          const active = key === shipType;
+          const kLevels = allUpgrades[key] || {};
+          const kTotal = Object.values(kLevels).reduce((sum, lvl) => sum + (lvl || 0), 0);
+          const kSlotInfo = (STATE.slotsByShip && STATE.slotsByShip[key]) || slots;
+          const kMax = kSlotInfo.maxTotalCap || 30;
+          return `
+            <button onclick="selectRefitShipTab('${key}')" class="px-2.5 py-1.5 rounded text-xs font-bold font-mono transition-all flex items-center gap-1.5 whitespace-nowrap ${active ? 'bg-cyan-900/90 text-cyan-200 border-2 border-cyan-400 shadow-md shadow-cyan-950/80 scale-105' : 'bg-slate-900/80 text-slate-400 hover:text-slate-200 border border-slate-800'}">
+              <span>${l.symbol}</span>
+              <span>${l.name}</span>
+              <span class="text-[9px] px-1.5 py-0.2 rounded font-mono ${kTotal > 0 ? 'bg-cyan-950 text-cyan-300 border border-cyan-700' : 'bg-slate-950 text-slate-500'}">${kTotal}/${kMax} Szint</span>
+            </button>
+          `;
+        }).join('');
+      }
+
+      // 2. Kapacitás és Szintkeret Csík (Progressive Level Budget)
+      const capBar = document.getElementById('refit-capacity-bar');
+      if (capBar) {
+        const renderBudgetSocket = (tierNum, budgetLimit, pct, tierName) => {
+          const isUnlocked = (slots.maxLevelBudget || 10) >= budgetLimit;
+          const isCurrentTier = (slots.tierReached || 1) === tierNum;
+          if (!isUnlocked) {
+            return `
+              <div class="flex items-center gap-2 bg-slate-950/90 border border-slate-800 rounded px-2.5 py-1 text-slate-500">
+                <span class="text-xs">🔒</span>
+                <div>
+                  <div class="text-[10px] font-bold uppercase tracking-wider">${budgetLimit} Szint (${pct}%)</div>
+                  <div class="text-[9px] text-slate-500">Zárolva (${tierName})</div>
+                </div>
+              </div>
+            `;
+          }
+          return `
+            <div class="flex items-center gap-2 bg-cyan-950/70 border ${isCurrentTier ? 'border-cyan-400 ring-1 ring-cyan-400' : 'border-cyan-700/60'} rounded px-2.5 py-1 text-cyan-300 shadow-sm shadow-cyan-900">
+              <span class="text-xs text-emerald-400 font-bold">✓</span>
+              <div>
+                <div class="text-[10px] font-bold uppercase tracking-wider">${budgetLimit} Szint (${pct}%)</div>
+                <div class="text-[9px] text-emerald-300">Feloldva (${tierName})</div>
+              </div>
+            </div>
+          `;
+        };
+
+        const totalPossible = slots.totalPossibleLevels || 50;
+        const maxCapTotal = slots.maxTotalCap || 30;
+        const t1Budget = Math.round(totalPossible * 0.20);
+        const t2Budget = Math.round(totalPossible * 0.40);
+        const t3Budget = maxCapTotal;
+        const capPercentage = Math.round((totalLevels / totalPossible) * 100);
+
+        capBar.innerHTML = `
+          <div class="flex flex-wrap items-center gap-2.5">
+            ${renderBudgetSocket(1, t1Budget, 20, 'Alap dokk')}
+            ${renderBudgetSocket(2, t2Budget, 40, 'Tier 2 kutatás')}
+            ${renderBudgetSocket(3, t3Budget, 60, 'Tier 3 / Max 60% Plafon')}
+          </div>
+          <div class="flex items-center gap-3">
+            <div class="text-right">
+              <div class="text-[10px] text-slate-400 uppercase tracking-wider">Fejlesztési Keret (${totalPossible}-ből)</div>
+              <div class="text-xs font-bold text-amber-300 font-mono">
+                ${totalLevels} / ${maxCapTotal} Szint (${capPercentage}% / Max 60% Plafon)
+              </div>
+            </div>
+            <div class="w-24 bg-slate-950 h-3 rounded-full overflow-hidden border border-cyan-900 p-0.5">
+              <div class="bg-gradient-to-r from-cyan-500 via-amber-400 to-yellow-400 h-full rounded-full transition-all duration-300" style="width: ${Math.min(100, (totalLevels / maxCapTotal) * 100)}%"></div>
+            </div>
+          </div>
+        `;
+      }
+
+      // 3. Tervrajz Kép & Infók
+      const imgEl = document.getElementById('refit-ship-img');
+      if (imgEl) imgEl.src = lore.image;
+      const nameEl = document.getElementById('refit-ship-name');
+      if (nameEl) nameEl.innerText = `${lore.symbol} ${lore.name}`;
+      const badgeEl = document.getElementById('refit-active-count-badge');
+      if (badgeEl) badgeEl.innerText = `${totalLevels} / ${slots.maxTotalCap || 30} SZINT (${Math.round((totalLevels/(slots.totalPossibleLevels || 50))*100)}% / 60% PLAFON)`;
+      const selSlotBadge = document.getElementById('refit-selected-slot-badge');
+      if (selSlotBadge) selSlotBadge.innerText = `${selectedSlotDef.icon} ${selectedSlotDef.name} (Lv.${curLvl}/10)`;
+
+      // 4. Hotspot Jelölők a Tervrajzon (Mind az 5 alrendszer Lv.0-tól Lv.10-ig)
+      const hotspotsContainer = document.getElementById('refit-hotspots-container');
+      if (hotspotsContainer) {
+        hotspotsContainer.innerHTML = Object.entries(subsystemsForShip).map(([sKey, sDef]) => {
+          const coords = hotspotsForShip[sKey] || { x: 50, y: 50, label: sDef.name };
+          const sLvl = shipLevels[sKey] || 0;
+          const isSelected = (sKey === selectedSlotDef.slotKey);
+          
+          let colorStyle = 'border-slate-700 bg-slate-950/80 text-slate-400';
+          let badgeStyle = 'bg-slate-900 text-slate-500';
+          if (sLvl >= 1 && sLvl <= 3) {
+            colorStyle = 'border-cyan-400 bg-cyan-950/90 text-cyan-200 shadow-md shadow-cyan-950';
+            badgeStyle = 'bg-cyan-900 text-cyan-300 font-bold border border-cyan-700';
+          } else if (sLvl >= 4 && sLvl <= 6) {
+            colorStyle = 'border-purple-400 bg-purple-950/90 text-purple-200 shadow-md shadow-purple-950';
+            badgeStyle = 'bg-purple-900 text-purple-300 font-bold border border-purple-700';
+          } else if (sLvl >= 7 && sLvl <= 9) {
+            colorStyle = 'border-amber-400 bg-amber-950/90 text-amber-200 shadow-lg shadow-amber-950';
+            badgeStyle = 'bg-amber-900 text-amber-300 font-bold border border-amber-600';
+          } else if (sLvl === 10) {
+            colorStyle = 'border-yellow-300 bg-yellow-950/90 text-yellow-200 shadow-xl shadow-yellow-900 ring-2 ring-yellow-400';
+            badgeStyle = 'bg-yellow-900 text-yellow-200 font-bold border border-yellow-500 animate-pulse';
+          }
+
+          return `
+            <div class="absolute -translate-x-1/2 -translate-y-1/2 cursor-pointer z-20 group" style="left: ${coords.x}%; top: ${coords.y}%;" onclick="selectRefitSubsystem('${sKey}')">
+              ${isSelected ? `
+                <div class="absolute -inset-3.5 rounded-full border border-cyan-400/80 animate-ping pointer-events-none"></div>
+                <div class="absolute -inset-1.5 rounded-full border-2 border-cyan-300 pointer-events-none"></div>
+              ` : ''}
+              <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[11px] font-mono font-bold backdrop-blur-md shadow-xl transition-all duration-200 group-hover:scale-110 group-active:scale-95 ${isSelected ? 'ring-2 ring-cyan-400 ' + colorStyle : colorStyle}">
+                <span class="text-xs">${sDef.icon}</span>
+                <span class="hidden md:inline">${sDef.name.split(' ')[0]}</span>
+                <span class="text-[9px] px-1.5 py-0.2 rounded font-mono ${badgeStyle}">Lv.${sLvl}/10</span>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+
+      // 5. Kijelölt Alrendszer Vezérlő Panel (Subsystem Controller - 10 Szint)
+      const ctrlEl = document.getElementById('refit-selected-controller');
+      if (ctrlEl) {
+        const pipsHtml = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(lvlNum => {
+          if (curLvl >= lvlNum) {
+            let pipColor = 'bg-cyan-400 border-cyan-300';
+            if (lvlNum >= 4 && lvlNum <= 6) pipColor = 'bg-purple-400 border-purple-300';
+            else if (lvlNum >= 7 && lvlNum <= 9) pipColor = 'bg-amber-400 border-amber-300';
+            else if (lvlNum === 10) pipColor = 'bg-yellow-300 border-yellow-200 shadow-md shadow-yellow-500';
+            return `<span class="inline-block w-3 h-3 rounded-full ${pipColor} border shadow-sm"></span>`;
+          }
+          return `<span class="inline-block w-3 h-3 rounded-full bg-slate-950 border border-slate-700"></span>`;
+        }).join(' ');
+
+        const levelTitle = curLvl === 0 ? 'Inaktív (Szint 0/10)' : `Szint ${curLvl}/10: ${curSpec ? curSpec.name : ''}`;
+        const curSpec = curLvl > 0 && selectedSlotDef.levels ? selectedSlotDef.levels[curLvl - 1] : null;
+        const nextSpec = curLvl < 10 && selectedSlotDef.levels ? selectedSlotDef.levels[curLvl] : null;
+
+        // Ellenőrzések szintlépéshez (Tech követelmény, Keret, Plafon, Erőforrás)
+        const isMaxLevel = curLvl >= 10;
+        const isCapBlocked = totalLevels >= (slots.maxTotalCap || 30);
+        const isBudgetLocked = totalLevels >= (slots.maxLevelBudget || 10);
+        const isTierLocked = nextSpec && (nextSpec.req_tier > (slots.tierReached || 1));
+        const reqTech = selectedSlotDef.requiredTech;
+        const isSubsystemTechLocked = reqTech && !(STATE.researchedTechs && STATE.researchedTechs.includes(reqTech));
+        
+        let hasResources = false;
+        if (nextSpec) {
+          const costM = nextSpec.cost_metal || 0;
+          const costE = nextSpec.cost_energy || 0;
+          const costI = nextSpec.cost_isotope || 0;
+          const curM = (STATE.resources && STATE.resources.metal) || STATE.metal || 0;
+          const curE = (STATE.resources && STATE.resources.energy) || STATE.energy || 0;
+          const curI = (STATE.resources && STATE.resources.isotope) || STATE.isotope || 0;
+          hasResources = (curM >= costM && curE >= costE && curI >= costI);
+        }
+
+        const canUpgrade = !isMaxLevel && !isCapBlocked && !isBudgetLocked && !isTierLocked && !isSubsystemTechLocked && hasResources;
+
+        ctrlEl.innerHTML = `
+          <!-- Fejléc és Szint Jelző Pips -->
+          <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-2.5">
+            <div class="flex items-center gap-2.5">
+              <span class="text-2xl p-2 rounded-lg bg-slate-950 border border-cyan-800/80">${selectedSlotDef.icon}</span>
+              <div>
+                <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                  <span>${selectedSlotDef.name}</span>
+                  <span class="text-[10px] px-2 py-0.5 rounded font-mono font-bold ${curLvl === 0 ? 'bg-slate-950 text-slate-500 border border-slate-800' : (curLvl <= 3 ? 'bg-cyan-950 text-cyan-300 border border-cyan-700' : (curLvl <= 6 ? 'bg-purple-950 text-purple-300 border border-purple-700' : (curLvl <= 9 ? 'bg-amber-950 text-amber-300 border border-amber-600' : 'bg-yellow-950 text-yellow-300 border border-yellow-500')))}">
+                    ${levelTitle}
+                  </span>
+                </h3>
+                <div class="text-[11px] text-slate-400">${selectedSlotDef.desc || 'Hajó alrendszer'}</div>
+              </div>
+            </div>
+            <div class="flex items-center gap-1 bg-slate-950 px-2.5 py-1.5 rounded-lg border border-slate-800 font-mono text-xs">
+              <span class="text-slate-400 text-[10px] uppercase mr-1">Szint:</span>
+              ${pipsHtml}
+            </div>
+          </div>
+
+          <!-- Jelenlegi Szint Hatása -->
+          <div class="bg-slate-950/70 border border-slate-800 rounded-lg p-3 space-y-1">
+            <div class="text-[10px] font-bold uppercase text-slate-400 tracking-wider flex items-center justify-between">
+              <span>Jelenlegi Állapot</span>
+              <span class="font-mono text-cyan-400">${curLvl > 0 ? curSpec.name : 'Nincs felszerelve'}</span>
+            </div>
+            <div class="text-xs text-slate-200">
+              ${curLvl > 0 ? curSpec.desc : 'Ez az alrendszer jelenleg inaktív (Szint 0). Növeld a szintjét a hajó bónuszainak aktiválásához.'}
+            </div>
+          </div>
+
+          <!-- Technológiai Zár Figyelmeztetés -->
+          ${isSubsystemTechLocked ? `
+            <div class="bg-red-950/70 border border-red-700 rounded-lg p-3 space-y-1">
+              <div class="text-[10px] font-bold uppercase text-red-300 tracking-wider flex items-center gap-1.5">
+                <span>🔒</span>
+                <span>TECHNOLÓGIAI KÖVETELMÉNY HIÁNYZIK</span>
+              </div>
+              <div class="text-xs text-red-200">
+                Ez a fejlett alrendszer zárolva van! Előbb ki kell kutatnod a Tech Fában: <b class="text-yellow-300">${TECH_FRIENDLY_NAMES[reqTech] || reqTech}</b>.
+              </div>
+            </div>
+          ` : ''}
+
+          <!-- Következő Szint Előnézet (ha még nem Lv.10) -->
+          ${nextSpec ? `
+            <div class="bg-cyan-950/30 border border-cyan-800/60 rounded-lg p-3 space-y-2">
+              <div class="text-[10px] font-bold uppercase text-cyan-400 tracking-wider flex items-center justify-between">
+                <span>Következő Szint: ${nextSpec.name} (Szint ${nextSpec.level}/10)</span>
+                <span class="text-[9px] text-amber-300 font-bold">KÖVETELMÉNY: TIER ${nextSpec.req_tier} KUTATÁS</span>
+              </div>
+              <div class="text-xs text-emerald-300 font-medium">
+                ${nextSpec.desc}
+              </div>
+              <div class="flex flex-wrap items-center gap-3 pt-1 border-t border-cyan-950 text-[11px] font-mono">
+                <span class="text-slate-400">Szintlépés költsége:</span>
+                <span class="${(STATE.metal||0) >= nextSpec.cost_metal ? 'text-cyan-300' : 'text-red-400 font-bold'}">⛏️ ${nextSpec.cost_metal} Fém</span>
+                <span class="${(STATE.energy||0) >= nextSpec.cost_energy ? 'text-amber-300' : 'text-red-400 font-bold'}">⚡ ${nextSpec.cost_energy} E</span>
+                ${nextSpec.cost_isotope > 0 ? `<span class="${(STATE.isotope||0) >= nextSpec.cost_isotope ? 'text-purple-300' : 'text-red-400 font-bold'}">☢️ ${nextSpec.cost_isotope} Izotóp</span>` : ''}
+              </div>
+            </div>
+          ` : `
+            <div class="bg-yellow-950/30 border border-yellow-500/60 rounded-lg p-3 text-center text-xs text-yellow-300 font-bold ring-1 ring-yellow-400/50">
+              ★ MAXIMÁLIS APEX MESTERMŰ SZINT ELÉRVE (SZINT 10/10) ★
+            </div>
+          `}
+
+          <!-- Vezérlő Gombok -->
+          <div class="flex flex-wrap items-center justify-between gap-2 pt-1">
+            <div>
+              ${curLvl > 0 ? `
+                <button onclick="resetShipSubsystem('${shipType}', '${selectedSlotDef.slotKey}')" class="bg-red-950/90 hover:bg-red-900 border border-red-600 text-red-200 font-bold text-xs px-3 py-2 rounded active:scale-95 transition-all flex items-center gap-1.5 shadow">
+                  <span>🔄</span>
+                  <span>KISZERELÉS (+50% Salvage & Szintek Felszabadítása)</span>
+                </button>
+              ` : ''}
+            </div>
+
+            <div class="flex items-center gap-2">
+              ${isMaxLevel ? `
+                <button disabled class="bg-slate-950 border border-slate-800 text-slate-500 font-bold px-3 py-2 rounded text-xs cursor-not-allowed">
+                  MAX SZINT ELÉRVE (10/10)
+                </button>
+              ` : isSubsystemTechLocked ? `
+                <button disabled class="bg-red-950 border border-red-700 text-red-300 font-bold px-3 py-2 rounded text-xs cursor-not-allowed flex items-center gap-1.5">
+                  <span>🔒</span>
+                  <span>KUTATÁS SZÜKSÉGES (${TECH_FRIENDLY_NAMES[reqTech] || reqTech})</span>
+                </button>
+              ` : isCapBlocked ? `
+                <button disabled class="bg-slate-950 border border-red-900/60 text-red-400 font-bold px-3 py-2 rounded text-xs cursor-not-allowed">
+                  ⛔ 60% PLAFON ELÉRVE (${slots.maxTotalCap || 30}/${slots.maxTotalCap || 30} SZINT BEOSZTVA)
+                </button>
+              ` : isBudgetLocked ? `
+                <button disabled class="bg-slate-950 border border-slate-800 text-slate-500 font-bold px-3 py-2 rounded text-xs cursor-not-allowed">
+                  🔒 KERETKORLÁT (${totalLevels}/${slots.maxLevelBudget} Szint) - Tier ${(slots.tierReached||1) + 1} Szükséges
+                </button>
+              ` : isTierLocked ? `
+                <button disabled class="bg-slate-950 border border-amber-900/60 text-amber-400 font-bold px-3 py-2 rounded text-xs cursor-not-allowed">
+                  🔒 TIER ${nextSpec.req_tier} KUTATÁS SZÜKSÉGES
+                </button>
+              ` : canUpgrade ? `
+                <button onclick="upgradeShipSubsystem('${shipType}', '${selectedSlotDef.slotKey}')" class="bg-gradient-to-r from-cyan-600 to-cyan-500 hover:from-cyan-500 hover:to-cyan-400 text-white font-bold text-xs px-4 py-2 rounded shadow-lg shadow-cyan-950 active:scale-95 transition-all flex items-center gap-1.5">
+                  <span>⬆️</span>
+                  <span>SZINTLÉPÉS SZINT ${curLvl + 1}-RE (${nextSpec.cost_metal} F, ${nextSpec.cost_energy} E${nextSpec.cost_isotope > 0 ? `, ${nextSpec.cost_isotope} Iso` : ''})</span>
+                </button>
+              ` : `
+                <button disabled class="bg-slate-950 border border-slate-800 text-red-400 font-bold px-3 py-2 rounded text-xs cursor-not-allowed">
+                  ⚠️ NINCS ELÉG NYERSANYAG
+                </button>
+              `}
+            </div>
+          </div>
+        `;
+      }
+
+      // 6. Gyors Alrendszer Választó (Quick list)
+      const qListEl = document.getElementById('refit-subsystems-quicklist');
+      if (qListEl) {
+        qListEl.innerHTML = Object.entries(subsystemsForShip).map(([sKey, sDef]) => {
+          const sLvl = shipLevels[sKey] || 0;
+          const isSelected = (sKey === selectedSlotDef.slotKey);
+          return `
+            <button onclick="selectRefitSubsystem('${sKey}')" class="w-full text-left px-2.5 py-1.5 rounded-lg border text-xs font-mono transition-all flex items-center justify-between ${isSelected ? 'bg-cyan-950/90 border-cyan-400 text-cyan-200 ring-1 ring-cyan-400' : 'bg-slate-950/70 border-slate-800 text-slate-300 hover:border-slate-700'}">
+              <div class="flex items-center gap-2">
+                <span class="text-sm">${sDef.icon}</span>
+                <span class="font-bold text-[11px]">${sDef.name}</span>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <span class="text-[10px] font-mono px-1.5 py-0.2 rounded ${sLvl > 0 ? 'bg-cyan-900/80 text-cyan-300 border border-cyan-700' : 'bg-slate-900 text-slate-500'}">Lv.${sLvl}/10</span>
+              </div>
+            </button>
+          `;
+        }).join('');
+      }
+
+      // 7. Élő Összesített Statisztikák Számítása (Lv.1 - Lv.10)
+      const bTables = STATE.bonusTables || {};
+      const shipBTables = bTables[shipType] || {};
+
+      let modHull = spec.hull;
+      if (STATE.researchedTechs && STATE.researchedTechs.includes('heavy_metallurgy')) modHull *= 1.30;
+      const hLvl = shipLevels.hull || 0;
+      if (hLvl > 0 && shipBTables.hull) modHull += (shipBTables.hull[hLvl] || 0);
+      modHull = Math.round(modHull);
+
+      let modShield = spec.shield;
+      if (STATE.researchedTechs && STATE.researchedTechs.includes('extended_shielding')) modShield *= 1.25;
+      const sLvl = shipLevels.shield || 0;
+      if (sLvl > 0 && shipBTables.shield) modShield += (shipBTables.shield[sLvl] || 0);
+      modShield = Math.round(modShield);
+
+      let modDmg = spec.damage;
+      const wLvl = shipLevels.weapon || 0;
+      if (wLvl > 0 && shipBTables.damage) modDmg += (shipBTables.damage[wLvl] || 0);
+      if (STATE.researchedTechs && STATE.researchedTechs.includes('kinetic_calibration') && (shipType === 'corvette' || shipType === 'destroyer')) modDmg = Math.round(modDmg * 1.15);
+      if (STATE.researchedTechs && STATE.researchedTechs.includes('siege_warheads') && shipType === 'battleship') modDmg = Math.round(modDmg * 1.50);
+
+      let modSpeed = spec.speed;
+      const eLvl = shipLevels.engine || 0;
+      if (eLvl > 0 && shipBTables.speed) modSpeed += (shipBTables.speed[eLvl] || 0);
+      if (STATE.researchedTechs && STATE.researchedTechs.includes('ion_thrusters')) modSpeed *= 1.25;
+
+      let modAcc = spec.accuracy;
+      const aLvl = shipLevels.avionics || 0;
+      if (shipType === 'destroyer' && aLvl > 0 && shipBTables.accuracy) modAcc += (shipBTables.accuracy[aLvl] || 0);
+
+      let modEva = spec.evasion;
+      if (aLvl > 0 && shipBTables.evasion) modEva += (shipBTables.evasion[aLvl] || 0);
+
+      const statsEl = document.getElementById('refit-stat-comparison');
+      if (statsEl) {
+        statsEl.innerHTML = `
+          <div class="flex justify-between items-center py-0.5 border-b border-slate-800">
+            <span class="text-slate-400">Páncélzat (Hull HP):</span>
+            <div class="font-mono">
+              <span class="text-slate-500">${spec.hull}</span>
+              <span class="text-slate-400 mx-1">→</span>
+              <b class="${modHull > spec.hull ? 'text-emerald-400' : 'text-slate-200'}">${modHull} HP</b>
+              ${modHull > spec.hull ? `<span class="text-[10px] text-emerald-400 ml-1">(+${modHull - spec.hull})</span>` : ''}
+            </div>
+          </div>
+          <div class="flex justify-between items-center py-0.5 border-b border-slate-800">
+            <span class="text-slate-400">Energiapajzs:</span>
+            <div class="font-mono">
+              <span class="text-slate-500">${spec.shield}</span>
+              <span class="text-slate-400 mx-1">→</span>
+              <b class="${modShield > spec.shield ? 'text-cyan-400' : 'text-slate-200'}">${modShield} Pajzs</b>
+              ${modShield > spec.shield ? `<span class="text-[10px] text-cyan-400 ml-1">(+${modShield - spec.shield})</span>` : ''}
+            </div>
+          </div>
+          <div class="flex justify-between items-center py-0.5 border-b border-slate-800">
+            <span class="text-slate-400">Tűzerő / Sebzés:</span>
+            <div class="font-mono">
+              <span class="text-slate-500">${spec.damage}</span>
+              <span class="text-slate-400 mx-1">→</span>
+              <b class="${modDmg > spec.damage ? 'text-amber-400' : 'text-slate-200'}">${modDmg} DMG</b>
+              ${modDmg > spec.damage ? `<span class="text-[10px] text-amber-400 ml-1">(+${modDmg - spec.damage})</span>` : ''}
+            </div>
+          </div>
+          <div class="flex justify-between items-center py-0.5 border-b border-slate-800">
+            <span class="text-slate-400">Sebesség:</span>
+            <div class="font-mono">
+              <span class="text-slate-500">${spec.speed.toFixed(1)}</span>
+              <span class="text-slate-400 mx-1">→</span>
+              <b class="${modSpeed > spec.speed ? 'text-sky-400' : 'text-slate-200'}">${modSpeed.toFixed(1)} /h</b>
+            </div>
+          </div>
+          <div class="flex justify-between items-center py-0.5">
+            <span class="text-slate-400">Kitérési Esély:</span>
+            <div class="font-mono">
+              <span class="text-slate-500">${Math.round(spec.evasion*100)}%</span>
+              <span class="text-slate-400 mx-1">→</span>
+              <b class="${modEva > spec.evasion ? 'text-purple-400' : 'text-slate-200'}">${Math.round(modEva*100)}%</b>
+            </div>
+          </div>
+        `;
+      }
+    }
+
+    async function upgradeShipSubsystem(shipType, slotKey) {
+      try {
+        const res = await fetch(`${API_BASE}/api/upgrade-ship-subsystem`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-Player-Id': STATE.currentPlayerId || 'player' },
+          body: JSON.stringify({ shipType, slotKey, playerId: STATE.currentPlayerId || 'player' })
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          audio.playConstruction();
+          if (!STATE.shipUpgrades) STATE.shipUpgrades = {};
+          STATE.shipUpgrades[shipType] = data.levels;
+          if (data.slotInfo) STATE.shipUpgradeSlots = data.slotInfo;
+          if (data.playerResources) {
+            STATE.metal = data.playerResources.metal;
+            STATE.energy = data.playerResources.energy;
+            STATE.isotope = data.playerResources.isotope;
+            updateTopBarResources();
+          }
+          renderShipyardRefit();
+          const refitBadge = document.getElementById('header-refit-badge');
+          if (refitBadge && STATE.shipUpgradeSlots) {
+            refitBadge.innerText = `${STATE.shipUpgradeSlots.maxLevelBudget || 10}/30 Szint`;
+          }
+        } else {
+          audio.playAlarm();
+          alert(data.error || "Hiba történt az alrendszer fejlesztésekor!");
+        }
+      } catch(e) {
+        console.error(e);
+        alert("Szerver kommunikációs hiba történt a szintlépéskor!");
+      }
+    }
+
+    async function resetShipSubsystem(shipType, slotKey) {
+      try {
+        const res = await fetch(`${API_BASE}/api/reset-ship-subsystem`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-Player-Id': STATE.currentPlayerId || 'player' },
+          body: JSON.stringify({ shipType, slotKey, playerId: STATE.currentPlayerId || 'player' })
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          audio.playSelect();
+          if (!STATE.shipUpgrades) STATE.shipUpgrades = {};
+          STATE.shipUpgrades[shipType] = data.levels;
+          if (data.slotInfo) STATE.shipUpgradeSlots = data.slotInfo;
+          if (data.playerResources) {
+            STATE.metal = data.playerResources.metal;
+            STATE.energy = data.playerResources.energy;
+            STATE.isotope = data.playerResources.isotope;
+            updateTopBarResources();
+          }
+          if (data.refund) {
+            console.log(`[SALVAGE] Visszatérítve: +${data.refund.metal} Fém, +${data.refund.energy} Energia, +${data.refund.isotope} Izotóp`);
+          }
+          renderShipyardRefit();
+          const refitBadge = document.getElementById('header-refit-badge');
+          if (refitBadge && STATE.shipUpgradeSlots) {
+            refitBadge.innerText = `${STATE.shipUpgradeSlots.maxLevelBudget || 10}/30 Szint`;
+          }
+        } else {
+          audio.playAlarm();
+          alert(data.error || "Hiba történt a kiszereléskor!");
+        }
+      } catch(e) {
+        console.error(e);
+        alert("Szerver hiba történt a modul kiszerelésekor!");
+      }
+    }
+
+    async function toggleShipUpgradeModule(shipType, moduleId) {
+      return upgradeShipSubsystem(shipType, moduleId);
+    }
+
+    // --- MODÁLOK KEZELÉSE ---
+    function openPlanetsModal() {
+      if (STATE.planets.length > 0) openPlanetDrawer(STATE.planets[0].id);
+    }
+
+    function openFleetsModal() {
+      if (STATE.planets[0]) openPlanetDrawer(STATE.planets[0].id);
+    }
+
+    function openLogsModal() {
+      document.getElementById('log-badge').classList.add('hidden');
+      const list = document.getElementById('logs-history-list');
+      list.innerHTML = '';
+      if (STATE.combatLogsHistory.length === 0) {
+        list.innerHTML = '<div class="text-slate-500 italic p-4 text-center">Nincs rögzített harci esemény. Indíts támadást az ellenséges Vektor-9 bázis ellen!</div>';
+      } else {
+        STATE.combatLogsHistory.forEach((item, idx) => {
+          const div = document.createElement('div');
+          div.className = 'bg-slate-950 p-3 rounded border border-slate-800 cursor-pointer hover:border-cyan-700 transition-all';
+          div.innerHTML = `
+            <div class="flex justify-between font-bold ${item.won ? 'text-emerald-400' : 'text-red-400'}">
+              <span>CSATA #${idx+1} (Kör #${item.tick})</span>
+              <span>${item.won ? 'GYŐZELEM' : 'VESZTESÉG / DÖNTETLEN'}</span>
+            </div>
+            <div class="text-[10px] text-slate-400 truncate mt-1">${item.text.split('\n')[2] || ''}</div>
+          `;
+          div.onclick = () => showCombatLogModal(item.text);
+          list.appendChild(div);
+        });
+      }
+      document.getElementById('modal-logs').classList.remove('hidden');
+    }
+
+    function closeModal(modalId) {
+      document.getElementById(modalId).classList.add('hidden');
+    }
+
+    function setActiveTab(tab) {
+      // Map view reset
+      resetMapView();
+    }
+
+    // --- SZERVER KOMMUNIKÁCIÓ ÉS VALÓS IDEJŰ SZINKRON ---
+    let SERVER_ONLINE = false;
+    const API_BASE = window.location.origin.includes('http') ? window.location.origin : 'http://localhost:3000';
+
+
+    // --- PvP PARANCSNOKI VEZÉRLÉS & GALAKTIKUS CSET ---
+    function openCommanderSelectModal() {
+      audio.playSelect();
+      document.getElementById('modal-commander-select').classList.remove('hidden');
+    }
+
+    async function selectCommander(newPlayerId) {
+      STATE.currentPlayerId = newPlayerId;
+      localStorage.setItem('space4x_player_id', newPlayerId);
+      closeModal('modal-commander-select');
+      audio.playSelect();
+
+      if (SERVER_ONLINE && newPlayerId !== 'spectator') {
+        try {
+          await fetch(`${API_BASE}/api/select-commander`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ playerId: newPlayerId })
+          });
+        } catch(e) {}
+      }
+
+      await checkServerConnection();
+      updateCommanderBadge();
+    }
+
+    function updateCommanderBadge() {
+      const pid = STATE.currentPlayerId || 'player';
+      const badge = document.getElementById('btn-commander-badge');
+      const icon = document.getElementById('header-commander-icon');
+      const name = document.getElementById('header-commander-name');
+
+      if (!badge || !icon || !name) return;
+
+      if (pid === 'player') {
+        badge.className = 'px-2.5 py-1.5 rounded text-xs font-mono font-bold bg-sky-950 text-sky-300 border border-sky-600 flex items-center gap-1.5 shadow-md shadow-sky-950/80 hover:bg-sky-900 active:scale-95 transition-all';
+        icon.innerText = '🔵';
+        name.innerText = 'KRONOS (KÉK)';
+      } else if (pid === 'enemy') {
+        badge.className = 'px-2.5 py-1.5 rounded text-xs font-mono font-bold bg-red-950 text-red-300 border border-red-600 flex items-center gap-1.5 shadow-md shadow-red-950/80 hover:bg-red-900 active:scale-95 transition-all';
+        icon.innerText = '🔴';
+        name.innerText = 'VEKTOR-9 (PIROS)';
+      } else {
+        badge.className = 'px-2.5 py-1.5 rounded text-xs font-mono font-bold bg-slate-900 text-slate-300 border border-slate-700 flex items-center gap-1.5 shadow-md hover:bg-slate-800 active:scale-95 transition-all';
+        icon.innerText = '👁️';
+        name.innerText = 'MEGFIGYELŐ';
+      }
+    }
+
+    function targetPlanetForAttack(targetPlanetId) {
+      const myId = STATE.currentPlayerId || 'player';
+      // Keressük meg a játékos egy olyan bolygóját, ahol van flotta
+      const myPlanets = STATE.planets.filter(p => (p.owner === myId || p.owner_id === myId));
+      let bestOrigin = myPlanets.find(p => {
+        const sf = p.stationedFleet || {};
+        return Object.values(sf).some(c => typeof c === 'number' && c > 0);
+      }) || myPlanets[0];
+
+      if (!bestOrigin) {
+        alert("Nincs saját bolygód, ahonnan flottát indíthatnál!");
+        return;
+      }
+
+      STATE.selectedPlanetId = bestOrigin.id;
+      closePlanetDrawer();
+      openDispatchModal();
+
+      setTimeout(() => {
+        const sel = document.getElementById('dispatch-target-select');
+        if (sel) {
+          sel.value = targetPlanetId;
+          updateDispatchEstimates();
+        }
+      }, 50);
+    }
+
+    function toggleCommsDrawer() {
+      const drawer = document.getElementById('comms-drawer');
+      if (drawer) {
+        drawer.classList.toggle('hidden');
+        if (!drawer.classList.contains('hidden')) {
+          renderChatMessages();
+          document.getElementById('comms-input')?.focus();
+        }
+      }
+    }
+
+    async function sendChatMessage() {
+      const input = document.getElementById('comms-input');
+      if (!input) return;
+      const text = input.value.trim();
+      if (!text) return;
+
+      input.value = '';
+      const pid = STATE.currentPlayerId || 'player';
+
+      try {
+        const res = await fetch(`${API_BASE}/api/chat`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-Player-Id': pid },
+          body: JSON.stringify({ playerId: pid, message: text })
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          audio.playBeep(920, 0.08);
+          await checkServerConnection();
+        }
+      } catch(e) {
+        console.error("Chat error", e);
+      }
+    }
+
+    function renderChatMessages() {
+      const list = document.getElementById('comms-messages-list');
+      const messages = STATE.recentChat || [];
+      if (!list) return;
+
+      if (messages.length === 0) {
+        list.innerHTML = '<div class="text-[10px] text-slate-500 text-center py-4">Még nincsenek üzenetek. Kezdj beszélgetést a másik parancsnokkal!</div>';
+        return;
+      }
+
+      list.innerHTML = messages.map(m => {
+        const isKronos = (m.sender_id === 'player');
+        const colorClass = isKronos ? 'text-sky-400' : 'text-red-400';
+        const senderBadge = isKronos ? '🔵 KRONOS' : '🔴 VEKTOR-9';
+        return `
+          <div class="p-2 rounded bg-slate-900/80 border border-slate-800 text-[11px]">
+            <div class="flex items-center justify-between text-[10px] font-bold mb-0.5">
+              <span class="${colorClass}">${senderBadge}</span>
+              <span class="text-slate-500 font-mono">#${m.tick_number}</span>
+            </div>
+            <div class="text-slate-200">${m.message}</div>
+          </div>
+        `;
+      }).join('');
+
+      list.scrollTop = list.scrollHeight;
+    }
+
+    async function checkServerConnection() {
+      try {
+        const curPid = STATE.currentPlayerId || 'player';
+        const res = await fetch(`${API_BASE}/api/state?playerId=${curPid}`, {
+          headers: { 'X-Player-Id': curPid }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          SERVER_ONLINE = true;
+          applyServerState(data);
+          const badge = document.getElementById('server-status-badge');
+          if (badge) badge.className = 'px-2 py-1 rounded text-[10px] font-mono font-bold bg-emerald-950 text-emerald-400 border border-emerald-700 flex items-center gap-1.5';
+          const txt = document.getElementById('server-status-text');
+          if (txt) txt.innerText = 'SZERVER: ÉLŐ (ONLINE)';
+        }
+      } catch (e) {
+        SERVER_ONLINE = false;
+        const badge = document.getElementById('server-status-badge');
+        if (badge) badge.className = 'px-2 py-1 rounded text-[10px] font-mono font-bold bg-amber-950/80 text-amber-400 border border-amber-800 flex items-center gap-1.5';
+        const txt = document.getElementById('server-status-text');
+        if (txt) txt.innerText = 'LOKÁLIS (OFFLINE)';
+      }
+    }
+
+    function applyServerState(data) {
+      STATE.tick = data.tick;
+      document.getElementById('current-tick').innerText = STATE.tick;
+      if (data.player) {
+        STATE.resources.metal = data.player.metal;
+        STATE.resources.energy = data.player.energy;
+        STATE.resources.isotope = data.player.isotope;
+        STATE.resources.data = data.player.data_points;
+      }
+      if (data.planets && data.planets.length > 0) {
+        STATE.planets = data.planets.map(p => ({
+          id: p.id,
+          name: p.name,
+          x: p.pos_x,
+          y: p.pos_y,
+          radius: p.size_slots * 5,
+          owner: p.owner_id === 'player' ? 'player' : (p.owner_id === 'enemy' ? 'enemy' : 'neutral'),
+          slotsCount: p.size_slots,
+          structures: (p.structures || []).map(s => ({
+            type: s.structure_type,
+            level: s.level || 1,
+            name: s.structure_type === 'industrial_hub' ? 'Ipari Központ' : (s.structure_type === 'orbital_railgun' ? 'Orbitális Railgun' : (s.structure_type === 'planetary_shield' ? 'Planetáris Pajzs' : (s.structure_type === 'automated_dock' ? 'Automatizált Dokk' : s.structure_type))),
+            bonus: s.structure_type === 'industrial_hub' ? `+${(s.level||1)*25}% Fém` : (s.structure_type === 'orbital_railgun' ? '450 Dmg' : 'Pajzs védelem')
+          })),
+          baseMetal: p.base_metal_rate,
+          baseEnergy: p.base_energy_rate,
+          shieldHp: p.planetary_shield_hp,
+          maxShieldHp: p.max_shield_hp,
+          stationedFleet: p.stationedFleet
+        }));
+      }
+      if (data.movingFleets) {
+        STATE.movingFleets = data.movingFleets.map(f => ({
+          id: f.id,
+          owner: f.owner_id === 'player' ? 'player' : 'enemy',
+          startX: f.current_x,
+          startY: f.current_y,
+          currentX: f.current_x,
+          currentY: f.current_y,
+          targetX: f.dest_x,
+          targetY: f.dest_y,
+          remainingHours: Math.max(1, f.arrival_tick - STATE.tick),
+          totalHours: Math.max(1, f.arrival_tick - f.departure_tick),
+          ships: f.ships
+        }));
+      }
+      if (data.recentAIActions && data.recentAIActions.length > 0) {
+        const ticker = document.getElementById('ai-action-ticker');
+        if (ticker) {
+          ticker.classList.remove('hidden');
+          document.getElementById('ai-action-text').innerText = data.recentAIActions[data.recentAIActions.length - 1];
+        }
+      }
+      if (data.combatLogs && data.combatLogs.length > 0) {
+        STATE.combatLogsHistory = data.combatLogs.map(l => ({
+          tick: l.tick_number,
+          text: l.log_text,
+          won: l.winner_id === 'player'
+        }));
+        document.getElementById('log-badge').classList.remove('hidden');
+      }
+
+      // Küldetések HUD frissítése
+      if (data.missions && data.missions.length > 0) {
+        const curMission = data.missions.find(m => m.status === 'completed') || data.missions.find(m => m.status === 'active') || data.missions[data.missions.length - 1];
+        if (curMission) {
+          STATE.activeMissionId = curMission.id;
+          document.getElementById('mission-title').innerText = curMission.title;
+          document.getElementById('mission-desc').innerText = curMission.description;
+          document.getElementById('mission-reward').innerText = curMission.reward_text;
+
+          const badge = document.getElementById('mission-status-badge');
+          const claimBtn = document.getElementById('btn-claim-mission');
+          if (curMission.status === 'completed') {
+            badge.className = 'px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-950 text-emerald-300 border border-emerald-700 animate-pulse';
+            badge.innerText = 'KÉSZ!';
+            claimBtn.classList.remove('hidden');
+          } else if (curMission.status === 'claimed') {
+            badge.className = 'px-1.5 py-0.5 rounded text-[9px] font-bold bg-slate-800 text-slate-400 border border-slate-700';
+            badge.innerText = 'BEVÁLTVA';
+            claimBtn.classList.add('hidden');
+          } else {
+            badge.className = 'px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-950 text-amber-300 border border-amber-800';
+            badge.innerText = 'AKTÍV';
+            claimBtn.classList.add('hidden');
+          }
+        }
+      }
+
+      // Tech fa szinkronizáció
+      if (data.techTree) {
+        STATE.techTree = data.techTree;
+      }
+      if (data.researchedTechs) {
+        STATE.researchedTechs = data.researchedTechs;
+        STATE.unlockedTechs = new Set(data.researchedTechs);
+      }
+      if (data.activeResearch !== undefined) {
+        STATE.activeResearch = data.activeResearch;
+      }
+      if (data.boss !== undefined) {
+        STATE.boss = data.boss;
+      }
+      if (data.bossPrereqs !== undefined) {
+        STATE.bossPrereqs = data.bossPrereqs;
+      }
+      if (data.allBosses !== undefined) {
+        STATE.allBosses = data.allBosses;
+      }
+      if (data.bossPrereqsByBoss !== undefined) {
+        STATE.bossPrereqsByBoss = data.bossPrereqsByBoss;
+      }
+      if (data.gloryPoints !== undefined) {
+        STATE.gloryPoints = data.gloryPoints;
+      }
+      if (data.activeBuffs !== undefined) {
+        STATE.activeBuffs = data.activeBuffs;
+      }
+      if (data.artifacts !== undefined) {
+        STATE.artifacts = data.artifacts;
+      }
+      if (data.shipTechRequirements !== undefined) {
+        STATE.shipTechRequirements = data.shipTechRequirements;
+      }
+      if (data.shipSubsystems !== undefined) {
+        STATE.shipSubsystems = data.shipSubsystems;
+      }
+      if (data.shipUpgrades !== undefined) {
+        STATE.shipUpgrades = data.shipUpgrades;
+      }
+      if (data.shipUpgradeSlots !== undefined) {
+        STATE.shipUpgradeSlots = data.shipUpgradeSlots;
+      }
+      if (data.shipUpgradeModules !== undefined) {
+        STATE.shipUpgradeModules = data.shipUpgradeModules;
+      }
+      const refitBadge = document.getElementById('header-refit-badge');
+      if (refitBadge && STATE.shipUpgradeSlots) {
+        refitBadge.innerText = `${STATE.shipUpgradeSlots.unlockedSlots}/3`;
+      }
+      const dataBadge = document.getElementById('header-data-badge');
+      if (dataBadge && data.player) {
+        dataBadge.innerText = Math.floor(data.player.data_points) + ' DAT';
+      }
+      const modalTech = document.getElementById('modal-tech');
+      if (modalTech && !modalTech.classList.contains('hidden')) {
+        renderTechTree();
+      }
+      const modalBoss = document.getElementById('modal-boss');
+      if (modalBoss && !modalBoss.classList.contains('hidden')) {
+        renderBossModal();
+      }
+      const modalRefit = document.getElementById('modal-shipyard-refit');
+      if (modalRefit && !modalRefit.classList.contains('hidden')) {
+        renderShipyardRefit();
+      }
+
+      updateHUD();
+      drawGalaxy();
+    }
+
+    async function claimActiveMission() {
+      if (!STATE.activeMissionId) return;
+      if (SERVER_ONLINE) {
+        try {
+          const res = await fetch(`${API_BASE}/api/claim-mission`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ missionId: STATE.activeMissionId })
+          });
+          if (res.ok) {
+            audio.playVictory();
+            await checkServerConnection();
+            return;
+          }
+        } catch(e) {}
+      }
+    }
+
+    // Indítás és PWA Service Worker regisztráció
+    window.onload = async () => {
+      resizeCanvas();
+      resetMapView();
+      updateHUD();
+      openPlanetDrawer('p1');
+      await checkServerConnection();
+
+      // PWA Service Worker regisztrálása
+      if ('serviceWorker' in navigator && window.location.protocol.startsWith('http')) {
+        try {
+          await navigator.serviceWorker.register('/sw.js');
+          console.log('[PWA] Service Worker sikeresen regisztrálva.');
+        } catch (err) {
+          console.log('[PWA] Service Worker regisztrációs figyelmeztetés:', err);
+        }
+      }
+
+      // ESC billentyű modal bezárás
+      window.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          ['modal-shipyard-refit', 'modal-tech', 'modal-boss', 'modal-logs', 'modal-combat-log', 'modal-dispatch', 'modal-shipyard'].forEach(id => {
+            const m = document.getElementById(id);
+            if (m && !m.classList.contains('hidden')) closeModal(id);
+          });
+        }
+      });
+    };
+  </script>
+</body>
+</html>

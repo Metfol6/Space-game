@@ -1,0 +1,14 @@
+{
+  "name": "space-4x-tactics",
+  "version": "1.0.0",
+  "description": "Space 4X Tactics - Asynchronous Turn-Based Strategy Game",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node test_suite.js"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "private": true
+}
