@@ -313,6 +313,9 @@ function processTick() {
                         console.log(`[FELDERÍTÉS] ${fleet.name} elérte a(z) ${targetPlanet.name} semleges világot (nem hozott Kolóniahajót, így nem kolonizálható).`);
                         _mergeFleetIntoPlanet(fleet, targetPlanet);
                     }
+                } else if (targetPlanet.is_bot) {
+                    // Bot világ vagy Boss elleni csata & rejtett loot feltárás
+                    _resolveBotPlanetBattle(fleet, targetPlanet, nextTick);
                 } else {
                     // Ellenséges bolygó: Csatamechanika!
                     _resolvePlanetBattle(fleet, targetPlanet, nextTick);
@@ -413,6 +416,84 @@ function _evaluateMissions(targetPlayerId = 'player') {
         if (completed) {
             db.db.prepare("UPDATE missions SET status = 'completed' WHERE id = ?").run(m.id);
             console.log(`[KÜLDETÉS TELJESÍTVE!] ${m.title}: ${m.reward_text}`);
+        }
+    }
+}
+
+
+function _resolveBotPlanetBattle(attackerFleet, planet, tick) {
+    const defenderFleet = planet.stationedFleet;
+    console.log(`[BOT HARC DETEKTÁLVA] ${planet.name} bolygónál! Támadó: ${attackerFleet.owner_id} vs Bot helyőrség`);
+
+    const techsA = db.getPlayerResearch(attackerFleet.owner_id);
+    const buffsA = db.getPlayerBuffs(attackerFleet.owner_id, tick);
+    const upgA = db.getShipUpgrades(attackerFleet.owner_id);
+
+    const fa = new Fleet(attackerFleet.owner_id, attackerFleet.name, planet.pos_x, planet.pos_y, techsA, buffsA);
+    for (const st of ALL_SHIP_TYPES) {
+        const cnt = attackerFleet.ships[st] || 0;
+        for (let i = 0; i < cnt; i++) fa.ships.push(new ShipInstance(st, techsA, upgA[st], buffsA));
+    }
+
+    const fb = new Fleet(planet.owner_id || 'bot_hostile', `${planet.name} Védelmi Erő`, planet.pos_x, planet.pos_y, [], []);
+    for (const st of ALL_SHIP_TYPES) {
+        const cnt = defenderFleet[st] || 0;
+        for (let i = 0; i < cnt; i++) fb.ships.push(new ShipInstance(st, [], {}, []));
+    }
+
+    // Ha ez a 3 Fő Boss egyike, bevonjuk a Boss旗舰/kolosszust is
+    if (planet.bot_type === 'boss') {
+        const bossState = db.getBossState(planet.id);
+        if (bossState && bossState.state !== 'defeated') {
+            const bossUnit = new ShipInstance('battleship', [], {}, []);
+            bossUnit.hull = bossState.hull;
+            bossUnit.maxHull = bossState.max_hull;
+            bossUnit.shield = bossState.shield;
+            bossUnit.maxShield = bossState.max_shield;
+            bossUnit.damage = bossState.damage || 400;
+            bossUnit.customName = bossState.name;
+            fb.ships.push(bossUnit);
+        }
+    }
+
+    const battleResult = CombatEngine.resolveCombat(fa, fb, 5, techsA, []);
+
+    let lootResult = null;
+    if (battleResult.winnerId === attackerFleet.owner_id) {
+        // Támadó győzött: Rejtett zsákmány felfedése és jóváírása!
+        lootResult = db.claimBotLoot(planet.id, attackerFleet.owner_id);
+        const winName = attackerFleet.owner_id === 'player' ? 'Kronos Parancsnok' : 'Vektor-9 Parancsnok';
+        const msg = `[💥 GYŐZELEM & ZSÁKMÁNY] ${winName} megtörte a(z) ${planet.name} védelmét! Zsákmány: ${lootResult ? lootResult.rewardSummary : 'Ismeretlen'}`;
+        recentAIActions.push(msg);
+        console.log(msg);
+
+        // Bolygó státusz frissítése
+        db.db.prepare("UPDATE planets SET owner_id = ?, status = 'looted', loot_revealed = 1 WHERE id = ?").run(attackerFleet.owner_id, planet.id);
+    } else {
+        recentAIActions.push(`[⚔️ VISSZAVERVE] A(z) ${planet.name} védelmi erői visszaverték a támadást!`);
+    }
+
+    // Csatariport mentése
+    let extraLog = battleResult.log;
+    if (lootResult) {
+        extraLog += `\n\n=== MEGSZERZETT ZSÁKMÁNY ===\n${lootResult.rewardSummary}\nA zsákmány automatikusan jóváírva a birodalmad számláján!`;
+    }
+
+    db.saveCombatLog(
+        tick, planet.pos_x, planet.pos_y, planet.name,
+        attackerFleet.owner_id, planet.owner_id || 'bot_hostile', battleResult.winnerId,
+        extraLog, battleResult.salvageMetal, battleResult.salvageIsotope
+    );
+
+    // Túlélő hajók szinkronizálása
+    for (const st of ALL_SHIP_TYPES) {
+        const count = battleResult.winnerId === attackerFleet.owner_id ? fa.countByType(st) : fb.countByType(st);
+        const row = db.db.prepare('SELECT id FROM fleet_ships WHERE fleet_id = ? AND ship_type = ?').get(defenderFleet.fleetId, st);
+        if (row) {
+            db.db.prepare('UPDATE fleet_ships SET count = ? WHERE fleet_id = ? AND ship_type = ?').run(count, defenderFleet.fleetId, st);
+        } else if (count > 0) {
+            db.db.prepare('INSERT INTO fleet_ships (id, fleet_id, ship_type, count, current_hull_total, current_shield_total) VALUES (?, ?, ?, ?, ?, ?)')
+                .run(`${defenderFleet.fleetId}_${st}`, defenderFleet.fleetId, st, count, count * (SHIP_SPECS[st]?.hull || 100), 0);
         }
     }
 }
@@ -546,6 +627,7 @@ const server = http.createServer((req, res) => {
             shipUpgradeModules: SHIP_UPGRADE_MODULES,
             allPlayers: db.getAllPlayers(),
             recentChat: db.getChatMessages(30),
+            pvpTargets: db.getHumanPlayers(playerObj.id),
             recentAIActions
         };
         res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -554,6 +636,15 @@ const server = http.createServer((req, res) => {
     }
 
     // Parancsnokok listája és Frakcióválasztó
+    
+    if (pathname === '/api/pvp-roster' && req.method === 'GET') {
+        const playerId = _getReqPlayerId(req, parsedUrl);
+        const targets = db.getHumanPlayers(playerId);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ targets }));
+        return;
+    }
+
     if (pathname === '/api/commanders' && req.method === 'GET') {
         const players = db.getAllPlayers();
         res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -876,25 +967,42 @@ const server = http.createServer((req, res) => {
             if (totalCount === 0) return _errorResponse(res, 400, "Válassz ki legalább 1 hajót az indításhoz!");
 
             const playerTechs = db.getPlayerResearch(playerId);
+            const playerBuffs = db.getPlayerBuffs(playerId);
+            const playerUpgrades = db.getShipUpgrades(playerId);
             const dist = Math.hypot(target.pos_x - origin.pos_x, target.pos_y - origin.pos_y);
-            let speeds = [];
             let totalFuelWeight = 0;
 
             for (const st of ALL_SHIP_TYPES) {
                 const count = ships[st] || 0;
                 if (count > 0) {
-                    speeds.push(SHIP_SPECS[st].speed);
                     totalFuelWeight += count * (SHIP_SPECS[st].fuel_weight || 1.0);
                 }
             }
 
-            let minSpeed = Math.min(...speeds);
-            if (playerTechs.includes('ion_thrusters')) minSpeed *= 1.25;
-            if (playerTechs.includes('hyperspace_gate')) minSpeed = Math.max(6.0, minSpeed);
+            // Egységes alapmenetidő: 5 kör
+            // Fejlesztésekkel lefaragható:
+            // - Ionhajtómű: -1 kör
+            // - Hipertér / Kvantum-kapu: -1 kör
+            // - Sebesség buff: -1 kör
+            // - Motor alrendszer fejlettség: -1 kör
+            const baseTravelTicks = 5;
+            let speedDiscount = 0;
+            if (playerTechs.includes('ion_thrusters')) speedDiscount += 1;
+            if (playerTechs.includes('hyperspace_gate')) speedDiscount += 1;
+            if (playerBuffs.some(b => b.buff_type === 'speed_boost')) speedDiscount += 1;
 
-            const travelHours = Math.max(1, Math.ceil(dist / minSpeed));
+            let hasEngineUpg = false;
+            for (const st of ALL_SHIP_TYPES) {
+                if ((ships[st] || 0) > 0) {
+                    const upg = playerUpgrades[st] || {};
+                    if ((upg.engine || 0) >= 2) hasEngineUpg = true;
+                }
+            }
+            if (hasEngineUpg) speedDiscount += 1;
+
+            const travelHours = Math.max(1, baseTravelTicks - speedDiscount);
             const fuelMultiplier = playerTechs.includes('isotope_compression') ? 0.70 : 1.0;
-            const fuelCost = Math.ceil(totalFuelWeight * dist * 0.05 * fuelMultiplier);
+            const fuelCost = Math.max(5, Math.ceil(totalFuelWeight * 2 * fuelMultiplier));
 
             if (player.isotope < fuelCost) {
                 return _errorResponse(res, 400, `Nincs elég Izotóp üzemanyag (${fuelCost} szükséges)!`);

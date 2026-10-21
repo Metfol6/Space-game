@@ -115,6 +115,11 @@
         <span class="hidden md:inline">TECH FA</span>
         <span id="header-data-badge" class="bg-indigo-900 px-1.5 py-0.5 rounded text-[10px] text-cyan-300 font-mono border border-indigo-700">0 DAT</span>
       </button>
+            <button id="btn-pvp-roster" onclick="openPvPRosterModal()" class="bg-red-950/90 hover:bg-red-900 active:scale-95 text-red-200 border border-red-500 font-mono text-xs font-bold px-2.5 py-1.5 rounded flex items-center gap-1.5 shadow-lg shadow-red-950 transition-all" title="Rivális emberi parancsnokok listája és közvetlen portyák">
+        <span>⚔️</span>
+        <span class="hidden md:inline">RIVÁLISOK</span>
+        <span class="text-[10px] bg-red-900 px-1 py-0.2 rounded border border-red-700 font-mono" id="header-pvp-badge">PvP</span>
+      </button>
       <button id="btn-shipyard-refit" onclick="openShipyardRefitModal()" class="bg-cyan-950/90 hover:bg-cyan-900 active:scale-95 text-cyan-200 border border-cyan-500 font-mono text-xs font-bold px-2.5 py-1.5 rounded flex items-center gap-1.5 shadow-lg shadow-cyan-950 transition-all">
         <span>🛠️</span>
         <span class="hidden md:inline">HAJÓDOKK</span>
@@ -296,7 +301,8 @@
             FLOTTA INDÍTÁSA
           </button>
         </div>
-        <div id="drawer-target-actions" class="hidden pt-1">
+        <div id="drawer-loot-container" class="my-2.5"></div>
+          <div id="drawer-target-actions" class="hidden pt-1">
           <button onclick="targetPlanetForAttack(STATE.selectedPlanetId)" class="w-full bg-red-700 hover:bg-red-600 active:scale-95 text-white py-2 rounded font-bold transition-all text-center flex items-center justify-center gap-1.5 shadow-lg shadow-red-950">
             <span>⚔️</span>
             <span>TÁMADÓ / EXPEDÍCIÓS FLOTTA INDÍTÁSA ERRE A BOLYGÓRA</span>
@@ -512,6 +518,32 @@
     <div class="p-2 bg-slate-900/90 border-t border-indigo-950 flex gap-1.5">
       <input id="comms-input" type="text" placeholder="Üzenet a másik parancsnoknak..." onkeydown="if(event.key==='Enter') sendChatMessage()" class="flex-1 bg-slate-950 border border-slate-700 rounded px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-indigo-400">
       <button onclick="sendChatMessage()" class="bg-indigo-600 hover:bg-indigo-500 active:scale-95 text-white font-bold px-3 py-1.5 rounded text-xs">Küldés</button>
+    </div>
+  </div>
+
+  
+  <!-- RIVÁLIS PARANCSNOKOK (PVP PORTYÁK) MODÁL -->
+  <div id="modal-pvp-roster" class="hidden fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-3 font-mono text-xs">
+    <div class="bg-[#090b14] border border-red-700/80 rounded-xl max-w-xl w-full flex flex-col max-h-[90vh] shadow-2xl shadow-red-950/80 overflow-hidden">
+      <div class="p-4 bg-gradient-to-r from-red-950 to-slate-900 border-b border-red-800 flex justify-between items-center">
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded bg-red-950 border border-red-500 flex items-center justify-center text-lg shadow-md shadow-red-950">⚔️</div>
+          <div>
+            <div class="text-sm font-bold text-red-300 tracking-wider">RIVÁLIS PARANCSNOKOK (PvP PORTYÁK)</div>
+            <div class="text-[10px] text-slate-400">Az emberi ellenfelek bázisai nem zsúfolják a térképet. Válassz innen célpontot!</div>
+          </div>
+        </div>
+        <button onclick="closeModal('modal-pvp-roster')" class="text-slate-400 hover:text-white text-base px-2 py-1 rounded hover:bg-slate-800 transition-colors">✕</button>
+      </div>
+
+      <div class="p-4 overflow-y-auto space-y-3 bg-[#060810]" id="pvp-roster-list">
+        <div class="text-center py-6 text-slate-500">Célpontok betöltése...</div>
+      </div>
+
+      <div class="p-3 bg-slate-950 border-t border-slate-900 text-[11px] text-slate-400 flex items-center justify-between">
+        <span>🛡️ Farmolás-védelem aktív (Dicsőség szorzó: 100% → 60% → 35% → 20% → 10%)</span>
+        <button onclick="closeModal('modal-pvp-roster')" class="bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded font-bold">Bezárás</button>
+      </div>
     </div>
   </div>
 
@@ -1049,9 +1081,17 @@
         return;
       }
 
-      for (const p of STATE.planets) {
+      const myId = STATE.currentPlayerId || 'player';
+      const visiblePlanets = STATE.planets.filter(p => {
+        if (p.is_bot) return true;
+        if (p.owner === myId || p.owner_id === myId) return true;
+        if (p.owner === 'neutral' || p.owner_id === 'neutral' || !p.owner_id) return true;
+        return false;
+      });
+
+      for (const p of visiblePlanets) {
         const dist = Math.hypot(p.x - clickX, p.y - clickY);
-        if (dist <= p.radius + 10) {
+        if (dist <= p.radius + 12) {
           audio.playBeep(600, 0.05);
           openPlanetDrawer(p.id);
           return;
@@ -1137,99 +1177,49 @@
         // Bolygó test
         ctx.fillStyle = fillColor;
         ctx.strokeStyle = strokeColor;
-        ctx.lineWidth = 2;
+        ctx.lineWidth = p.bot_type === 'boss' ? 2.5 : 2;
         ctx.beginPath();
         ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
         ctx.fill();
         ctx.stroke();
 
+        // Ikon a bolygó közepére
+        if (p.bot_type === 'boss') {
+          ctx.font = '14px monospace';
+          ctx.textAlign = 'center';
+          ctx.fillText(p.status === 'looted' ? '🏛️' : '☠️', p.x, p.y + 5);
+        } else if (p.is_bot) {
+          ctx.font = '11px monospace';
+          ctx.textAlign = 'center';
+          ctx.fillText(p.status === 'looted' ? '✓' : '⚠️', p.x, p.y + 4);
+        }
+
         // Bolygó neve és adatai
-        ctx.fillStyle = '#f1f5f9';
+        ctx.fillStyle = p.bot_type === 'boss' ? '#f87171' : (p.is_bot ? '#fbbf24' : '#f1f5f9');
         ctx.font = 'bold 11px monospace';
         ctx.textAlign = 'center';
         ctx.fillText(p.name, p.x, p.y + p.radius + 15);
 
-        // Állomásozó hajók jelölése
-        const totalShips = p.stationedFleet.corvette + p.stationedFleet.destroyer + p.stationedFleet.battleship;
+        // Kiegészítő felirat
+        if (p.bot_type === 'boss') {
+          ctx.fillStyle = p.status === 'looted' ? '#10b981' : '#c084fc';
+          ctx.font = '9px monospace';
+          ctx.fillText(p.status === 'looted' ? '✓ SEMLEGESÍTVE' : `[FŐ BOSS T${p.difficulty_tier || 3}]`, p.x, p.y + p.radius + 27);
+        } else if (p.is_bot) {
+          ctx.fillStyle = p.status === 'looted' ? '#10b981' : '#fb923c';
+          ctx.font = '9px monospace';
+          ctx.fillText(p.status === 'looted' ? '✓ KIFOSZTVA' : `[BOT ERŐD T${p.difficulty_tier || 1}]`, p.x, p.y + p.radius + 27);
+        }
+
+        // Állomásozó hajók jelölése (saját vagy védelmi flotta)
+        const sf = p.stationedFleet || {};
+        const totalShips = ALL_SHIPS.reduce((sum, st) => sum + (sf[st] || 0), 0);
         if (totalShips > 0) {
-          ctx.fillStyle = p.owner === 'player' ? '#38bdf8' : '#f87171';
+          ctx.fillStyle = isMine ? '#38bdf8' : (p.bot_type === 'boss' ? '#f87171' : '#fbbf24');
           ctx.font = '10px monospace';
           ctx.fillText(`▲ ${totalShips}`, p.x, p.y - p.radius - 8);
         }
       });
-
-      // ARK-0 KRONOS-LEVIATÁN (ŐS-KOLOSSZUS BOSS) KIRAJZOLÁSA
-      const bossX = (STATE.boss && STATE.boss.pos_x) || 280;
-      const bossY = (STATE.boss && STATE.boss.pos_y) || 200;
-      const bossDefeated = STATE.boss && STATE.boss.state === 'defeated';
-
-      if (bossDefeated) {
-        // Semlegesített kozmikus roncsmező
-        ctx.strokeStyle = '#475569';
-        ctx.lineWidth = 1.5;
-        ctx.setLineDash([3, 4]);
-        ctx.beginPath();
-        ctx.arc(bossX, bossY, 22, 0, Math.PI * 2);
-        ctx.stroke();
-        ctx.setLineDash([]);
-
-        ctx.fillStyle = '#1e293b';
-        ctx.beginPath();
-        ctx.arc(bossX, bossY, 15, 0, Math.PI * 2);
-        ctx.fill();
-
-        ctx.fillStyle = '#10b981';
-        ctx.font = 'bold 10px monospace';
-        ctx.textAlign = 'center';
-        ctx.fillText('✓ ARK-0 SEMLEGESÍTVE', bossX, bossY + 32);
-      } else {
-        // Aktív pulzáló szingularitás és Kvantum-Torzító Mező
-        const pulse = (Date.now() % 2000) / 2000;
-        const outerR = 24 + pulse * 8;
-
-        // Külső torzító aura
-        const grad = ctx.createRadialGradient(bossX, bossY, 6, bossX, bossY, outerR);
-        grad.addColorStop(0, 'rgba(239, 68, 68, 0.7)');
-        grad.addColorStop(0.5, 'rgba(168, 85, 247, 0.3)');
-        grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
-
-        ctx.fillStyle = grad;
-        ctx.beginPath();
-        ctx.arc(bossX, bossY, outerR, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Gravitációs védelmi gyűrűk
-        ctx.strokeStyle = 'rgba(239, 68, 68, 0.8)';
-        ctx.lineWidth = 2;
-        ctx.setLineDash([4, 4]);
-        ctx.beginPath();
-        ctx.arc(bossX, bossY, 24, 0, Math.PI * 2);
-        ctx.stroke();
-        ctx.setLineDash([]);
-
-        // Sötét mag
-        ctx.fillStyle = '#0b0318';
-        ctx.strokeStyle = '#dc2626';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.arc(bossX, bossY, 16, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.stroke();
-
-        // Ikon és felirat
-        ctx.fillStyle = '#ef4444';
-        ctx.font = 'bold 12px monospace';
-        ctx.textAlign = 'center';
-        ctx.fillText('☠️', bossX, bossY + 4);
-
-        ctx.fillStyle = '#f87171';
-        ctx.font = 'bold 10px monospace';
-        ctx.fillText('ARK-0 LEVIATÁN', bossX, bossY + 32);
-
-        ctx.fillStyle = '#c084fc';
-        ctx.font = '9px monospace';
-        ctx.fillText('[OMEGA ANOMÁLIA]', bossX, bossY + 44);
-      }
 
       ctx.restore();
     }
@@ -1326,8 +1316,54 @@
       const isMine = (p.owner === myId) || (p.owner_id === myId);
       const isOpponent = (p.owner && p.owner !== 'neutral' && p.owner !== myId) || (p.owner_id && p.owner_id !== 'neutral' && p.owner_id !== myId);
 
-      document.getElementById('drawer-owner').innerText = isMine ? 'Saját Birodalmad Bázisa' : (isOpponent ? 'Ellenséges Frakció Bázisa' : 'Semleges Világ');
-      document.getElementById('drawer-owner').className = isMine ? 'text-cyan-400 font-bold' : (isOpponent ? 'text-red-400 font-bold' : 'text-slate-400 font-bold');
+      let ownerText = isMine ? 'Saját Birodalmad Bázisa' : (isOpponent ? 'Ellenséges Frakció Bázisa' : 'Semleges Világ');
+      let ownerClass = isMine ? 'text-cyan-400 font-bold' : (isOpponent ? 'text-red-400 font-bold' : 'text-slate-400 font-bold');
+      if (p.bot_type === 'boss') {
+        ownerText = '☠️ PREKURZOR FŐ BOSS CITADELLA (Tier ' + (p.difficulty_tier || 3) + ')';
+        ownerClass = 'text-red-400 font-bold animate-pulse';
+      } else if (p.is_bot) {
+        ownerText = '⚠️ ELLENSÉGES BOT ERŐD (Tier ' + (p.difficulty_tier || 1) + ')';
+        ownerClass = 'text-amber-400 font-bold';
+      }
+      document.getElementById('drawer-owner').innerText = ownerText;
+      document.getElementById('drawer-owner').className = ownerClass;
+
+      const lootEl = document.getElementById('drawer-loot-container');
+      if (lootEl) {
+        if (p.is_bot) {
+          if (!p.loot_revealed) {
+            lootEl.innerHTML = `
+              <div class="bg-amber-950/40 border border-amber-500/70 p-2.5 rounded-lg text-amber-200">
+                <div class="flex items-center gap-1.5 font-bold text-amber-300 text-xs">
+                  <span>❓</span>
+                  <span>ISMERETLEN ZSÁKMÁNY (LEGYŐZÉS UTÁN DERÜL KI!)</span>
+                </div>
+                <div class="text-[10px] text-slate-300 mt-1">
+                  A bolygó kincse titkos. Győzd le a védelmi helyőrséget a zsákmány felfedéséhez és megszerzéséhez! (Nyersanyag csomag, Prekurzor Ereklye, vagy Dicsőség Pont).
+                </div>
+              </div>
+            `;
+          } else {
+            let lootDesc = '📦 Nyersanyag raktár (+Fém, +Energia, +Izotóp, +Adat)';
+            if (p.loot_type === 'artifact') lootDesc = '🏺 Ritka Prekurzor Ereklye (Chrono-Mag / Rezonátor / Kódex)';
+            else if (p.loot_type === 'glory') lootDesc = '🏆 Kozmikus Dicsőség Pont (+15-25 GP)';
+            lootEl.innerHTML = `
+              <div class="bg-emerald-950/50 border border-emerald-500/70 p-2.5 rounded-lg text-emerald-200">
+                <div class="flex items-center gap-1.5 font-bold text-emerald-300 text-xs">
+                  <span>🎁</span>
+                  <span>ZSÁKMÁNY FELTÁRVA & KIFOSZTVA</span>
+                </div>
+                <div class="text-[11px] text-emerald-100 font-mono font-bold mt-1">
+                  ${lootDesc}
+                </div>
+                <div class="text-[9px] text-emerald-300 mt-0.5">A kincs már jóváírásra került a számládon.</div>
+              </div>
+            `;
+          }
+        } else {
+          lootEl.innerHTML = '';
+        }
+      }
 
       const ownActionsEl = document.getElementById('drawer-own-actions');
       const targetActionsEl = document.getElementById('drawer-target-actions');
@@ -1565,7 +1601,9 @@
     // --- FLOTTA INDÍTÁS (DISPATCH) MIND A 10 HAJÓOSZTÁLYRA ---
     function openDispatchModal() {
       const p = STATE.planets.find(x => x.id === STATE.selectedPlanetId);
-      if (!p || p.owner !== 'player') {
+      const myId = STATE.currentPlayerId || 'player';
+      const isMine = (p.owner === myId) || (p.owner_id === myId);
+      if (!p || !isMine) {
         alert("Csak saját bolygóról indíthatsz flottát!");
         return;
       }
@@ -1575,7 +1613,8 @@
       STATE.planets.filter(x => x.id !== p.id).forEach(target => {
         const opt = document.createElement('option');
         opt.value = target.id;
-        opt.innerText = `${target.name} (Táv: ${Math.round(Math.hypot(target.x - p.x, target.y - p.y))} egység) [${target.owner}]`;
+        let labelType = target.bot_type === 'boss' ? '☠️ BOSS' : (target.is_bot ? '⚠️ BOT' : (target.owner === myId ? '🔵 SAJÁT' : '⚔️ RIVÁLIS'));
+        opt.innerText = `[${labelType}] ${target.name} (Táv: ${Math.round(Math.hypot(target.x - p.x, target.y - p.y))} egység)`;
         sel.appendChild(opt);
       });
 
@@ -1626,18 +1665,43 @@
       }
 
       const dist = Math.hypot(target.x - origin.x, target.y - origin.y);
-      let minSpeed = speeds.length > 0 ? Math.min(...speeds) : 5.0;
+      const baseTravelTicks = 5;
+      let speedDiscount = 0;
+      const bonusNotes = [];
 
-      if (STATE.researchedTechs && STATE.researchedTechs.includes('ion_thrusters')) minSpeed *= 1.25;
-      if (STATE.resources && STATE.resources.energy < 0) minSpeed *= 0.50;
+      if (STATE.researchedTechs && STATE.researchedTechs.includes('ion_thrusters')) {
+        speedDiscount += 1;
+        bonusNotes.push('Ionhajtómű (-1)');
+      }
+      if (STATE.researchedTechs && STATE.researchedTechs.includes('hyperspace_gate')) {
+        speedDiscount += 1;
+        bonusNotes.push('Hipertér-kapu (-1)');
+      }
+      if (STATE.activeBuffs && STATE.activeBuffs.some(b => b.buff_type === 'speed_boost')) {
+        speedDiscount += 1;
+        bonusNotes.push('Sebesség Bónusz (-1)');
+      }
+      let hasEngineUpg = false;
+      if (STATE.shipUpgrades) {
+        for (const st of ALL_SHIPS) {
+          const val = parseInt(document.getElementById(`send-${st}`)?.value) || 0;
+          if (val > 0 && STATE.shipUpgrades[st] && (STATE.shipUpgrades[st].engine || 0) >= 2) {
+            hasEngineUpg = true;
+          }
+        }
+      }
+      if (hasEngineUpg) {
+        speedDiscount += 1;
+        bonusNotes.push('Fejlett Motor-Array (-1)');
+      }
 
-      const hours = minSpeed > 0 ? (dist / minSpeed) : 0;
+      const finalTravelTicks = Math.max(1, baseTravelTicks - speedDiscount);
       const fuelMultiplier = (STATE.researchedTechs && STATE.researchedTechs.includes('isotope_compression')) ? 0.70 : 1.0;
-      const fuelCost = Math.ceil(totalFuelWeight * dist * 0.05 * fuelMultiplier);
+      const fuelCost = Math.max(5, Math.ceil(totalFuelWeight * 2 * fuelMultiplier));
 
       document.getElementById('disp-dist').innerText = `${Math.round(dist)} koordináta egység`;
-      document.getElementById('disp-speed').innerText = `${minSpeed.toFixed(1)} egység / óra`;
-      document.getElementById('disp-time').innerText = `${Math.ceil(hours)} óra (${Math.ceil(hours)} tick)`;
+      document.getElementById('disp-speed').innerText = `Alap: 5 kör${bonusNotes.length > 0 ? ' • Levonás: -' + speedDiscount + ' kör (' + bonusNotes.join(', ') + ')' : ' (Nincs aktív hajtómű-bónusz)'}`;
+      document.getElementById('disp-time').innerText = `${finalTravelTicks} kör (Érkezés a(z) #${(STATE.tick||1) + finalTravelTicks}. körben)`;
       document.getElementById('disp-fuel').innerText = `${fuelCost} Izotóp`;
     }
 
@@ -3019,6 +3083,56 @@
 
 
     // --- PvP PARANCSNOKI VEZÉRLÉS & GALAKTIKUS CSET ---
+    
+    // --- RIVÁLIS PARANCSNOKOK (PvP PORTYÁK) TÁBLÁZAT ---
+    function openPvPRosterModal() {
+      audio.playSelect();
+      renderPvPRoster();
+      document.getElementById('modal-pvp-roster').classList.remove('hidden');
+    }
+
+    function renderPvPRoster() {
+      const container = document.getElementById('pvp-roster-list');
+      if (!container) return;
+      const targets = STATE.pvpTargets || [];
+      if (targets.length === 0) {
+        container.innerHTML = '<div class="text-slate-500 text-center py-6 font-mono">Nincsenek elérhető rivális emberi parancsnokok ebben a szektorban.</div>';
+        return;
+      }
+
+      container.innerHTML = targets.map(t => {
+        const isEnemy = t.id === 'enemy';
+        const factionBadge = isEnemy 
+          ? '<span class="px-2 py-0.5 rounded bg-red-950 text-red-300 border border-red-700 font-bold text-[10px]">🔴 VEKTOR-9 SZINDIKÁTUS</span>'
+          : '<span class="px-2 py-0.5 rounded bg-sky-950 text-sky-300 border border-sky-700 font-bold text-[10px]">🔵 KRONOS PARANCSNOKSÁG</span>';
+        const multPct = Math.round((t.multiplier || 1.0) * 100);
+        const multColor = multPct >= 100 ? 'text-emerald-400' : (multPct >= 50 ? 'text-amber-400' : 'text-red-400');
+
+        return `
+          <div class="bg-slate-950 p-3.5 rounded-lg border border-slate-800 hover:border-red-600/60 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md shadow-black">
+            <div class="space-y-1">
+              <div class="flex items-center gap-2">
+                ${factionBadge}
+                <span class="font-bold text-white text-sm">${t.username}</span>
+                <span class="text-[10px] text-slate-400 font-mono">(${t.is_ai ? 'MI Szimuláció' : 'Emberi Parancsnok'})</span>
+              </div>
+              <div class="text-[11px] text-slate-300 flex flex-wrap gap-x-4 gap-y-1 font-mono">
+                <span>Főbázis: <b class="text-cyan-300">${t.base_planet_name}</b></span>
+                <span>Dicsőség: <b class="text-yellow-400">🏆 ${Math.floor(t.glory_points || 0)} GP</b></span>
+                <span>Farmolás elleni szorzó: <b class="${multColor}">${multPct}%</b> (${t.attacks_count || 0}. támadás)</span>
+              </div>
+            </div>
+            <div class="shrink-0 flex items-center">
+              <button onclick="targetPlanetForAttack('${t.base_planet_id}'); closeModal('modal-pvp-roster');" class="w-full sm:w-auto bg-gradient-to-r from-red-700 to-rose-600 hover:from-red-600 hover:to-rose-500 active:scale-95 text-white font-mono font-bold px-3.5 py-2 rounded text-xs border border-red-500 shadow-md shadow-red-950/60 flex items-center justify-center gap-1.5 transition-all">
+                <span>⚔️</span>
+                <span>PORTYA INDÍTÁSA</span>
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
     function openCommanderSelectModal() {
       audio.playSelect();
       document.getElementById('modal-commander-select').classList.remove('hidden');
@@ -3197,8 +3311,16 @@
           name: p.name,
           x: p.pos_x,
           y: p.pos_y,
-          radius: p.size_slots * 5,
+          radius: (p.bot_type === 'boss' ? 26 : (p.is_bot ? 18 : (p.size_slots || 4) * 5)),
           owner: p.owner_id === 'player' ? 'player' : (p.owner_id === 'enemy' ? 'enemy' : 'neutral'),
+          owner_id: p.owner_id,
+          is_bot: p.is_bot || 0,
+          bot_type: p.bot_type || null,
+          loot_type: p.loot_type || null,
+          loot_data: p.loot_data || null,
+          loot_revealed: p.loot_revealed || 0,
+          difficulty_tier: p.difficulty_tier || 1,
+          status: p.status || 'normal',
           slotsCount: p.size_slots,
           structures: (p.structures || []).map(s => ({
             type: s.structure_type,
@@ -3228,6 +3350,7 @@
           ships: f.ships
         }));
       }
+      if (data.pvpTargets) STATE.pvpTargets = data.pvpTargets;
       if (data.recentAIActions && data.recentAIActions.length > 0) {
         const ticker = document.getElementById('ai-action-ticker');
         if (ticker) {

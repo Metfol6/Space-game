@@ -30,7 +30,14 @@ CREATE TABLE IF NOT EXISTS planets (
     planetary_shield_hp REAL NOT NULL DEFAULT 0.0,
     max_shield_hp REAL NOT NULL DEFAULT 0.0,
     railgun_count INTEGER NOT NULL DEFAULT 0,
-    status TEXT NOT NULL DEFAULT 'normal' -- 'normal', 'under_siege', 'consolidating'
+    status TEXT NOT NULL DEFAULT 'normal', -- 'normal', 'under_siege', 'consolidating', 'looted', 'defeated'
+    is_bot INTEGER NOT NULL DEFAULT 0,
+    bot_type TEXT NULL, -- 'outpost', 'boss'
+    loot_type TEXT NULL, -- 'resources', 'artifact', 'glory'
+    loot_data TEXT NULL, -- JSON data
+    loot_revealed INTEGER NOT NULL DEFAULT 0,
+    defeated_by_player_id TEXT NULL,
+    difficulty_tier INTEGER NOT NULL DEFAULT 1
 );
 
 -- 3. Bolygói építmények és slotok

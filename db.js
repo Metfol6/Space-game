@@ -399,6 +399,7 @@ class DatabaseService {
         this.db.exec(schemaSql);
         this.seedInitialWorld();
         this.seedMissions();
+        this.seedBotPlanets();
     }
 
     seedMissions() {
@@ -457,6 +458,13 @@ class DatabaseService {
         try { this.db.prepare("ALTER TABLE missions ADD COLUMN reward_buff_value REAL DEFAULT 0").run(); } catch(e) {}
         try { this.db.prepare("ALTER TABLE missions ADD COLUMN reward_buff_duration INTEGER DEFAULT 0").run(); } catch(e) {}
         try { this.db.prepare("ALTER TABLE missions ADD COLUMN reward_artifact_id TEXT NULL").run(); } catch(e) {}
+        try { this.db.prepare("ALTER TABLE planets ADD COLUMN is_bot INTEGER NOT NULL DEFAULT 0").run(); } catch(e) {}
+        try { this.db.prepare("ALTER TABLE planets ADD COLUMN bot_type TEXT NULL").run(); } catch(e) {}
+        try { this.db.prepare("ALTER TABLE planets ADD COLUMN loot_type TEXT NULL").run(); } catch(e) {}
+        try { this.db.prepare("ALTER TABLE planets ADD COLUMN loot_data TEXT NULL").run(); } catch(e) {}
+        try { this.db.prepare("ALTER TABLE planets ADD COLUMN loot_revealed INTEGER NOT NULL DEFAULT 0").run(); } catch(e) {}
+        try { this.db.prepare("ALTER TABLE planets ADD COLUMN defeated_by_player_id TEXT NULL").run(); } catch(e) {}
+        try { this.db.prepare("ALTER TABLE planets ADD COLUMN difficulty_tier INTEGER NOT NULL DEFAULT 1").run(); } catch(e) {}
 
         this.db.exec(`
             CREATE TABLE IF NOT EXISTS player_buffs (
@@ -543,6 +551,228 @@ class DatabaseService {
         for (const nm of newMissions) {
             mStmt.run(nm.id, nm.title, nm.description, nm.reward_text, nm.reward_metal, nm.reward_energy, nm.reward_isotope, nm.reward_data, nm.reward_buff_type, nm.reward_buff_value, nm.reward_buff_duration, nm.reward_artifact_id, nm.sort_order);
         }
+    }
+
+
+    seedBotPlanets() {
+        this.db.prepare(`
+            INSERT OR IGNORE INTO players (id, username, color_hex, metal, energy, isotope, data_points, is_ai)
+            VALUES ('bot_hostile', 'Kozmikus Renegátok (Bot)', '#f59e0b', 0, 0, 0, 0, 1)
+        `).run();
+        this.db.prepare(`
+            INSERT OR IGNORE INTO players (id, username, color_hex, metal, energy, isotope, data_points, is_ai)
+            VALUES ('precursor_boss', 'Prekurzor Ős-Kolosszusok', '#dc2626', 0, 0, 0, 0, 1)
+        `).run();
+
+        // 3 Fő Boss Citadella
+        const bossPlanets = [
+            {
+                id: 'boss_1',
+                name: 'CYGNUS BASTION // ŐSI ELŐŐRS',
+                pos_x: 180, pos_y: 140, size_slots: 6,
+                is_bot: 1, bot_type: 'boss', difficulty_tier: 3,
+                loot_type: 'resources',
+                loot_data: JSON.stringify({ metal: 2000, energy: 1000, isotope: 500, data: 500, glory: 100 }),
+                planetary_shield_hp: 1500.0, max_shield_hp: 1500.0, railgun_count: 2,
+                ships: { frigate: 4, destroyer: 3, heavy_destroyer: 2 }
+            },
+            {
+                id: 'boss_2',
+                name: 'VOID CITADEL // ÜRESSÉG CITADELLÁJA',
+                pos_x: 360, pos_y: 180, size_slots: 6,
+                is_bot: 1, bot_type: 'boss', difficulty_tier: 4,
+                loot_type: 'resources',
+                loot_data: JSON.stringify({ metal: 3500, energy: 1800, isotope: 1000, data: 1000, glory: 200 }),
+                planetary_shield_hp: 3000.0, max_shield_hp: 3000.0, railgun_count: 4,
+                ships: { destroyer: 5, cruiser: 3, battleship: 1 }
+            },
+            {
+                id: 'boss_3',
+                name: 'OMEGA-ARK-0 // KRONOS-LEVIATÁN',
+                pos_x: 280, pos_y: 200, size_slots: 6,
+                is_bot: 1, bot_type: 'boss', difficulty_tier: 5,
+                loot_type: 'resources',
+                loot_data: JSON.stringify({ metal: 6000, energy: 3000, isotope: 2000, data: 2000, glory: 500 }),
+                planetary_shield_hp: 4500.0, max_shield_hp: 4500.0, railgun_count: 6,
+                ships: { heavy_destroyer: 4, cruiser: 4, battleship: 3 }
+            }
+        ];
+
+        // 6 Kisebb Ellenséges Bot Bolygó a rejtett zsákmányokkal
+        const botOutposts = [
+            {
+                id: 'bot_p1',
+                name: 'DRAKON KALÓZTÁMASZPONT',
+                pos_x: 80, pos_y: 240, size_slots: 3,
+                is_bot: 1, bot_type: 'outpost', difficulty_tier: 1,
+                loot_type: 'resources',
+                loot_data: JSON.stringify({ metal: 1200, energy: 500, isotope: 180, data: 120 }),
+                planetary_shield_hp: 200.0, max_shield_hp: 200.0, railgun_count: 1,
+                ships: { interceptor: 6, corvette: 4 }
+            },
+            {
+                id: 'bot_p2',
+                name: 'RENEGÁT IZOTÓP-BÁNYA',
+                pos_x: 250, pos_y: 60, size_slots: 3,
+                is_bot: 1, bot_type: 'outpost', difficulty_tier: 1,
+                loot_type: 'glory',
+                loot_data: JSON.stringify({ glory: 15 }),
+                planetary_shield_hp: 150.0, max_shield_hp: 150.0, railgun_count: 1,
+                ships: { corvette: 5, frigate: 2 }
+            },
+            {
+                id: 'bot_p3',
+                name: 'PREKURZOR KRIPTA-HOLD',
+                pos_x: 380, pos_y: 100, size_slots: 4,
+                is_bot: 1, bot_type: 'outpost', difficulty_tier: 2,
+                loot_type: 'artifact',
+                loot_data: JSON.stringify({ artifact_id: 'artifact_chrono_core', name: 'Kvantum Chrono-Mag' }),
+                planetary_shield_hp: 350.0, max_shield_hp: 350.0, railgun_count: 2,
+                ships: { frigate: 4, destroyer: 2 }
+            },
+            {
+                id: 'bot_p4',
+                name: 'ROBOT GÉPGYÁR ALFA',
+                pos_x: 160, pos_y: 360, size_slots: 4,
+                is_bot: 1, bot_type: 'outpost', difficulty_tier: 2,
+                loot_type: 'resources',
+                loot_data: JSON.stringify({ metal: 1600, energy: 700, isotope: 250, data: 200 }),
+                planetary_shield_hp: 300.0, max_shield_hp: 300.0, railgun_count: 2,
+                ships: { corvette: 8, heavy_destroyer: 2 }
+            },
+            {
+                id: 'bot_p5',
+                name: 'KOZMIKUS RONCS-ERŐD',
+                pos_x: 340, pos_y: 320, size_slots: 4,
+                is_bot: 1, bot_type: 'outpost', difficulty_tier: 2,
+                loot_type: 'glory',
+                loot_data: JSON.stringify({ glory: 25 }),
+                planetary_shield_hp: 400.0, max_shield_hp: 400.0, railgun_count: 2,
+                ships: { destroyer: 4, cruiser: 1 }
+            },
+            {
+                id: 'bot_p6',
+                name: 'SÖTÉT CSILLAG ŐRHELY',
+                pos_x: 440, pos_y: 220, size_slots: 5,
+                is_bot: 1, bot_type: 'outpost', difficulty_tier: 3,
+                loot_type: 'artifact',
+                loot_data: JSON.stringify({ artifact_id: 'artifact_dark_resonator', name: 'Sötét Anyag Rezonátor' }),
+                planetary_shield_hp: 500.0, max_shield_hp: 500.0, railgun_count: 3,
+                ships: { frigate: 4, destroyer: 3, cruiser: 2 }
+            }
+        ];
+
+        const allBots = [...bossPlanets, ...botOutposts];
+        for (const bp of allBots) {
+            const exists = this.db.prepare('SELECT id FROM planets WHERE id = ?').get(bp.id);
+            const ownerId = bp.bot_type === 'boss' ? 'precursor_boss' : 'bot_hostile';
+            if (!exists) {
+                this.db.prepare(`
+                    INSERT INTO planets (id, name, pos_x, pos_y, size_slots, owner_id, base_metal_rate, base_energy_rate, planetary_shield_hp, max_shield_hp, railgun_count, is_bot, bot_type, loot_type, loot_data, loot_revealed, difficulty_tier, status)
+                    VALUES (?, ?, ?, ?, ?, ?, 0, 0, ?, ?, ?, 1, ?, ?, ?, 0, ?, 'normal')
+                `).run(bp.id, bp.name, bp.pos_x, bp.pos_y, bp.size_slots, ownerId, bp.planetary_shield_hp, bp.max_shield_hp, bp.railgun_count, bp.bot_type, bp.loot_type, bp.loot_data, bp.difficulty_tier);
+
+                this.createFleet(`f_${bp.id}`, ownerId, `${bp.name} Védelmi Erő`, bp.pos_x, bp.pos_y, bp.id, bp.ships);
+            } else {
+                // Biztosítjuk a bot mezők beállítását létező soroknál is
+                this.db.prepare(`
+                    UPDATE planets 
+                    SET is_bot = 1, bot_type = ?, loot_type = ?, loot_data = ?, difficulty_tier = ?
+                    WHERE id = ? AND (is_bot = 0 OR is_bot IS NULL)
+                `).run(bp.bot_type, bp.loot_type, bp.loot_data, bp.difficulty_tier, bp.id);
+            }
+        }
+    }
+
+    claimBotLoot(planetId, playerId) {
+        const planet = this.db.prepare('SELECT * FROM planets WHERE id = ?').get(planetId);
+        if (!planet || !planet.is_bot) return null;
+        let lootData = {};
+        try { lootData = JSON.parse(planet.loot_data || '{}'); } catch(e) {}
+
+        const player = this.getPlayer(playerId);
+        let rewardSummary = '';
+
+        if (planet.loot_type === 'resources') {
+            const metal = lootData.metal || 0;
+            const energy = lootData.energy || 0;
+            const isotope = lootData.isotope || 0;
+            const data = lootData.data || 0;
+            const glory = lootData.glory || 0;
+            if (player) {
+                this.updatePlayerResources(playerId, player.metal + metal, player.energy + energy, player.isotope + isotope, player.data_points + data);
+                if (glory > 0) this.addGloryPoints(playerId, glory);
+            }
+            rewardSummary = `+${metal} Fém, +${energy} E, +${isotope} Iso, +${data} Dat${glory > 0 ? `, +${glory} GP` : ''}`;
+        } else if (planet.loot_type === 'artifact') {
+            const artId = lootData.artifact_id || 'artifact_chrono_core';
+            const artName = lootData.name || 'Ősi Ereklye';
+            this.addPlayerArtifact(playerId, artId, artName);
+            rewardSummary = `🏺 ${artName}`;
+        } else if (planet.loot_type === 'glory') {
+            const glory = lootData.glory || 20;
+            this.addGloryPoints(playerId, glory);
+            rewardSummary = `🏆 +${glory} Dicsőség Pont`;
+        }
+
+        this.db.prepare(`
+            UPDATE planets 
+            SET loot_revealed = 1, status = 'looted', defeated_by_player_id = ?
+            WHERE id = ?
+        `).run(playerId, planetId);
+
+        if (planet.bot_type === 'boss') {
+            this.db.prepare("UPDATE boss_state SET state = 'defeated', defeated_at_tick = ? WHERE id = ?")
+                .run(this.getGameState(), planetId);
+        }
+
+        return {
+            planetId,
+            planetName: planet.name,
+            lootType: planet.loot_type,
+            lootData,
+            rewardSummary
+        };
+    }
+
+    addGloryPoints(playerId, amount) {
+        this.db.prepare('UPDATE players SET glory_points = glory_points + ? WHERE id = ?').run(amount, playerId);
+        return this.getPlayer(playerId);
+    }
+
+    getHumanPlayers(excludePlayerId = null) {
+        const query = excludePlayerId 
+            ? "SELECT id, username, color_hex, metal, energy, isotope, data_points, glory_points, is_ai, created_at FROM players WHERE id NOT IN ('bot_hostile', 'precursor_boss', ?)"
+            : "SELECT id, username, color_hex, metal, energy, isotope, data_points, glory_points, is_ai, created_at FROM players WHERE id NOT IN ('bot_hostile', 'precursor_boss')";
+        const players = excludePlayerId 
+            ? this.db.prepare(query).all(excludePlayerId)
+            : this.db.prepare(query).all();
+        
+        const curTick = this.getGameState();
+        for (const p of players) {
+            const basePlanet = this.db.prepare("SELECT id, name FROM planets WHERE owner_id = ? ORDER BY id ASC LIMIT 1").get(p.id);
+            p.base_planet_id = basePlanet ? basePlanet.id : null;
+            p.base_planet_name = basePlanet ? basePlanet.name : 'Ismeretlen Bázis';
+
+            if (excludePlayerId) {
+                const recentAttacks = this.db.prepare(`
+                    SELECT COUNT(*) as count FROM glory_attack_history 
+                    WHERE attacker_id = ? AND target_player_id = ? AND attack_tick >= ?
+                `).get(excludePlayerId, p.id, curTick - 30);
+                const count = recentAttacks ? recentAttacks.count : 0;
+                let multiplier = 1.0;
+                if (count === 1) multiplier = 0.60;
+                else if (count === 2) multiplier = 0.35;
+                else if (count === 3) multiplier = 0.20;
+                else if (count >= 4) multiplier = 0.10;
+                p.multiplier = multiplier;
+                p.attacks_count = count;
+            } else {
+                p.multiplier = 1.0;
+                p.attacks_count = 0;
+            }
+        }
+        return players;
     }
 
     seedInitialWorld() {
@@ -675,18 +905,15 @@ class DatabaseService {
             p.structures = this.db.prepare('SELECT * FROM planet_structures WHERE planet_id = ? ORDER BY slot_index').all(p.id);
             // Állomásozó flotta keresése ezen a bolygón
             const fleet = this.db.prepare("SELECT * FROM fleets WHERE origin_planet_id = ? AND state = 'stationed'").get(p.id);
+            p.stationedFleet = { fleetId: fleet ? fleet.id : null };
+            for (const st of ALL_SHIP_TYPES) {
+                p.stationedFleet[st] = 0;
+            }
             if (fleet) {
                 const ships = this.db.prepare('SELECT ship_type, count FROM fleet_ships WHERE fleet_id = ?').all(fleet.id);
-                p.stationedFleet = {
-                    fleetId: fleet.id,
-                    scout: ships.find(s => s.ship_type === 'scout')?.count || 0,
-                    corvette: ships.find(s => s.ship_type === 'corvette')?.count || 0,
-                    colony_ship: ships.find(s => s.ship_type === 'colony_ship')?.count || 0,
-                    destroyer: ships.find(s => s.ship_type === 'destroyer')?.count || 0,
-                    battleship: ships.find(s => s.ship_type === 'battleship')?.count || 0
-                };
-            } else {
-                p.stationedFleet = { fleetId: null, scout: 0, corvette: 0, colony_ship: 0, destroyer: 0, battleship: 0 };
+                for (const s of ships) {
+                    p.stationedFleet[s.ship_type] = s.count || 0;
+                }
             }
         }
         return planets;
@@ -696,13 +923,11 @@ class DatabaseService {
         const fleets = this.db.prepare("SELECT * FROM fleets WHERE state = 'in_transit'").all();
         for (const f of fleets) {
             const ships = this.db.prepare('SELECT ship_type, count FROM fleet_ships WHERE fleet_id = ?').all(f.id);
-            f.ships = {
-                scout: ships.find(s => s.ship_type === 'scout')?.count || 0,
-                corvette: ships.find(s => s.ship_type === 'corvette')?.count || 0,
-                colony_ship: ships.find(s => s.ship_type === 'colony_ship')?.count || 0,
-                destroyer: ships.find(s => s.ship_type === 'destroyer')?.count || 0,
-                battleship: ships.find(s => s.ship_type === 'battleship')?.count || 0
-            };
+            f.ships = {};
+            for (const st of ALL_SHIP_TYPES) f.ships[st] = 0;
+            for (const s of ships) {
+                f.ships[s.ship_type] = s.count || 0;
+            }
         }
         return fleets;
     }

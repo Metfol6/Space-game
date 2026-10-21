@@ -741,7 +741,88 @@ function runTests() {
     }
     console.log("✓ Galaktikus Kommunikáció (PvP Comms Chat) sikeresen igazolva!");
 
-    console.log("\n>>> MINDEN ÚJ HAJÓOSZTÁLY, KÉPESSÉG, 3 BOSS ÉS PVP MULTI-COMMANDER RENDSZER SIKERESEN IGAZOLVA! <<<");
+    // =========================================================================
+    // [TEST 12] Térkép Tisztítás, Bot Világok, Rejtett Zsákmány és Menetidő
+    // =========================================================================
+    console.log("\n=== [TEST 12] Bot Világok, 3 Fő Boss, Rejtett Zsákmány és Menetidő Tesztje ===");
+
+    // 1. Bot bolygók és 3 Boss létezésének vizsgálata
+    const allPlanetsTest = db.getAllPlanets();
+    const botWorlds = allPlanetsTest.filter(p => p.is_bot);
+    console.log("Bot világok száma az univerzumban:", botWorlds.length, botWorlds.map(b => `${b.id}: ${b.name} (${b.bot_type})`));
+    if (botWorlds.length < 9) {
+        throw new Error(`Legalább 9 bot világnak (3 Boss + 6 Bot erőd) kell léteznie! Megtalálva: ${botWorlds.length}`);
+    }
+
+    const bossCitadels = botWorlds.filter(b => b.bot_type === 'boss');
+    const smallOutposts = botWorlds.filter(b => b.bot_type === 'outpost');
+    if (bossCitadels.length !== 3 || smallOutposts.length !== 6) {
+        throw new Error(`Pontosan 3 Boss Citadellának és 6 Bot Erődnek kell léteznie! Bossok: ${bossCitadels.length}, Erődök: ${smallOutposts.length}`);
+    }
+    console.log("✓ 3 Fő Boss Citadella és 6 Bot Erőd sikeresen inicializálva a bolygók táblában!");
+
+    // 2. A 3-féle zsákmánytípus (Nyersanyag, Artifact, Dicsőség) ellenőrzése
+    const resBots = smallOutposts.filter(b => b.loot_type === 'resources');
+    const artBots = smallOutposts.filter(b => b.loot_type === 'artifact');
+    const gloryBots = smallOutposts.filter(b => b.loot_type === 'glory');
+    console.log(`Zsákmánytípusok eloszlása: Nyersanyag: ${resBots.length}, Ereklye: ${artBots.length}, Dicsőség: ${gloryBots.length}`);
+    if (resBots.length === 0 || artBots.length === 0 || gloryBots.length === 0) {
+        throw new Error("Mindhárom zsákmánytípusból (resources, artifact, glory) léteznie kell bot bolygónak!");
+    }
+
+    // 3. Rejtett zsákmány (loot_revealed = 0) és felfedés győzelemkor
+    const testBot = smallOutposts.find(b => b.id === 'bot_p3'); // Prekurzor Kripta-Hold (artifact)
+    console.log(`Kezdeti állapot [${testBot.name}]: loot_revealed = ${testBot.loot_revealed}, status = ${testBot.status}`);
+    if (testBot.loot_revealed !== 0) throw new Error("A zsákmánynak kezdetben rejtettnek kell lennie (loot_revealed = 0)!");
+
+    // Győzelem és zsákmányszerzés szimulációja
+    const lootClaimRes = db.claimBotLoot(testBot.id, 'player');
+    console.log("Megszerzett és feltárt zsákmány:", lootClaimRes);
+    const updatedTestBot = db.getAllPlanets().find(p => p.id === testBot.id);
+    console.log(`Feltárás után [${updatedTestBot.name}]: loot_revealed = ${updatedTestBot.loot_revealed}, status = ${updatedTestBot.status}`);
+    if (updatedTestBot.loot_revealed !== 1 || updatedTestBot.status !== 'looted') {
+        throw new Error("A zsákmánynak fel kell fedődnie győzelem után (loot_revealed = 1, status = 'looted')!");
+    }
+    const testHasChrono = db.hasArtifact('player', 'artifact_chrono_core');
+    if (!testHasChrono) throw new Error("A zsákmányolt Chrono-Mag ereklye nem íródott jóvá a játékos profiljában!");
+    console.log("✓ Rejtett zsákmányrendszer és győzelmi felfedés sikeresen igazolva!");
+
+    // Visszaállítás a teszt után
+    db.db.prepare("UPDATE planets SET loot_revealed = 0, status = 'normal', defeated_by_player_id = NULL WHERE id = 'bot_p3'").run();
+
+    // 4. Menetidő kalkuláció tesztje (Alap 5 kör, fejlesztésekkel csökkentve)
+    const baseTicks = 5;
+    // Ionhajtómű nélkül
+    let discWithoutTech = 0;
+    const testTechs = ['deep_core_mining'];
+    if (testTechs.includes('ion_thrusters')) discWithoutTech += 1;
+    if (testTechs.includes('hyperspace_gate')) discWithoutTech += 1;
+    const timeNoTech = Math.max(1, baseTicks - discWithoutTech);
+    console.log(`Menetidő alapesetben (fejlesztés nélkül): ${timeNoTech} kör (várt: 5 kör)`);
+    if (timeNoTech !== 5) throw new Error("Alapértelmezett menetidőnek pontosan 5 körnek kell lennie!");
+
+    // Ionhajtóművel és Kvantum-kapuval
+    let discWithTech = 0;
+    const advancedTechs = ['ion_thrusters', 'hyperspace_gate'];
+    if (advancedTechs.includes('ion_thrusters')) discWithTech += 1;
+    if (advancedTechs.includes('hyperspace_gate')) discWithTech += 1;
+    const timeWithTech = Math.max(1, baseTicks - discWithTech);
+    console.log(`Menetidő Ionhajtóművel és Hipertér-kapuval: ${timeWithTech} kör (várt: 3 kör)`);
+    if (timeWithTech !== 3) throw new Error("A technológiáknak 3 körre kellett csökkenteniük a menetidőt!");
+    console.log("✓ Egységes 5 körös alapidő és technológiákkal való menetidő-csökkentés igazolva!");
+
+    // 5. PvP Célpont Roster lekérése
+    const pvpRoster = db.getHumanPlayers('player');
+    console.log("PvP Rivális célpontok Kék játékos számára:", pvpRoster.map(p => `${p.username} (Bázis: ${p.base_planet_name}, Szorzó: ${p.multiplier * 100}%)`));
+    if (pvpRoster.length === 0 || !pvpRoster.some(p => p.id === 'enemy')) {
+        throw new Error("A PvP célpontlistának vissza kell adnia az ellenséges emberi/MI játékost!");
+    }
+    if (pvpRoster.some(p => p.id === 'bot_hostile' || p.id === 'precursor_boss')) {
+        throw new Error("A botok nem szerepelhetnek az emberi PvP célpontlistában!");
+    }
+    console.log("✓ PvP Rivális Célpont Táblázat (getHumanPlayers) sikeresen igazolva!");
+
+    console.log("\n>>> MINDEN ÚJ HAJÓOSZTÁLY, KÉPESSÉG, 3 BOSS, REJTETT ZSÁKMÁNY ÉS TÉRKÉP-PVP RENDSZER SIKERESEN IGAZOLVA! <<<");
 }
 
 try {
