@@ -1231,7 +1231,7 @@ function runServerTests() {
 if (process.argv.includes('--test')) {
     runServerTests();
 } else {
-    server.listen(PORT, () => {
+    server.listen(PORT, '0.0.0.0', () => {
         console.log(`\n======================================================`);
         console.log(`  SPACE 4X TACTICS SZERVER FUT`);
         console.log(`  Cím: http://localhost:${PORT}`);

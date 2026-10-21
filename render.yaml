@@ -6,5 +6,5 @@ services:
     buildCommand: ""
     startCommand: "node server.js"
     envVars:
-      - key: PORT
-        value: 3000
+      - key: NODE_VERSION
+        value: 22.12.0

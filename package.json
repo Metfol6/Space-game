@@ -8,7 +8,7 @@
     "test": "node test_suite.js"
   },
   "engines": {
-    "node": ">=22.0.0"
+    "node": ">=22.5.0"
   },
   "private": true
 }
