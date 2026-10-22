@@ -2,6 +2,19 @@
  * SPACE 4X TACTICS - BACKEND SZERVER ÉS TICK FUTTATÓ (Node.js 24)
  * Zéró külső függőség! Natív HTTP és SQLite szerver REST API-val és MI-vel.
  */
+// Ensure --experimental-sqlite is active if running on Node 22
+try {
+    require('node:sqlite');
+} catch (e) {
+    if (e.code === 'ERR_UNKNOWN_BUILTIN_MODULE' && !process.env._SQLITE_RESPAWNED) {
+        const { spawnSync } = require('node:child_process');
+        const res = spawnSync(process.execPath, ['--experimental-sqlite', ...process.argv.slice(1)], {
+            stdio: 'inherit',
+            env: { ...process.env, _SQLITE_RESPAWNED: '1' }
+        });
+        process.exit(res.status ?? (res.signal ? 1 : 0));
+    }
+}
 
 const http = require('node:http');
 const fs = require('node:fs');

@@ -3,7 +3,20 @@
  * Perzisztens SQLite adatbázis kezelés natív Node 24 modullal.
  */
 
-const { DatabaseSync } = require('node:sqlite');
+let DatabaseSync;
+try {
+    DatabaseSync = require('node:sqlite').DatabaseSync;
+} catch (e) {
+    if (e.code === 'ERR_UNKNOWN_BUILTIN_MODULE' && !process.env._SQLITE_RESPAWNED) {
+        const { spawnSync } = require('node:child_process');
+        const res = spawnSync(process.execPath, ['--experimental-sqlite', ...process.argv.slice(1)], {
+            stdio: 'inherit',
+            env: { ...process.env, _SQLITE_RESPAWNED: '1' }
+        });
+        process.exit(res.status ?? (res.signal ? 1 : 0));
+    }
+    throw e;
+}
 const path = require('node:path');
 const fs = require('node:fs');
 

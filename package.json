@@ -4,9 +4,9 @@
   "description": "Space 4X Tactics - Asynchronous Turn-Based Strategy Game",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js",
+    "start": "node --experimental-sqlite server.js",
     "build": "echo Build completed",
-    "test": "node test_suite.js"
+    "test": "node --experimental-sqlite test_suite.js"
   },
   "engines": {
     "node": ">=22.5.0"
