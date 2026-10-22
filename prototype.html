@@ -2529,9 +2529,12 @@
         }
       } catch(e) {
         console.error(e);
-      }
-      renderShipyardRefit();
       document.getElementById('modal-shipyard-refit').classList.remove('hidden');
+      try {
+        renderShipyardRefit();
+      } catch(err) {
+        console.error("renderShipyardRefit hiba:", err);
+      }
     }
 
     function selectRefitShipTab(shipType) {
@@ -2715,9 +2718,9 @@
           return `<span class="inline-block w-3 h-3 rounded-full bg-slate-950 border border-slate-700"></span>`;
         }).join(' ');
 
-        const levelTitle = curLvl === 0 ? 'Inaktív (Szint 0/10)' : `Szint ${curLvl}/10: ${curSpec ? curSpec.name : ''}`;
         const curSpec = curLvl > 0 && selectedSlotDef.levels ? selectedSlotDef.levels[curLvl - 1] : null;
         const nextSpec = curLvl < 10 && selectedSlotDef.levels ? selectedSlotDef.levels[curLvl] : null;
+        const levelTitle = curLvl === 0 ? 'Inaktív (Szint 0/10)' : `Szint ${curLvl}/10: ${curSpec ? curSpec.name : ''}`;
 
         // Ellenőrzések szintlépéshez (Tech követelmény, Keret, Plafon, Erőforrás)
         const isMaxLevel = curLvl >= 10;
