@@ -3606,6 +3606,369 @@
       }
     }
 
+
+    // =========================================================================
+    // 4/G. GALAKTIKUS PARANCSNOKI ÚTMUTATÓ (GUIDE) VEZÉRLÉS
+    // =========================================================================
+    STATE.currentGuideTab = 'tech';
+
+    function openGuideModal() {
+      try {
+        if (typeof audio !== 'undefined' && audio.playSelect) audio.playSelect();
+      } catch(e) {}
+      switchGuideTab(STATE.currentGuideTab || 'tech');
+      const m = document.getElementById('modal-guide');
+      if (m) m.classList.remove('hidden');
+    }
+    window.openGuideModal = openGuideModal;
+
+    function switchGuideTab(tabKey) {
+      STATE.currentGuideTab = tabKey;
+      ['tech', 'ships', 'dock', 'bots'].forEach(t => {
+        const btn = document.getElementById('guide-tab-' + t);
+        if (btn) {
+          if (t === tabKey) {
+            btn.className = 'px-3 py-1.5 rounded text-xs font-bold font-mono transition-all flex items-center gap-1.5 bg-indigo-900/90 text-indigo-200 border border-indigo-400 shadow';
+          } else {
+            btn.className = 'px-3 py-1.5 rounded text-xs font-bold font-mono transition-all flex items-center gap-1.5 bg-slate-900/70 border border-slate-800 text-slate-400 hover:text-slate-200';
+          }
+        }
+      });
+      renderGuideContent(tabKey);
+    }
+    window.switchGuideTab = switchGuideTab;
+
+    function renderGuideContent(tabKey) {
+      const container = document.getElementById('guide-content-area');
+      if (!container) return;
+
+      if (tabKey === 'tech') {
+        container.innerHTML = `
+          <div class="space-y-4">
+            <div class="bg-indigo-950/40 border border-indigo-500/50 p-3 rounded-xl text-indigo-200 text-xs">
+              <div class="font-bold text-indigo-300 text-sm mb-1 flex items-center gap-2">
+                <span>🔬</span>
+                <span>HOGYAN MŰKÖDIK A TECHNOLÓGIAI FA?</span>
+              </div>
+              <div>A játékban 4 fő technológiai ág található. Minden ág Tier 1 kutatással indul (1 óra/kör), és az előfeltételek feloldásával juthatsz el a haladó Tier 2 és a legerősebb Tier 3 végjáték technológiákhoz. A kutatásokhoz a laboratóriumok által termelt Adatpontok (Dat) és Izotóp szükséges.</div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <!-- 1. Ág: Ipar & Bányászat -->
+              <div class="bg-slate-900/80 border border-amber-900/60 rounded-xl p-3.5 space-y-2.5">
+                <div class="flex items-center justify-between border-b border-amber-900/60 pb-2">
+                  <span class="font-bold text-amber-300 text-xs flex items-center gap-2">
+                    <span>⛏️</span>
+                    <span>1. ÁG: IPAR & BÁNYÁSZAT</span>
+                  </span>
+                  <span class="text-[10px] text-amber-400/80 font-mono">Gazdasági növekedés</span>
+                </div>
+                <div class="space-y-2 text-[11px] font-mono">
+                  <div class="p-2 bg-slate-950/80 rounded border border-amber-500/40">
+                    <div class="font-bold text-amber-300">Tier 1: Mélységi Fúrás (⛏️)</div>
+                    <div class="text-slate-300 text-[10px] mt-0.5">+25% Fémtermelés minden birtokolt bolygón.</div>
+                    <div class="text-emerald-400 text-[9px] mt-1">➔ Nyitja: Nehézfém Kohászat, Automatizált Hajógyár</div>
+                  </div>
+                  <div class="p-2 bg-slate-950/80 rounded border border-amber-500/30">
+                    <div class="font-bold text-amber-200">Tier 2: Nehézfém Kohászat (🔩)</div>
+                    <div class="text-slate-300 text-[10px] mt-0.5">+30% Hajótest (Hull HP) minden hajónál!</div>
+                    <div class="text-cyan-400 text-[9px] mt-1">➔ Nyitja a(z) ◆ ROMBOLÓ CIRKÁLÓ-t & Ostrom-tölteteket</div>
+                  </div>
+                  <div class="p-2 bg-slate-950/80 rounded border border-amber-500/30">
+                    <div class="font-bold text-amber-200">Tier 2: Automatizált Hajógyár (🏭)</div>
+                    <div class="text-slate-300 text-[10px] mt-0.5">-20% Hajógyártási Fémköltség!</div>
+                    <div class="text-cyan-400 text-[9px] mt-1">➔ Nyitja a(z) ⚲ KOLÓNIAHAJÓ-t & Nano-Összeszerelést</div>
+                  </div>
+                  <div class="p-2 bg-slate-950/80 rounded border border-amber-500/20">
+                    <div class="font-bold text-yellow-300">Tier 3: Nano-Összeszerelés (💠)</div>
+                    <div class="text-slate-300 text-[10px] mt-0.5">+1 Építési Slot minden bolygón (további bányák és pajzsok).</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 2. Ág: Energia & Reaktorok -->
+              <div class="bg-slate-900/80 border border-cyan-900/60 rounded-xl p-3.5 space-y-2.5">
+                <div class="flex items-center justify-between border-b border-cyan-900/60 pb-2">
+                  <span class="font-bold text-cyan-300 text-xs flex items-center gap-2">
+                    <span>⚛️</span>
+                    <span>2. ÁG: ENERGIA & REAKTOROK</span>
+                  </span>
+                  <span class="text-[10px] text-cyan-400/80 font-mono">Energiahálózat</span>
+                </div>
+                <div class="space-y-2 text-[11px] font-mono">
+                  <div class="p-2 bg-slate-950/80 rounded border border-cyan-500/40">
+                    <div class="font-bold text-cyan-300">Tier 1: Sötét Anyag Reaktor (⚛️)</div>
+                    <div class="text-slate-300 text-[10px] mt-0.5">+30% Energiatermelés minden bolygón.</div>
+                    <div class="text-emerald-400 text-[9px] mt-1">➔ Nyitja: Szupervezető Hálózat, Automatizált Hajógyár</div>
+                  </div>
+                  <div class="p-2 bg-slate-950/80 rounded border border-cyan-500/30">
+                    <div class="font-bold text-cyan-200">Tier 2: Szupervezető Hálózat (⚡)</div>
+                    <div class="text-slate-300 text-[10px] mt-0.5">-25% Épület energiafogyasztás (több marad a hadiflottára).</div>
+                    <div class="text-cyan-400 text-[9px] mt-1">➔ Nyitja: Antianyag Csomópont, Hipertér-Ugrómotor</div>
+                  </div>
+                  <div class="p-2 bg-slate-950/80 rounded border border-cyan-500/20">
+                    <div class="font-bold text-yellow-300">Tier 3: Antianyag Csomópont (🌌)</div>
+                    <div class="text-slate-300 text-[10px] mt-0.5">+50% Planetáris pajzs és orbitális railgun hatékonyság!</div>
+                    <div class="text-cyan-400 text-[9px] mt-1">➔ Nyitja a(z) 🛸 DRÓN-HORDOZÓ CIRKÁLÓ-t!</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 3. Ág: Haditechnika & Védelem -->
+              <div class="bg-slate-900/80 border border-red-900/60 rounded-xl p-3.5 space-y-2.5">
+                <div class="flex items-center justify-between border-b border-red-900/60 pb-2">
+                  <span class="font-bold text-red-300 text-xs flex items-center gap-2">
+                    <span>🎯</span>
+                    <span>3. ÁG: HADITECHNIKA & VÉDELEM</span>
+                  </span>
+                  <span class="text-[10px] text-red-400/80 font-mono">Tűzerő & Pajzs</span>
+                </div>
+                <div class="space-y-2 text-[11px] font-mono">
+                  <div class="p-2 bg-slate-950/80 rounded border border-red-500/40">
+                    <div class="font-bold text-red-300">Tier 1: Kinetikus Kalibráció (🎯)</div>
+                    <div class="text-slate-300 text-[10px] mt-0.5">+15% Korvett és Romboló sebzés a harcban.</div>
+                    <div class="text-emerald-400 text-[9px] mt-1">➔ Nyitja: Kiterjesztett Energiapajzs</div>
+                  </div>
+                  <div class="p-2 bg-slate-950/80 rounded border border-red-500/30">
+                    <div class="font-bold text-red-200">Tier 2: Kiterjesztett Energiapajzs (🛡️)</div>
+                    <div class="text-slate-300 text-[10px] mt-0.5">+25% Pajzskapacitás minden újonnan gyártott hadihajón!</div>
+                    <div class="text-cyan-400 text-[9px] mt-1">➔ Nyitja a(z) 🗡️ LOPAKODÓ TORPEDÓ FREGATT-ot!</div>
+                  </div>
+                  <div class="p-2 bg-slate-950/80 rounded border border-red-500/20">
+                    <div class="font-bold text-yellow-300">Tier 3: Ostrom-töltetek (💥)</div>
+                    <div class="text-slate-300 text-[10px] mt-0.5">+50% Csatahajó sebzés a harcban!</div>
+                    <div class="text-cyan-400 text-[9px] mt-1">➔ Nyitja a(z) 💥 OSTROM-ROMBOLÓ-t!</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 4. Ág: Hajtómű & Logisztika -->
+              <div class="bg-slate-900/80 border border-sky-900/60 rounded-xl p-3.5 space-y-2.5">
+                <div class="flex items-center justify-between border-b border-sky-900/60 pb-2">
+                  <span class="font-bold text-sky-300 text-xs flex items-center gap-2">
+                    <span>🚀</span>
+                    <span>4. ÁG: HAJTÓMŰ & LOGISZTIKA</span>
+                  </span>
+                  <span class="text-[10px] text-sky-400/80 font-mono">Menetidő Csökkentés</span>
+                </div>
+                <div class="space-y-2 text-[11px] font-mono">
+                  <div class="p-2 bg-slate-950/80 rounded border border-sky-500/40">
+                    <div class="font-bold text-sky-300">Tier 1: Ionos Impulzus-hajtómű (🚀)</div>
+                    <div class="text-slate-300 text-[10px] mt-0.5">+25% Hajósebesség • ⏱️ -1 KÖR MENETIDŐ KEDVEZMÉNY!</div>
+                    <div class="text-cyan-400 text-[9px] mt-1">➔ Nyitja a(z) ⚡ GYORS ELFOGÓVADÁSZ-t & Izotóp-tömörítést</div>
+                  </div>
+                  <div class="p-2 bg-slate-950/80 rounded border border-sky-500/30">
+                    <div class="font-bold text-sky-200">Tier 2: Izotóp-tömörítés (🔋)</div>
+                    <div class="text-slate-300 text-[10px] mt-0.5">-30% Izotóp üzemanyagköltség flotta indításakor.</div>
+                    <div class="text-emerald-400 text-[9px] mt-1">➔ Nyitja: Hipertér-Ugrómotor, Antianyag Csomópont</div>
+                  </div>
+                  <div class="p-2 bg-slate-950/80 rounded border border-sky-500/20">
+                    <div class="font-bold text-yellow-300">Tier 3: Hipertér-Ugrómotor (🌀)</div>
+                    <div class="text-slate-300 text-[10px] mt-0.5">Minimális sebesség 6.0-ra nő • ⏱️ -1 KÖR MENETIDŐ KEDVEZMÉNY!</div>
+                    <div class="text-cyan-400 text-[9px] mt-1">➔ Nyitja a birodalmi zászlóshajót: ⬟ CSATAHAJÓ (DREADNOUGHT)!</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+      } else if (tabKey === 'ships') {
+        container.innerHTML = `
+          <div class="space-y-3">
+            <div class="bg-slate-900/80 border border-slate-800 p-3 rounded-xl text-slate-300 text-xs">
+              <span class="font-bold text-cyan-300">10 HAJÓOSZTÁLY ÉS TECHNOLÓGIAI FELOLDÁSI KÖVETELMÉNYEK:</span>
+              <p class="mt-1 text-[11px] text-slate-400">Az alábbi táblázat mutatja, hogy melyik hadihajót melyik technológiával tudod feloldani a bolygói Hajógyárban:</p>
+            </div>
+
+            <div class="overflow-x-auto">
+              <table class="w-full text-left font-mono text-[11px] border border-slate-800 rounded-lg overflow-hidden">
+                <thead class="bg-slate-950 text-slate-400 uppercase text-[10px]">
+                  <tr>
+                    <th class="p-2.5">Hajóosztály</th>
+                    <th class="p-2.5">Szükséges Tech</th>
+                    <th class="p-2.5">Különleges Képesség</th>
+                    <th class="p-2.5">Harcérték (HP/Shield/DMG)</th>
+                    <th class="p-2.5">Sebesség</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-800/80 bg-slate-900/60">
+                  <tr class="hover:bg-slate-800/50">
+                    <td class="p-2.5 font-bold text-cyan-300">⌖ Felderítő Szonda</td>
+                    <td class="p-2.5 text-emerald-400 font-bold">Kezdéskor elérhető</td>
+                    <td class="p-2.5 text-slate-300">Tachion szonár, harcképtelen (0 DMG), azonnali felderítés</td>
+                    <td class="p-2.5 text-slate-400">40 / 0 / 0</td>
+                    <td class="p-2.5 text-sky-400 font-bold">9.0 /h</td>
+                  </tr>
+                  <tr class="hover:bg-slate-800/50">
+                    <td class="p-2.5 font-bold text-cyan-300">▲ Könnyű Korvett</td>
+                    <td class="p-2.5 text-emerald-400 font-bold">Kezdéskor elérhető</td>
+                    <td class="p-2.5 text-slate-300">Elektronikai zavarómező: 25% kitérés csatahajók elől</td>
+                    <td class="p-2.5 text-slate-400">120 / 40 / 35</td>
+                    <td class="p-2.5 text-sky-400 font-bold">5.5 /h</td>
+                  </tr>
+                  <tr class="hover:bg-slate-800/50">
+                    <td class="p-2.5 font-bold text-cyan-300">📦 Nehéz Teherszállító</td>
+                    <td class="p-2.5 text-emerald-400 font-bold">Kezdéskor elérhető</td>
+                    <td class="p-2.5 text-slate-300">+50% extra roncsmentési zsákmány (Fém & Izotóp) csata után</td>
+                    <td class="p-2.5 text-slate-400">350 / 60 / 20</td>
+                    <td class="p-2.5 text-sky-400 font-bold">4.0 /h</td>
+                  </tr>
+                  <tr class="hover:bg-slate-800/50 bg-sky-950/20">
+                    <td class="p-2.5 font-bold text-sky-300">⚡ Gyors Elfogóvadász</td>
+                    <td class="p-2.5 text-amber-300 font-bold">🚀 Ionos Impulzus-hajtómű</td>
+                    <td class="p-2.5 text-amber-200">Villámcsapás: +25% sebzés az 1. harci körben!</td>
+                    <td class="p-2.5 text-slate-400">70 / 25 / 45</td>
+                    <td class="p-2.5 text-emerald-400 font-bold">10.0 /h (Leggyorsabb!)</td>
+                  </tr>
+                  <tr class="hover:bg-slate-800/50">
+                    <td class="p-2.5 font-bold text-cyan-300">⚲ Kolóniahajó</td>
+                    <td class="p-2.5 text-amber-300 font-bold">🏭 Automatizált Hajógyár</td>
+                    <td class="p-2.5 text-slate-300">Új semleges világok birodalmi kolonizálása</td>
+                    <td class="p-2.5 text-slate-400">200 / 50 / 0</td>
+                    <td class="p-2.5 text-sky-400 font-bold">3.0 /h</td>
+                  </tr>
+                  <tr class="hover:bg-slate-800/50 bg-red-950/20">
+                    <td class="p-2.5 font-bold text-red-300">🗡️ Lopakodó Torpedó Fregatt</td>
+                    <td class="p-2.5 text-amber-300 font-bold">🛡️ Kiterjesztett Energiapajzs</td>
+                    <td class="p-2.5 text-red-300 font-bold">Pajzs-átütés: 30% sebzés közvetlenül a Hull-ba!</td>
+                    <td class="p-2.5 text-slate-400">280 / 120 / 85</td>
+                    <td class="p-2.5 text-sky-400 font-bold">4.5 /h</td>
+                  </tr>
+                  <tr class="hover:bg-slate-800/50">
+                    <td class="p-2.5 font-bold text-cyan-300">◆ Romboló Cirkáló</td>
+                    <td class="p-2.5 text-amber-300 font-bold">🔩 Nehézfém Kohászat</td>
+                    <td class="p-2.5 text-slate-300">Pajzs-szinkronizáció: regenerálja a flotta pajzsait</td>
+                    <td class="p-2.5 text-slate-400">450 / 200 / 110</td>
+                    <td class="p-2.5 text-sky-400 font-bold">3.5 /h</td>
+                  </tr>
+                  <tr class="hover:bg-slate-800/50 bg-amber-950/20">
+                    <td class="p-2.5 font-bold text-amber-300">💥 Ostrom-Romboló</td>
+                    <td class="p-2.5 text-amber-300 font-bold">💥 Ostrom-töltetek</td>
+                    <td class="p-2.5 text-amber-300 font-bold">Tripla ostromsebzés (260 DMG), de sérülékeny pajzs (+50%)</td>
+                    <td class="p-2.5 text-slate-400">950 / 70 / 260</td>
+                    <td class="p-2.5 text-sky-400 font-bold">2.4 /h</td>
+                  </tr>
+                  <tr class="hover:bg-slate-800/50 bg-indigo-950/20">
+                    <td class="p-2.5 font-bold text-indigo-300">🛸 Drón-Hordozó Cirkáló</td>
+                    <td class="p-2.5 text-amber-300 font-bold">🌌 Antianyag Csomópont</td>
+                    <td class="p-2.5 text-indigo-200">Flotta Védelem (+15%) és ellenséges találat rontás (-15%)</td>
+                    <td class="p-2.5 text-slate-400">800 / 400 / 75</td>
+                    <td class="p-2.5 text-sky-400 font-bold">3.0 /h</td>
+                  </tr>
+                  <tr class="hover:bg-slate-800/50 bg-yellow-950/20">
+                    <td class="p-2.5 font-bold text-yellow-300">⬟ Csatahajó (Dreadnought)</td>
+                    <td class="p-2.5 text-yellow-300 font-bold">🌀 Hipertér-Ugrómotor</td>
+                    <td class="p-2.5 text-yellow-200 font-bold">Spinalis Railgun, blokádfegyver és 380 megsemmisítő DMG</td>
+                    <td class="p-2.5 text-slate-400">1600 / 800 / 380</td>
+                    <td class="p-2.5 text-sky-400 font-bold">2.0 /h</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        `;
+      } else if (tabKey === 'dock') {
+        container.innerHTML = `
+          <div class="space-y-4">
+            <div class="bg-cyan-950/40 border border-cyan-500/60 p-3 rounded-xl text-cyan-200 text-xs">
+              <div class="font-bold text-cyan-300 text-sm mb-1 flex items-center gap-2">
+                <span>🛠️</span>
+                <span>BIRODALMI HAJÓDOKK & A 60%-OS SZINTPLAFON</span>
+              </div>
+              <div>Minden hajóosztály 5 független alrendszerrel rendelkezik (Fő Fegyverzet, Páncélzat, Energiapajzs, Hajtómű, Szenzorika). Mind az 5 alrendszer 1-től 10-ig fejleszthető (összesen 50 szint lehetőség hajónként). A birodalmi reaktorkapacitás miatt azonban szigorú szabályok érvényesek:</div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3 font-mono text-xs">
+              <div class="bg-slate-900/80 border border-cyan-700/60 p-3 rounded-lg space-y-1.5">
+                <div class="font-bold text-cyan-300 flex items-center justify-between">
+                  <span>1. KUTATÁSI KERET (TIER 1)</span>
+                  <span class="text-[10px] bg-cyan-950 px-1.5 py-0.5 rounded border border-cyan-700 text-cyan-300">20% LIMIT</span>
+                </div>
+                <div class="text-[11px] text-slate-300">Kezdéskor legfeljebb <b>10 szint</b> osztható szét a hajó 5 alrendszere között.</div>
+              </div>
+
+              <div class="bg-slate-900/80 border border-purple-700/60 p-3 rounded-lg space-y-1.5">
+                <div class="font-bold text-purple-300 flex items-center justify-between">
+                  <span>2. KUTATÁSI KERET (TIER 2)</span>
+                  <span class="text-[10px] bg-purple-950 px-1.5 py-0.5 rounded border border-purple-700 text-purple-300">40% LIMIT</span>
+                </div>
+                <div class="text-[11px] text-slate-300">Tier 2 kutatásokkal a keret <b>20 szintre</b> bővül hajónként.</div>
+              </div>
+
+              <div class="bg-slate-900/80 border border-amber-500/60 p-3 rounded-lg space-y-1.5">
+                <div class="font-bold text-amber-300 flex items-center justify-between">
+                  <span>3. MAX PLAFON (TIER 3)</span>
+                  <span class="text-[10px] bg-amber-950 px-1.5 py-0.5 rounded border border-amber-600 text-amber-300">60% MAX LIMIT</span>
+                </div>
+                <div class="text-[11px] text-slate-300">A legfelsőbb birodalmi határ <b>30 szint (60%)</b>. Egyetlen hajó sem haladhatja meg a 30 szintet!</div>
+              </div>
+            </div>
+
+            <div class="p-3 bg-slate-900/90 border border-slate-800 rounded-xl text-xs space-y-2">
+              <div class="font-bold text-white flex items-center gap-1.5">
+                <span>🔄</span>
+                <span>Alrendszer Kiszerelése & Szintek Felszabadítása:</span>
+              </div>
+              <div class="text-slate-300 text-[11px]">Ha megváltoztatnád a haditervedet, a Hajódokkban bármelyik alrendszer szintjét azonnal nullázhatod a <b>[KISZERELÉS]</b> gombbal. Ekkor a befektetett nyersanyagok <b>50%-át azonnal visszakapod</b>, és a felhasznált szintkeret újra kioszthatóvá válik!</div>
+            </div>
+          </div>
+        `;
+      } else if (tabKey === 'bots') {
+        container.innerHTML = `
+          <div class="space-y-4">
+            <div class="bg-amber-950/40 border border-amber-500/60 p-3 rounded-xl text-amber-200 text-xs">
+              <div class="font-bold text-amber-300 text-sm mb-1 flex items-center gap-2">
+                <span>🪐</span>
+                <span>30 BOT VILÁG & A 3 FŐ BOSS CITADELLA</span>
+              </div>
+              <div>A galaxisban 30 kisebb bot világ és 3 kolosszális Boss Citadella található. A bot világok a csillagtérképen közvetlenül láthatók és támadhatók, míg a 3 Boss a fejléc <b>[3 BOSS CITADELLA]</b> menüjéből érhető el.</div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs font-mono">
+              <div class="bg-slate-900/80 border border-slate-800 p-3 rounded-xl space-y-2">
+                <div class="font-bold text-cyan-300 flex items-center gap-2 border-b border-slate-800 pb-1.5">
+                  <span>🪐</span>
+                  <span>30 KIS BOT VILÁG (TIER 1 - 3)</span>
+                </div>
+                <div class="text-[11px] text-slate-300 space-y-1">
+                  <div>• <b>Tier 1 (10 db):</b> Kalózfészkek és bányák (Könnyű helyőrség).</div>
+                  <div>• <b>Tier 2 (10 db):</b> Robot gépgyárak és erődítmények (Közepes flotta).</div>
+                  <div>• <b>Tier 3 (10 db):</b> Prekurzor bástyák és silók (Nehéz flotta & railgunok).</div>
+                  <div class="text-amber-300 pt-1">• <b>Rejtett Zsákmány:</b> A kincs ismeretlen, amíg le nem győzöd a védelmet (Nyersanyag, Ereklye, vagy Dicsőség).</div>
+                </div>
+              </div>
+
+              <div class="bg-red-950/40 border border-red-700/60 p-3 rounded-xl space-y-2">
+                <div class="font-bold text-red-300 flex items-center gap-2 border-b border-red-900 pb-1.5">
+                  <span>☠️</span>
+                  <span>3 FŐ BOSS CITADELLA (VÉGJÁTÉK)</span>
+                </div>
+                <div class="text-[11px] text-slate-300 space-y-1">
+                  <div>1. <b>Cygnus Bastion:</b> 4,500 HP / 2,500 Pajzs • Belépő: 100 Dicsőség & Kvantum Chrono-Mag.</div>
+                  <div>2. <b>Void Citadel:</b> 7,500 HP / 4,500 Pajzs • Belépő: 250 Dicsőség & Sötét Anyag Rezonátor.</div>
+                  <div>3. <b>Omega Leviatán:</b> 12,000 HP / 7,000 Pajzs • Belépő: 450 Dicsőség & Prekurzor Kódex.</div>
+                  <div class="text-red-300 pt-1">• <b>Megjegyzés:</b> A Bossok a térképről le vannak véve a tisztaság érdekében, kizárólag a Boss felületről támadhatók!</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="bg-sky-950/30 border border-sky-800/60 p-3 rounded-xl text-xs space-y-1">
+              <div class="font-bold text-sky-300">⏱️ FLOTTA MENETIDŐ & GYORSÍTÁSOK:</div>
+              <div class="text-[11px] text-slate-300">Az alapesetben 5 körös utazási idő technológiákkal és modulokkal akár <b>1–2 körre</b> csökkenthető:</div>
+              <div class="text-[10px] text-slate-400 font-mono">
+                • Ionos Impulzus-hajtómű kutatás: <b>-1 kör</b><br>
+                • Hipertér-Ugrómotor kutatás: <b>-1 kör</b><br>
+                • Küldetés Sebesség bónusz (buff): <b>-1 kör</b><br>
+                • Hajódokk Hajtómű alrendszer (Lv.2+): <b>-1 kör</b><br>
+                • <b>Minimális menetidő:</b> 1 kör (azonnali ugrás a következő órában).
+              </div>
+            </div>
+          </div>
+        `;
+      }
+    }
+    window.renderGuideContent = renderGuideContent;
+
     // Indítás és PWA Service Worker regisztráció
     window.onload = async () => {
       resizeCanvas();
@@ -3627,7 +3990,7 @@
       // ESC billentyű modal bezárás
       window.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
-          ['modal-shipyard-refit', 'modal-tech', 'modal-boss', 'modal-logs', 'modal-combat-log', 'modal-dispatch', 'modal-shipyard'].forEach(id => {
+          ['modal-guide', 'modal-pvp-roster', 'modal-shipyard-refit', 'modal-tech', 'modal-boss', 'modal-logs', 'modal-combat-log', 'modal-dispatch', 'modal-shipyard'].forEach(id => {
             const m = document.getElementById(id);
             if (m && !m.classList.contains('hidden')) closeModal(id);
           });
