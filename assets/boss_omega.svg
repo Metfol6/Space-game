@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 360" width="100%" height="100%">
+  <defs>
+    <radialGradient id="omegaGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ef4444" stop-opacity="0.9"/>
+      <stop offset="40%" stop-color="#991b1b" stop-opacity="0.5"/>
+      <stop offset="100%" stop-color="#020617" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="planetOmega" cx="45%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#f87171"/>
+      <stop offset="35%" stop-color="#dc2626"/>
+      <stop offset="75%" stop-color="#7f1d1d"/>
+      <stop offset="100%" stop-color="#180404"/>
+    </radialGradient>
+  </defs>
+  <rect width="600" height="360" fill="#090202"/>
+  <!-- Space Stars -->
+  <g fill="#fca5a5" opacity="0.7">
+    <circle cx="50" cy="45" r="1.5"/><circle cx="130" cy="85" r="1.2"/><circle cx="520" cy="65" r="1.5"/><circle cx="470" cy="140" r="1"/>
+    <circle cx="85" cy="275" r="1.5"/><circle cx="535" cy="295" r="1.5"/><circle cx="215" cy="35" r="1.2"/><circle cx="395" cy="325" r="1.5"/>
+  </g>
+  <!-- Blood-Red Supernova Glow -->
+  <circle cx="300" cy="180" r="210" fill="url(#omegaGlow)"/>
+  
+  <!-- Mega Dreadnought Dock Arrays -->
+  <ellipse cx="300" cy="180" rx="250" ry="90" fill="none" stroke="rgba(239,68,68,0.5)" stroke-width="2.5" stroke-dasharray="10,6"/>
+  <ellipse cx="300" cy="180" rx="220" ry="75" fill="none" stroke="rgba(248,113,113,0.8)" stroke-width="3"/>
+  
+  <!-- Armored World-Engine Core -->
+  <circle cx="300" cy="180" r="110" fill="url(#planetOmega)"/>
+  
+  <!-- Planetary Armor Plates & Magma Trenches -->
+  <path d="M 210 140 L 390 140" stroke="#fca5a5" stroke-width="3" opacity="0.9"/>
+  <path d="M 195 180 L 405 180" stroke="#fef08a" stroke-width="4" opacity="0.95"/>
+  <path d="M 210 220 L 390 220" stroke="#fca5a5" stroke-width="3" opacity="0.9"/>
+  
+  <!-- Central Omega Core Emitter -->
+  <polygon points="300,140 335,180 300,220 265,180" fill="#fef08a" stroke="#ef4444" stroke-width="3"/>
+  <circle cx="300" cy="180" r="14" fill="#ffffff"/>
+  
+  <!-- Heavy Defense Heavy Destroyers & Dreadnoughts in Orbit -->
+  <g fill="#ef4444" stroke="#450a0a" stroke-width="2">
+    <polygon points="120,170 145,180 120,190 130,180"/>
+    <polygon points="480,170 455,180 480,190 470,180"/>
+    <polygon points="290,260 300,285 310,260 300,270"/>
+    <polygon points="290,100 300,75 310,100 300,90"/>
+  </g>
+  
+  <text x="300" y="325" fill="#f87171" font-family="monospace" font-size="14" font-weight="bold" text-anchor="middle" letter-spacing="3">OMEGA-ARK-0 // KRONOS-LEVIATÁN</text>
+  <text x="300" y="345" fill="#fca5a5" font-family="monospace" font-size="10" text-anchor="middle">A VÉGSŐ ENDGAME PREKURZOR CSILLAGBÁRKA • 12,000 HP / 7,000 PAJZS</text>
+</svg>

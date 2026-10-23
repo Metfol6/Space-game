@@ -750,16 +750,16 @@ function runTests() {
     const allPlanetsTest = db.getAllPlanets();
     const botWorlds = allPlanetsTest.filter(p => p.is_bot);
     console.log("Bot világok száma az univerzumban:", botWorlds.length, botWorlds.map(b => `${b.id}: ${b.name} (${b.bot_type})`));
-    if (botWorlds.length < 9) {
-        throw new Error(`Legalább 9 bot világnak (3 Boss + 6 Bot erőd) kell léteznie! Megtalálva: ${botWorlds.length}`);
+    if (botWorlds.length < 33) {
+        throw new Error(`Legalább 33 bot világnak (3 Boss + 30 Bot erőd) kell léteznie! Megtalálva: ${botWorlds.length}`);
     }
 
     const bossCitadels = botWorlds.filter(b => b.bot_type === 'boss');
     const smallOutposts = botWorlds.filter(b => b.bot_type === 'outpost');
-    if (bossCitadels.length !== 3 || smallOutposts.length !== 6) {
-        throw new Error(`Pontosan 3 Boss Citadellának és 6 Bot Erődnek kell léteznie! Bossok: ${bossCitadels.length}, Erődök: ${smallOutposts.length}`);
+    if (bossCitadels.length !== 3 || smallOutposts.length !== 30) {
+        throw new Error(`Pontosan 3 Boss Citadellának és 30 Bot Erődnek kell léteznie! Bossok: ${bossCitadels.length}, Erődök: ${smallOutposts.length}`);
     }
-    console.log("✓ 3 Fő Boss Citadella és 6 Bot Erőd sikeresen inicializálva a bolygók táblában!");
+    console.log("✓ 3 Fő Boss Citadella és 30 Bot Erőd sikeresen inicializálva a bolygók táblában!");
 
     // 2. A 3-féle zsákmánytípus (Nyersanyag, Artifact, Dicsőség) ellenőrzése
     const resBots = smallOutposts.filter(b => b.loot_type === 'resources');

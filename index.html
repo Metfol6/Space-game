@@ -110,6 +110,11 @@
         <div class="text-[10px] text-slate-400 uppercase tracking-wider">Kör / Tick</div>
         <div class="text-cyan-400 font-bold text-sm">#<span id="current-tick">1</span> (<span id="tick-timer">59:45</span>)</div>
       </div>
+            <button id="btn-guide" onclick="openGuideModal()" class="bg-indigo-950/90 hover:bg-indigo-900 active:scale-95 text-indigo-200 border border-indigo-500 font-mono text-xs font-bold px-2.5 py-1.5 rounded flex items-center gap-1.5 shadow-lg shadow-indigo-950 transition-all" title="Teljes Technológiai és Fejlődési Útmutató">
+        <span>📖</span>
+        <span class="hidden md:inline">ÚTMUTATÓ</span>
+        <span class="text-[10px] bg-indigo-900 px-1 py-0.2 rounded border border-indigo-700 font-mono">GUIDE</span>
+      </button>
       <button id="btn-tech-tree" onclick="openTechTreeModal()" class="bg-indigo-950 hover:bg-indigo-900 active:scale-95 text-indigo-200 border border-indigo-500 font-mono text-xs font-bold px-2.5 py-1.5 rounded flex items-center gap-1.5 shadow-lg shadow-indigo-950 transition-all">
         <span>🔬</span>
         <span class="hidden md:inline">TECH FA</span>
@@ -522,6 +527,62 @@
   </div>
 
   
+  
+  <!-- ========================================================================= -->
+  <!-- 4/G. GALAKTIKUS PARANCSNOKI ÚTMUTATÓ MODAL (GUIDE MODAL) -->
+  <!-- ========================================================================= -->
+  <div id="modal-guide" class="hidden fixed inset-0 bg-black/90 backdrop-blur-md z-50 flex items-center justify-center p-2 sm:p-4 font-mono text-xs">
+    <div class="bg-[#090b18] border-2 border-indigo-500 rounded-xl max-w-4xl w-full max-h-[92vh] flex flex-col shadow-2xl shadow-indigo-950/80 overflow-hidden">
+      <!-- Modal Fejléc -->
+      <div class="p-3.5 bg-gradient-to-r from-indigo-950 to-slate-900 border-b border-indigo-800 flex items-center justify-between shrink-0">
+        <div class="flex items-center gap-2.5">
+          <span class="text-2xl">📖</span>
+          <div>
+            <h2 class="text-sm sm:text-base font-bold text-indigo-300 tracking-wider flex items-center gap-2">
+              <span>PARANCSNOKI ÚTMUTATÓ // TECH FA & FEJLŐDÉSI MÁTRIX</span>
+              <span class="text-[10px] bg-indigo-900 border border-indigo-700 text-indigo-200 px-2 py-0.5 rounded font-bold">KÉZIKÖNYV</span>
+            </h2>
+            <div class="text-[11px] text-slate-400">
+              Minden kutatási lánc, előfeltétel, feloldott hajóosztály és játékmenet egyetlen átlátható felületen.
+            </div>
+          </div>
+        </div>
+        <button onclick="closeModal('modal-guide')" class="text-slate-400 hover:text-white text-base px-2 py-1 rounded hover:bg-slate-800 transition-colors">✕</button>
+      </div>
+
+      <!-- Útmutató Fülek (Tabs) -->
+      <div class="flex border-b border-indigo-950/80 bg-slate-950/70 px-3 py-2 gap-2 overflow-x-auto shrink-0">
+        <button id="guide-tab-tech" onclick="switchGuideTab('tech')" class="px-3 py-1.5 rounded text-xs font-bold font-mono transition-all flex items-center gap-1.5 bg-indigo-900/90 text-indigo-200 border border-indigo-400 shadow">
+          <span>🔬</span>
+          <span>1. Tech Fa Láncolatok</span>
+        </button>
+        <button id="guide-tab-ships" onclick="switchGuideTab('ships')" class="px-3 py-1.5 rounded text-xs font-bold font-mono transition-all flex items-center gap-1.5 bg-slate-900/70 border border-slate-800 text-slate-400 hover:text-slate-200">
+          <span>🚀</span>
+          <span>2. Hajó Feloldási Kulcsok</span>
+        </button>
+        <button id="guide-tab-dock" onclick="switchGuideTab('dock')" class="px-3 py-1.5 rounded text-xs font-bold font-mono transition-all flex items-center gap-1.5 bg-slate-900/70 border border-slate-800 text-slate-400 hover:text-slate-200">
+          <span>🛠️</span>
+          <span>3. Dokk & 60% Plafon</span>
+        </button>
+        <button id="guide-tab-bots" onclick="switchGuideTab('bots')" class="px-3 py-1.5 rounded text-xs font-bold font-mono transition-all flex items-center gap-1.5 bg-slate-900/70 border border-slate-800 text-slate-400 hover:text-slate-200">
+          <span>🪐</span>
+          <span>4. 30 Bot Világ & Bossok</span>
+        </button>
+      </div>
+
+      <!-- Útmutató Tartalom (Görgethető törzs) -->
+      <div class="flex-1 overflow-y-auto p-4 space-y-4" id="guide-content-area">
+        <!-- JS generálja a fül tartalmát -->
+      </div>
+
+      <!-- Modal Lábléc -->
+      <div class="p-3 bg-slate-950 border-t border-slate-900 text-[11px] text-slate-400 flex items-center justify-between shrink-0">
+        <span>💡 <i>Használd a felső [TECH FA] gombot a kutatások elindításához!</i></span>
+        <button onclick="closeModal('modal-guide')" class="bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded font-bold">Bezárás</button>
+      </div>
+    </div>
+  </div>
+
   <!-- RIVÁLIS PARANCSNOKOK (PVP PORTYÁK) MODÁL -->
   <div id="modal-pvp-roster" class="hidden fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-3 font-mono text-xs">
     <div class="bg-[#090b14] border border-red-700/80 rounded-xl max-w-xl w-full flex flex-col max-h-[90vh] shadow-2xl shadow-red-950/80 overflow-hidden">
@@ -582,6 +643,16 @@
           <span class="truncate">3. Omega Leviatán</span>
           <span id="boss-tab-badge-boss_3" class="text-[9px] px-1 py-0.2 rounded bg-slate-900 text-slate-400">...</span>
         </button>
+      </div>
+
+            <!-- Boss Planetáris Illusztráció (Végjáték Citadella Kép) -->
+      <div class="relative w-full h-44 sm:h-52 bg-black border-b border-red-950 overflow-hidden shrink-0 flex items-center justify-center">
+        <img id="boss-planet-img" src="/assets/boss_cygnus.svg" alt="Boss Citadel" class="w-full h-full object-cover filter contrast-125 brightness-105">
+        <div class="absolute inset-0 bg-gradient-to-t from-[#090514] via-transparent to-transparent"></div>
+        <div class="absolute bottom-2.5 left-3.5 right-3.5 flex items-center justify-between text-xs font-mono">
+          <span id="boss-badge-tier" class="bg-red-950/90 border border-red-500 text-red-200 px-2 py-0.5 rounded font-bold uppercase shadow-lg">ENDGAME VÉGJÁTÉK CITADELLA</span>
+          <span id="boss-badge-loot" class="bg-amber-950/90 border border-amber-500 text-amber-200 px-2 py-0.5 rounded font-bold font-mono">TITANIKUS VÉDELMI FLOTTA</span>
+        </div>
       </div>
 
       <!-- Boss Adatlap & Életerő csíkok -->
@@ -1027,18 +1098,24 @@
     window.addEventListener('resize', resizeCanvas);
 
     function resetMapView() {
-      STATE.camera.zoom = 1.0;
-      STATE.camera.x = canvas.width / 2 - 250;
-      STATE.camera.y = canvas.height / 2 - 200;
+      // Fixált stabil nézet - pontosan a 820x600-as galaktikus szektorra illesztve
+      const contentW = 820;
+      const contentH = 580;
+      const scaleX = canvas.width / contentW;
+      const scaleY = canvas.height / contentH;
+      const fitZoom = Math.min(1.05, Math.max(0.65, Math.min(scaleX, scaleY)));
+      STATE.camera.zoom = fitZoom;
+      STATE.camera.x = (canvas.width - contentW * fitZoom) / 2 + 10;
+      STATE.camera.y = (canvas.height - contentH * fitZoom) / 2 + 10;
       drawGalaxy();
     }
 
     function zoomMap(factor) {
-      STATE.camera.zoom = Math.max(0.5, Math.min(2.5, STATE.camera.zoom * factor));
+      // Zoom fixálva a stabil átláthatóság érdekében
       drawGalaxy();
     }
 
-    // Egér és érintés vezérlés
+    // Egér és érintés vezérlés - FIXÁLT TÉRKÉP (Micro-pan korlátozással: max +/- 30px)
     canvas.addEventListener('mousedown', e => {
       STATE.isDragging = true;
       STATE.lastMouse = { x: e.clientX, y: e.clientY };
@@ -1046,8 +1123,14 @@
     window.addEventListener('mouseup', () => STATE.isDragging = false);
     canvas.addEventListener('mousemove', e => {
       if (STATE.isDragging) {
-        STATE.camera.x += (e.clientX - STATE.lastMouse.x);
-        STATE.camera.y += (e.clientY - STATE.lastMouse.y);
+        const contentW = 820;
+        const contentH = 580;
+        const baseCamX = (canvas.width - contentW * STATE.camera.zoom) / 2 + 10;
+        const baseCamY = (canvas.height - contentH * STATE.camera.zoom) / 2 + 10;
+        const deltaX = (e.clientX - STATE.lastMouse.x) * 0.25;
+        const deltaY = (e.clientY - STATE.lastMouse.y) * 0.25;
+        STATE.camera.x = Math.max(baseCamX - 30, Math.min(baseCamX + 30, STATE.camera.x + deltaX));
+        STATE.camera.y = Math.max(baseCamY - 30, Math.min(baseCamY + 30, STATE.camera.y + deltaY));
         STATE.lastMouse = { x: e.clientX, y: e.clientY };
         drawGalaxy();
       }
@@ -1060,10 +1143,8 @@
     });
 
     canvas.addEventListener('wheel', e => {
-      e.preventDefault();
-      const zoomFactor = e.deltaY < 0 ? 1.1 : 0.9;
-      zoomMap(zoomFactor);
-    });
+      e.preventDefault(); // Zoom zárolva, a térkép stabilan marad
+    }, { passive: false });
 
     // Bolygóra vagy Boss anomáliára kattintás detektálás
     canvas.addEventListener('click', e => {
@@ -1072,17 +1153,10 @@
       const clickX = (e.clientX - rect.left - STATE.camera.x) / STATE.camera.zoom;
       const clickY = (e.clientY - rect.top - STATE.camera.y) / STATE.camera.zoom;
 
-      // Boss anomália vizsgálat
-      const bossX = (STATE.boss && STATE.boss.pos_x) || 280;
-      const bossY = (STATE.boss && STATE.boss.pos_y) || 200;
-      if (Math.hypot(bossX - clickX, bossY - clickY) <= 32) {
-        audio.playAlarm();
-        openBossModal();
-        return;
-      }
-
+      // Bossok le vannak véve a térképről, csak a Boss gombból érhetők el
       const myId = STATE.currentPlayerId || 'player';
       const visiblePlanets = STATE.planets.filter(p => {
+        if (p.bot_type === 'boss') return false; // BOSSOK NEM KATTINTHATÓK A TÉRKÉPEN
         if (p.is_bot) return true;
         if (p.owner === myId || p.owner_id === myId) return true;
         if (p.owner === 'neutral' || p.owner_id === 'neutral' || !p.owner_id) return true;
@@ -1091,7 +1165,7 @@
 
       for (const p of visiblePlanets) {
         const dist = Math.hypot(p.x - clickX, p.y - clickY);
-        if (dist <= p.radius + 12) {
+        if (dist <= 18) {
           audio.playBeep(600, 0.05);
           openPlanetDrawer(p.id);
           return;
@@ -1141,83 +1215,110 @@
         ctx.fillText(`ETA: ${Math.ceil(fleet.remainingHours)}h`, fleet.currentX + 10, fleet.currentY - 6);
       });
 
-      // Bolygók kirajzolása
-      STATE.planets.forEach(p => {
-        // Bolygó színe
-        let fillColor = '#64748b'; // neutral
-        let strokeColor = '#334155';
-        if (p.owner === 'player') {
+      // Bolygók kirajzolása (BOSSOK KIZÁRVA, CSAK SAJÁT, SEMLEGES ÉS A 30 KIS BOT VILÁG)
+      const myId = STATE.currentPlayerId || 'player';
+      const mapPlanets = STATE.planets.filter(p => {
+        if (p.bot_type === 'boss') return false; // BOSSOK NEM JELENNEK MEG A TÉRKÉPEN
+        if (p.is_bot) return true;
+        if (p.owner === myId || p.owner_id === myId) return true;
+        if (p.owner === 'neutral' || p.owner_id === 'neutral' || !p.owner_id) return true;
+        return false;
+      });
+
+      mapPlanets.forEach(p => {
+        const isMine = (p.owner === myId || p.owner_id === myId);
+        const isLooted = (p.status === 'looted');
+        
+        // Kompakt, egységes, NEM növekvő és NEM pulzáló méret:
+        const radius = p.is_bot ? 9 : (isMine ? 12 : 10);
+
+        // Bolygó színe a státusz és Tier alapján
+        let fillColor = '#1e293b';
+        let strokeColor = '#475569';
+        if (isMine) {
           fillColor = '#0284c7';
           strokeColor = '#38bdf8';
-        } else if (p.owner === 'enemy') {
-          fillColor = '#dc2626';
-          strokeColor = '#f87171';
+        } else if (p.is_bot) {
+          if (isLooted) {
+            fillColor = '#064e3b';
+            strokeColor = '#10b981';
+          } else if (p.difficulty_tier === 3) {
+            fillColor = '#4a044e';
+            strokeColor = '#c026d3';
+          } else if (p.difficulty_tier === 2) {
+            fillColor = '#164e63';
+            strokeColor = '#06b6d4';
+          } else {
+            fillColor = '#78350f';
+            strokeColor = '#f59e0b';
+          }
         }
 
-        // Kiválasztott fényudvar
+        // Kiválasztott fényudvar (nem növekvő, diszkrét kör)
         if (STATE.selectedPlanetId === p.id) {
           ctx.strokeStyle = '#22d3ee';
           ctx.lineWidth = 2;
           ctx.beginPath();
-          ctx.arc(p.x, p.y, p.radius + 8, 0, Math.PI * 2);
+          ctx.arc(p.x, p.y, radius + 5, 0, Math.PI * 2);
           ctx.stroke();
         }
 
-        // Planetáris pajzs gyűrű
-        if (p.shieldHp > 0) {
-          ctx.strokeStyle = 'rgba(56, 189, 248, 0.5)';
-          ctx.lineWidth = 2;
+        // Planetáris pajzs gyűrű (ha van pajzs)
+        if (p.shieldHp > 0 && !isLooted) {
+          ctx.strokeStyle = 'rgba(56, 189, 248, 0.45)';
+          ctx.lineWidth = 1.5;
           ctx.setLineDash([2, 3]);
           ctx.beginPath();
-          ctx.arc(p.x, p.y, p.radius + 4, 0, Math.PI * 2);
+          ctx.arc(p.x, p.y, radius + 3, 0, Math.PI * 2);
           ctx.stroke();
           ctx.setLineDash([]);
         }
 
-        // Bolygó test
+        // Bolygó test (Statikus kompakt kör)
         ctx.fillStyle = fillColor;
         ctx.strokeStyle = strokeColor;
-        ctx.lineWidth = p.bot_type === 'boss' ? 2.5 : 2;
+        ctx.lineWidth = 1.5;
         ctx.beginPath();
-        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+        ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
         ctx.fill();
         ctx.stroke();
 
-        // Ikon a bolygó közepére
-        if (p.bot_type === 'boss') {
-          ctx.font = '14px monospace';
+        // Planetáris szimbólum (🪐 szimbólum a bot bolygóknál a felkiáltójel helyett!)
+        if (p.is_bot) {
+          ctx.font = '10px monospace';
           ctx.textAlign = 'center';
-          ctx.fillText(p.status === 'looted' ? '🏛️' : '☠️', p.x, p.y + 5);
-        } else if (p.is_bot) {
-          ctx.font = '11px monospace';
+          ctx.fillText(isLooted ? '✓' : '🪐', p.x, p.y + 3.5);
+        } else if (isMine) {
+          ctx.font = '10px monospace';
           ctx.textAlign = 'center';
-          ctx.fillText(p.status === 'looted' ? '✓' : '⚠️', p.x, p.y + 4);
+          ctx.fillText('🏛️', p.x, p.y + 3.5);
+        } else {
+          ctx.font = '9px monospace';
+          ctx.textAlign = 'center';
+          ctx.fillText('⚪', p.x, p.y + 3);
         }
 
-        // Bolygó neve és adatai
-        ctx.fillStyle = p.bot_type === 'boss' ? '#f87171' : (p.is_bot ? '#fbbf24' : '#f1f5f9');
-        ctx.font = 'bold 11px monospace';
+        // Bolygó neve (Kompakt, tiszta tipográfia)
+        ctx.fillStyle = isMine ? '#38bdf8' : (p.is_bot ? (isLooted ? '#6ee7b7' : (p.difficulty_tier === 3 ? '#e879f9' : (p.difficulty_tier === 2 ? '#67e8f9' : '#fcd34d'))) : '#94a3b8');
+        ctx.font = 'bold 9px monospace';
         ctx.textAlign = 'center';
-        ctx.fillText(p.name, p.x, p.y + p.radius + 15);
+        const displayName = p.name.split(' // ')[0];
+        ctx.fillText(displayName, p.x, p.y + radius + 11);
 
-        // Kiegészítő felirat
-        if (p.bot_type === 'boss') {
-          ctx.fillStyle = p.status === 'looted' ? '#10b981' : '#c084fc';
-          ctx.font = '9px monospace';
-          ctx.fillText(p.status === 'looted' ? '✓ SEMLEGESÍTVE' : `[FŐ BOSS T${p.difficulty_tier || 3}]`, p.x, p.y + p.radius + 27);
-        } else if (p.is_bot) {
-          ctx.fillStyle = p.status === 'looted' ? '#10b981' : '#fb923c';
-          ctx.font = '9px monospace';
-          ctx.fillText(p.status === 'looted' ? '✓ KIFOSZTVA' : `[BOT ERŐD T${p.difficulty_tier || 1}]`, p.x, p.y + p.radius + 27);
+        // Kiegészítő státusz felirat
+        if (p.is_bot) {
+          ctx.fillStyle = isLooted ? '#10b981' : (p.difficulty_tier === 3 ? '#c026d3' : (p.difficulty_tier === 2 ? '#06b6d4' : '#f59e0b'));
+          ctx.font = '8px monospace';
+          ctx.fillText(isLooted ? '[KIFOSZTVA]' : `[T${p.difficulty_tier || 1}]`, p.x, p.y + radius + 20);
         }
 
-        // Állomásozó hajók jelölése (saját vagy védelmi flotta)
+        // Állomásozó védelmi flotta
         const sf = p.stationedFleet || {};
         const totalShips = ALL_SHIPS.reduce((sum, st) => sum + (sf[st] || 0), 0);
-        if (totalShips > 0) {
-          ctx.fillStyle = isMine ? '#38bdf8' : (p.bot_type === 'boss' ? '#f87171' : '#fbbf24');
-          ctx.font = '10px monospace';
-          ctx.fillText(`▲ ${totalShips}`, p.x, p.y - p.radius - 8);
+        if (totalShips > 0 && !isLooted) {
+          ctx.fillStyle = isMine ? '#38bdf8' : '#fbbf24';
+          ctx.font = '9px monospace';
+          ctx.fillText(`▲ ${totalShips}`, p.x, p.y - radius - 4);
         }
       });
 
@@ -2315,15 +2416,32 @@
         }
       });
 
-      // Fejléc információk
+      // Fejléc információk & Planetáris Citadella Illusztráció
       const headerTitle = document.getElementById('boss-header-title');
       if (headerTitle) headerTitle.innerText = currentBoss.name;
 
+      const bossImg = document.getElementById('boss-planet-img');
+      if (bossImg) {
+        if (selectedId === 'boss_1') bossImg.src = '/assets/boss_cygnus.svg';
+        else if (selectedId === 'boss_2') bossImg.src = '/assets/boss_void.svg';
+        else bossImg.src = '/assets/boss_omega.svg';
+      }
+
+      const bossTierBadge = document.getElementById('boss-badge-tier');
+      if (bossTierBadge) {
+        bossTierBadge.innerText = selectedId === 'boss_1' ? 'TIER 3 PREKURZOR ELŐŐRS CITADELLA' : (selectedId === 'boss_2' ? 'TIER 4 KVANTUM ÜRESSÉG FELLEGVÁR' : 'TIER 5 VÉGZETES PREKURZOR CSILLAGBÁRKA');
+      }
+
+      const bossLootBadge = document.getElementById('boss-badge-loot');
+      if (bossLootBadge) {
+        bossLootBadge.innerText = selectedId === 'boss_1' ? '+3,000 Fém, +1,500 E, +150 Dicsőség' : (selectedId === 'boss_2' ? '+5,000 Fém, +2,500 E, +300 Dicsőség' : '+10,000 Fém, +5,000 E, +600 Dicsőség');
+      }
+
       const headerDesc = document.getElementById('boss-header-desc');
       if (headerDesc) {
-        if (selectedId === 'boss_1') headerDesc.innerText = '1. Fő Boss: Ősi felderítő állomás a Cygnus-peremen • Alacsonyabb belépési küszöb.';
-        else if (selectedId === 'boss_2') headerDesc.innerText = '2. Fő Boss: Mélyűri Precursor fellegvár • Jelentős védőpajzsok és fegyverzet.';
-        else headerDesc.innerText = '3. Fő Boss: Végzetes Szingularitás Kolosszus • A végső űruralkodás kulcsa!';
+        if (selectedId === 'boss_1') headerDesc.innerText = '1. Fő Boss: Ősi felderítő állomás a Cygnus-peremen • 4,500 HP / 2,500 Pajzs • Belépő: 100 Dicsőség.';
+        else if (selectedId === 'boss_2') headerDesc.innerText = '2. Fő Boss: Mélyűri Precursor fellegvár • 7,500 HP / 4,500 Pajzs • Belépő: 250 Dicsőség.';
+        else headerDesc.innerText = '3. Fő Boss: Kolosszális Kronos-Leviatán Csillagbárka • 12,000 HP / 7,000 Pajzs • A végső űruralkodás kulcsa!';
       }
 
       // Hull & Shield csíkok
