@@ -545,9 +545,9 @@ class DatabaseService {
 
         // 3 Fő Boss Bolygó (Prekurzor Citadellák - Végjáték Titánok)
         const bossList = [
-            { id: 'boss_1', name: 'CYGNUS BASTION // ŐSI ELŐŐRS', hull: 11250.0, max_hull: 11250.0, shield: 6250.0, max_shield: 6250.0, damage: 875.0, pos_x: 180.0, pos_y: 140.0, salvage_metal: 6250.0, salvage_isotope: 2500.0 },
-            { id: 'boss_2', name: 'VOID CITADEL // ÜRESSÉG CITADELLÁJA', hull: 18750.0, max_hull: 18750.0, shield: 11250.0, max_shield: 11250.0, damage: 1375.0, pos_x: 360.0, pos_y: 180.0, salvage_metal: 11250.0, salvage_isotope: 5000.0 },
-            { id: 'boss_3', name: 'OMEGA-ARK-0 // KRONOS-LEVIATÁN', hull: 30000.0, max_hull: 30000.0, shield: 17500.0, max_shield: 17500.0, damage: 2125.0, pos_x: 280.0, pos_y: 200.0, salvage_metal: 20000.0, salvage_isotope: 10000.0 }
+            { id: 'boss_1', name: 'CYGNUS BASTION // ŐSI ELŐŐRS', hull: 12000.0, max_hull: 12000.0, shield: 7000.0, max_shield: 7000.0, damage: 900.0, pos_x: 180.0, pos_y: 140.0, salvage_metal: 7500.0, salvage_isotope: 3000.0 },
+            { id: 'boss_2', name: 'VOID CITADEL // ÜRESSÉG CITADELLÁJA', hull: 20000.0, max_hull: 20000.0, shield: 12000.0, max_shield: 12000.0, damage: 1450.0, pos_x: 360.0, pos_y: 180.0, salvage_metal: 14000.0, salvage_isotope: 6000.0 },
+            { id: 'boss_3', name: 'OMEGA-ARK-0 // KRONOS-LEVIATÁN', hull: 32000.0, max_hull: 32000.0, shield: 18000.0, max_shield: 18000.0, damage: 2200.0, pos_x: 280.0, pos_y: 200.0, salvage_metal: 25000.0, salvage_isotope: 12000.0 }
         ];
 
         for (const b of bossList) {
@@ -610,9 +610,9 @@ class DatabaseService {
                 pos_x: 180, pos_y: 140, size_slots: 6,
                 is_bot: 1, bot_type: 'boss', difficulty_tier: 3,
                 loot_type: 'resources',
-                loot_data: JSON.stringify({ metal: 7500, energy: 3750, isotope: 2000, data: 2000, glory: 375 }),
-                planetary_shield_hp: 6250.0, max_shield_hp: 6250.0, railgun_count: 5,
-                ships: { frigate: 15, destroyer: 10, heavy_destroyer: 8, cruiser: 3 }
+                loot_data: JSON.stringify({ metal: 7500, energy: 3750, isotope: 2000, data: 2000, glory: 400 }),
+                planetary_shield_hp: 7000.0, max_shield_hp: 7000.0, railgun_count: 5,
+                ships: { frigate: 16, destroyer: 12, heavy_destroyer: 8, cruiser: 4 }
             },
             {
                 id: 'boss_2',
@@ -620,9 +620,9 @@ class DatabaseService {
                 pos_x: 360, pos_y: 180, size_slots: 6,
                 is_bot: 1, bot_type: 'boss', difficulty_tier: 4,
                 loot_type: 'resources',
-                loot_data: JSON.stringify({ metal: 12500, energy: 6250, isotope: 3750, data: 3750, glory: 750 }),
-                planetary_shield_hp: 11250.0, max_shield_hp: 11250.0, railgun_count: 8,
-                ships: { destroyer: 15, heavy_destroyer: 10, cruiser: 10, battleship: 5 }
+                loot_data: JSON.stringify({ metal: 14000, energy: 6500, isotope: 4000, data: 4000, glory: 800 }),
+                planetary_shield_hp: 12000.0, max_shield_hp: 12000.0, railgun_count: 8,
+                ships: { destroyer: 16, heavy_destroyer: 12, cruiser: 12, battleship: 6 }
             },
             {
                 id: 'boss_3',
@@ -630,9 +630,9 @@ class DatabaseService {
                 pos_x: 280, pos_y: 200, size_slots: 6,
                 is_bot: 1, bot_type: 'boss', difficulty_tier: 5,
                 loot_type: 'resources',
-                loot_data: JSON.stringify({ metal: 25000, energy: 12500, isotope: 7500, data: 7500, glory: 1500 }),
-                planetary_shield_hp: 25000.0, max_shield_hp: 25000.0, railgun_count: 15,
-                ships: { heavy_destroyer: 20, cruiser: 15, battleship: 10 }
+                loot_data: JSON.stringify({ metal: 28000, energy: 14000, isotope: 8000, data: 8000, glory: 1600 }),
+                planetary_shield_hp: 26000.0, max_shield_hp: 26000.0, railgun_count: 16,
+                ships: { heavy_destroyer: 24, cruiser: 18, battleship: 12 }
             }
         ];
 
@@ -1516,31 +1516,31 @@ class DatabaseService {
         let fleetDetails = "";
 
         if (bossId === 'boss_1') {
-            requiredGlory = 200;
+            requiredGlory = 250;
             requiredArtifacts = ['artifact_chrono_core'];
             reqIso = 80;
             reqData = 150;
-            fleetMet = totalCorvettes >= 12 || totalDestroyers >= 4;
-            fleetDetails = `Haderő: ${totalCorvettes}/12 Korvett VAGY ${totalDestroyers}/4 Romboló`;
+            fleetMet = totalCorvettes >= 15 || totalDestroyers >= 6;
+            fleetDetails = `Haderő: ${totalCorvettes}/15 Korvett VAGY ${totalDestroyers}/6 Romboló`;
             techMet = true;
             techDetails = "Alapszintű flotta-infrastruktúra elegendő.";
         } else if (bossId === 'boss_2') {
-            requiredGlory = 400;
+            requiredGlory = 500;
             requiredArtifacts = ['artifact_chrono_core', 'artifact_dark_resonator'];
             reqIso = 160;
             reqData = 300;
-            fleetMet = totalDestroyers >= 8 && (totalFrigates >= 4 || totalCorvettes >= 16);
-            fleetDetails = `Haderő: ${totalDestroyers}/8 Romboló és (${totalFrigates}/4 Fregatt vagy ${totalCorvettes}/16 Korvett)`;
+            fleetMet = totalDestroyers >= 10 && (totalFrigates >= 6 || totalCorvettes >= 20);
+            fleetDetails = `Haderő: ${totalDestroyers}/10 Romboló és (${totalFrigates}/6 Fregatt vagy ${totalCorvettes}/20 Korvett)`;
             techMet = playerTechs.includes('extended_shielding') || playerTechs.includes('heavy_metallurgy');
             techDetails = techMet ? "Kifejlesztve: Kiterjesztett Pajzs VAGY Nehézfém Kohászat!" : "Szükséges: Kiterjesztett Pajzs VAGY Nehézfém Kohászat";
         } else {
             // boss_3 (Omega Leviatán)
-            requiredGlory = 700;
+            requiredGlory = 850;
             requiredArtifacts = ['artifact_chrono_core', 'artifact_dark_resonator', 'artifact_codex'];
             reqIso = 250;
             reqData = 500;
-            fleetMet = totalBB >= 6 && totalDestroyers >= 10;
-            fleetDetails = `Haderő: ${totalBB}/6 Csatahajó, ${totalDestroyers}/10 Romboló`;
+            fleetMet = totalBB >= 8 && totalDestroyers >= 14;
+            fleetDetails = `Haderő: ${totalBB}/8 Csatahajó, ${totalDestroyers}/14 Romboló`;
             const hasSiege = playerTechs.includes('siege_warheads');
             const hasAdvancedEnergy = playerTechs.includes('antimatter_containment') || playerTechs.includes('hyperspace_gate');
             techMet = hasSiege && hasAdvancedEnergy;

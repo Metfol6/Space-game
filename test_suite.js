@@ -185,17 +185,17 @@ function runTests() {
 
     // 3. Kritériumok feloldása a teszthez
     // A) Dicsőség és Ereklye
-    db.db.prepare("UPDATE players SET glory_points = 200 WHERE id = 'player'").run();
+    db.db.prepare("UPDATE players SET glory_points = 250 WHERE id = 'player'").run();
     db.addPlayerArtifact('player', 'artifact_chrono_core', 'Kvantum Chrono-Mag');
 
     // B) Erőforrások biztosítása (min. 50 Iso, 100 Dat)
     const pRes = db.getPlayer('player');
     db.updatePlayerResources('player', pRes.metal + 1000, pRes.energy + 500, pRes.isotope + 500, pRes.data_points + 800);
 
-    // C) Armada biztosítása a Kronos-IV bolygón (min. 6 Korvett)
+    // C) Armada biztosítása a Kronos-IV bolygón (min. 15 Korvett VAGY 6 Romboló)
     const p1FleetId = 'f_p1';
-    db.db.prepare("UPDATE fleet_ships SET count = 15, current_hull_total = 1800, current_shield_total = 600 WHERE fleet_id = ? AND ship_type = 'corvette'").run(p1FleetId);
-    db.db.prepare("UPDATE fleet_ships SET count = 4, current_hull_total = 1800, current_shield_total = 800 WHERE fleet_id = ? AND ship_type = 'destroyer'").run(p1FleetId);
+    db.db.prepare("UPDATE fleet_ships SET count = 20, current_hull_total = 2400, current_shield_total = 800 WHERE fleet_id = ? AND ship_type = 'corvette'").run(p1FleetId);
+    db.db.prepare("UPDATE fleet_ships SET count = 6, current_hull_total = 2700, current_shield_total = 1200 WHERE fleet_id = ? AND ship_type = 'destroyer'").run(p1FleetId);
 
     const prereqCheckComplete = db.checkBossPrerequisites('player', 'boss_1');
     console.log("Kritériumok teljesülése (canAttack várt: true):", prereqCheckComplete.canAttack);

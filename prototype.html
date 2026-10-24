@@ -2476,11 +2476,11 @@
       const currentBoss = allBosses.find(b => (b.bossId || b.id) === selectedId) || STATE.boss || {
         bossId: selectedId,
         name: selectedId === 'boss_1' ? 'Cygnus Bastion (Ősi Előőrs)' : (selectedId === 'boss_2' ? 'Void Citadel (Üresség Fellegvár)' : 'Omega Leviatán (Kronos-Leviatán)'),
-        hull: selectedId === 'boss_1' ? 11250 : (selectedId === 'boss_2' ? 18750 : 30000),
-        max_hull: selectedId === 'boss_1' ? 11250 : (selectedId === 'boss_2' ? 18750 : 30000),
-        shield: selectedId === 'boss_1' ? 6250 : (selectedId === 'boss_2' ? 11250 : 17500),
-        max_shield: selectedId === 'boss_1' ? 6250 : (selectedId === 'boss_2' ? 11250 : 17500),
-        damage: selectedId === 'boss_1' ? 875 : (selectedId === 'boss_2' ? 1375 : 2125),
+        hull: selectedId === 'boss_1' ? 12000 : (selectedId === 'boss_2' ? 20000 : 32000),
+        max_hull: selectedId === 'boss_1' ? 12000 : (selectedId === 'boss_2' ? 20000 : 32000),
+        shield: selectedId === 'boss_1' ? 7000 : (selectedId === 'boss_2' ? 12000 : 18000),
+        max_shield: selectedId === 'boss_1' ? 7000 : (selectedId === 'boss_2' ? 12000 : 18000),
+        damage: selectedId === 'boss_1' ? 900 : (selectedId === 'boss_2' ? 1450 : 2200),
         state: 'dormant'
       };
 
@@ -2534,14 +2534,14 @@
 
       const bossLootBadge = document.getElementById('boss-badge-loot');
       if (bossLootBadge) {
-        bossLootBadge.innerText = selectedId === 'boss_1' ? '+7,500 Fém, +3,750 E, +375 Dicsőség' : (selectedId === 'boss_2' ? '+12,500 Fém, +6,250 E, +750 Dicsőség' : '+25,000 Fém, +12,500 E, +1,500 Dicsőség');
+        bossLootBadge.innerText = selectedId === 'boss_1' ? '+7,500 Fém, +3,750 E, +400 Dicsőség' : (selectedId === 'boss_2' ? '+14,000 Fém, +6,500 E, +800 Dicsőség' : '+28,000 Fém, +14,000 E, +1,600 Dicsőség');
       }
 
       const headerDesc = document.getElementById('boss-header-desc');
       if (headerDesc) {
-        if (selectedId === 'boss_1') headerDesc.innerText = '1. Fő Boss: Ősi felderítő állomás a Cygnus-peremen • 11,250 HP / 6,250 Pajzs • Belépő: 200 Dicsőség.';
-        else if (selectedId === 'boss_2') headerDesc.innerText = '2. Fő Boss: Mélyűri Precursor fellegvár • 18,750 HP / 11,250 Pajzs • Belépő: 400 Dicsőség.';
-        else headerDesc.innerText = '3. Fő Boss: Kolosszális Kronos-Leviatán Csillagbárka • 30,000 HP / 17,500 Pajzs • Belépő: 700 Dicsőség.';
+        if (selectedId === 'boss_1') headerDesc.innerText = '1. Fő Boss: Ősi felderítő állomás a Cygnus-peremen • 12,000 HP / 7,000 Pajzs • Belépő: 250 Dicsőség.';
+        else if (selectedId === 'boss_2') headerDesc.innerText = '2. Fő Boss: Mélyűri Precursor fellegvár • 20,000 HP / 12,000 Pajzs • Belépő: 500 Dicsőség.';
+        else headerDesc.innerText = '3. Fő Boss: Kolosszális Kronos-Leviatán Csillagbárka • 32,000 HP / 18,000 Pajzs • Belépő: 850 Dicsőség.';
       }
 
       // Hull & Shield csíkok
@@ -4073,9 +4073,9 @@
                   <span>3 FŐ BOSS CITADELLA (VÉGJÁTÉK)</span>
                 </div>
                 <div class="text-[11px] text-slate-300 space-y-1">
-                  <div>1. <b>Cygnus Bastion:</b> 11,250 HP / 6,250 Pajzs • Belépő: 200 Dicsőség & Kvantum Chrono-Mag.</div>
-                  <div>2. <b>Void Citadel:</b> 18,750 HP / 11,250 Pajzs • Belépő: 400 Dicsőség & Sötét Anyag Rezonátor.</div>
-                  <div>3. <b>Omega Leviatán:</b> 30,000 HP / 17,500 Pajzs • Belépő: 700 Dicsőség & Prekurzor Kódex.</div>
+                  <div>1. <b>Cygnus Bastion:</b> 12,000 HP / 7,000 Pajzs • Belépő: 250 Dicsőség & Kvantum Chrono-Mag.</div>
+                  <div>2. <b>Void Citadel:</b> 20,000 HP / 12,000 Pajzs • Belépő: 500 Dicsőség & Sötét Anyag Rezonátor.</div>
+                  <div>3. <b>Omega Leviatán:</b> 32,000 HP / 18,000 Pajzs • Belépő: 850 Dicsőség & Prekurzor Kódex.</div>
                   <div class="text-red-300 pt-1">• A Bossok kizárólag a <b>[3 BOSS CITADELLA]</b> menüből támadhatók.</div>
                 </div>
               </div>
