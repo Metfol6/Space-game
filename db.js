@@ -545,9 +545,9 @@ class DatabaseService {
 
         // 3 Fő Boss Bolygó (Prekurzor Citadellák - Végjáték Titánok)
         const bossList = [
-            { id: 'boss_1', name: 'CYGNUS BASTION // ŐSI ELŐŐRS', hull: 4500.0, max_hull: 4500.0, shield: 2500.0, max_shield: 2500.0, damage: 350.0, pos_x: 180.0, pos_y: 140.0, salvage_metal: 2500.0, salvage_isotope: 1000.0 },
-            { id: 'boss_2', name: 'VOID CITADEL // ÜRESSÉG CITADELLÁJA', hull: 7500.0, max_hull: 7500.0, shield: 4500.0, max_shield: 4500.0, damage: 550.0, pos_x: 360.0, pos_y: 180.0, salvage_metal: 4500.0, salvage_isotope: 2000.0 },
-            { id: 'boss_3', name: 'OMEGA-ARK-0 // KRONOS-LEVIATÁN', hull: 12000.0, max_hull: 12000.0, shield: 7000.0, max_shield: 7000.0, damage: 850.0, pos_x: 280.0, pos_y: 200.0, salvage_metal: 8000.0, salvage_isotope: 4000.0 }
+            { id: 'boss_1', name: 'CYGNUS BASTION // ŐSI ELŐŐRS', hull: 11250.0, max_hull: 11250.0, shield: 6250.0, max_shield: 6250.0, damage: 875.0, pos_x: 180.0, pos_y: 140.0, salvage_metal: 6250.0, salvage_isotope: 2500.0 },
+            { id: 'boss_2', name: 'VOID CITADEL // ÜRESSÉG CITADELLÁJA', hull: 18750.0, max_hull: 18750.0, shield: 11250.0, max_shield: 11250.0, damage: 1375.0, pos_x: 360.0, pos_y: 180.0, salvage_metal: 11250.0, salvage_isotope: 5000.0 },
+            { id: 'boss_3', name: 'OMEGA-ARK-0 // KRONOS-LEVIATÁN', hull: 30000.0, max_hull: 30000.0, shield: 17500.0, max_shield: 17500.0, damage: 2125.0, pos_x: 280.0, pos_y: 200.0, salvage_metal: 20000.0, salvage_isotope: 10000.0 }
         ];
 
         for (const b of bossList) {
@@ -610,9 +610,9 @@ class DatabaseService {
                 pos_x: 180, pos_y: 140, size_slots: 6,
                 is_bot: 1, bot_type: 'boss', difficulty_tier: 3,
                 loot_type: 'resources',
-                loot_data: JSON.stringify({ metal: 3000, energy: 1500, isotope: 800, data: 800, glory: 150 }),
-                planetary_shield_hp: 2500.0, max_shield_hp: 2500.0, railgun_count: 3,
-                ships: { frigate: 6, destroyer: 4, heavy_destroyer: 3, cruiser: 1 }
+                loot_data: JSON.stringify({ metal: 7500, energy: 3750, isotope: 2000, data: 2000, glory: 375 }),
+                planetary_shield_hp: 6250.0, max_shield_hp: 6250.0, railgun_count: 5,
+                ships: { frigate: 15, destroyer: 10, heavy_destroyer: 8, cruiser: 3 }
             },
             {
                 id: 'boss_2',
@@ -620,9 +620,9 @@ class DatabaseService {
                 pos_x: 360, pos_y: 180, size_slots: 6,
                 is_bot: 1, bot_type: 'boss', difficulty_tier: 4,
                 loot_type: 'resources',
-                loot_data: JSON.stringify({ metal: 5000, energy: 2500, isotope: 1500, data: 1500, glory: 300 }),
-                planetary_shield_hp: 5000.0, max_shield_hp: 5000.0, railgun_count: 5,
-                ships: { destroyer: 6, heavy_destroyer: 4, cruiser: 4, battleship: 2 }
+                loot_data: JSON.stringify({ metal: 12500, energy: 6250, isotope: 3750, data: 3750, glory: 750 }),
+                planetary_shield_hp: 11250.0, max_shield_hp: 11250.0, railgun_count: 8,
+                ships: { destroyer: 15, heavy_destroyer: 10, cruiser: 10, battleship: 5 }
             },
             {
                 id: 'boss_3',
@@ -630,9 +630,9 @@ class DatabaseService {
                 pos_x: 280, pos_y: 200, size_slots: 6,
                 is_bot: 1, bot_type: 'boss', difficulty_tier: 5,
                 loot_type: 'resources',
-                loot_data: JSON.stringify({ metal: 10000, energy: 5000, isotope: 3000, data: 3000, glory: 600 }),
-                planetary_shield_hp: 10000.0, max_shield_hp: 10000.0, railgun_count: 8,
-                ships: { heavy_destroyer: 8, cruiser: 6, battleship: 4 }
+                loot_data: JSON.stringify({ metal: 25000, energy: 12500, isotope: 7500, data: 7500, glory: 1500 }),
+                planetary_shield_hp: 25000.0, max_shield_hp: 25000.0, railgun_count: 15,
+                ships: { heavy_destroyer: 20, cruiser: 15, battleship: 10 }
             }
         ];
 
@@ -644,80 +644,80 @@ class DatabaseService {
                 pos_x: 80, pos_y: 220, size_slots: 3,
                 is_bot: 1, bot_type: 'outpost', difficulty_tier: 1,
                 loot_type: 'resources', loot_data: JSON.stringify({ metal: 1200, energy: 500, isotope: 180, data: 120 }),
-                planetary_shield_hp: 200.0, max_shield_hp: 200.0, railgun_count: 1,
-                ships: { interceptor: 5, corvette: 4 }
+                planetary_shield_hp: 230.0, max_shield_hp: 230.0, railgun_count: 1,
+                ships: { interceptor: 6, corvette: 5 }
             },
             {
                 id: 'bot_p2', name: 'RENEGÁT IZOTÓP-BÁNYA',
                 pos_x: 240, pos_y: 50, size_slots: 3,
                 is_bot: 1, bot_type: 'outpost', difficulty_tier: 1,
                 loot_type: 'glory', loot_data: JSON.stringify({ glory: 15 }),
-                planetary_shield_hp: 150.0, max_shield_hp: 150.0, railgun_count: 1,
-                ships: { corvette: 5, frigate: 2 }
+                planetary_shield_hp: 173.0, max_shield_hp: 173.0, railgun_count: 1,
+                ships: { corvette: 6, frigate: 3 }
             },
             {
                 id: 'bot_p3', name: 'PREKURZOR KRIPTA-HOLD',
                 pos_x: 390, pos_y: 70, size_slots: 3,
                 is_bot: 1, bot_type: 'outpost', difficulty_tier: 1,
                 loot_type: 'artifact', loot_data: JSON.stringify({ artifact_id: 'artifact_chrono_core', name: 'Kvantum Chrono-Mag' }),
-                planetary_shield_hp: 250.0, max_shield_hp: 250.0, railgun_count: 1,
-                ships: { interceptor: 6, corvette: 3 }
+                planetary_shield_hp: 288.0, max_shield_hp: 288.0, railgun_count: 1,
+                ships: { interceptor: 7, corvette: 4 }
             },
             {
                 id: 'bot_p4', name: 'ASZTEROIDA-CSOMÓPONT',
                 pos_x: 90, pos_y: 340, size_slots: 3,
                 is_bot: 1, bot_type: 'outpost', difficulty_tier: 1,
                 loot_type: 'resources', loot_data: JSON.stringify({ metal: 1100, energy: 450, isotope: 160, data: 110 }),
-                planetary_shield_hp: 180.0, max_shield_hp: 180.0, railgun_count: 1,
-                ships: { interceptor: 4, corvette: 4 }
+                planetary_shield_hp: 207.0, max_shield_hp: 207.0, railgun_count: 1,
+                ships: { interceptor: 5, corvette: 5 }
             },
             {
                 id: 'bot_p5', name: 'ORBITÁLIS KALÓZ-DOKK',
                 pos_x: 170, pos_y: 440, size_slots: 3,
                 is_bot: 1, bot_type: 'outpost', difficulty_tier: 1,
                 loot_type: 'glory', loot_data: JSON.stringify({ glory: 18 }),
-                planetary_shield_hp: 200.0, max_shield_hp: 200.0, railgun_count: 1,
-                ships: { corvette: 6, frigate: 1 }
+                planetary_shield_hp: 230.0, max_shield_hp: 230.0, railgun_count: 1,
+                ships: { corvette: 7, frigate: 2 }
             },
             {
                 id: 'bot_p6', name: 'REJTETT DRÓN-SZONDAŐR',
                 pos_x: 480, pos_y: 60, size_slots: 3,
                 is_bot: 1, bot_type: 'outpost', difficulty_tier: 1,
                 loot_type: 'artifact', loot_data: JSON.stringify({ artifact_id: 'artifact_chrono_core', name: 'Kvantum Chrono-Mag' }),
-                planetary_shield_hp: 220.0, max_shield_hp: 220.0, railgun_count: 1,
-                ships: { scout: 4, interceptor: 6 }
+                planetary_shield_hp: 253.0, max_shield_hp: 253.0, railgun_count: 1,
+                ships: { scout: 5, interceptor: 7 }
             },
             {
                 id: 'bot_p7', name: 'RONGÁLT ADAT-SZIGET',
                 pos_x: 520, pos_y: 150, size_slots: 3,
                 is_bot: 1, bot_type: 'outpost', difficulty_tier: 1,
                 loot_type: 'resources', loot_data: JSON.stringify({ metal: 1300, energy: 600, isotope: 200, data: 180 }),
-                planetary_shield_hp: 200.0, max_shield_hp: 200.0, railgun_count: 1,
-                ships: { corvette: 5, frigate: 2 }
+                planetary_shield_hp: 230.0, max_shield_hp: 230.0, railgun_count: 1,
+                ships: { corvette: 6, frigate: 3 }
             },
             {
                 id: 'bot_p8', name: 'KALÓZ ÜZEMANYAG-RAKTÁR',
                 pos_x: 70, pos_y: 150, size_slots: 3,
                 is_bot: 1, bot_type: 'outpost', difficulty_tier: 1,
                 loot_type: 'glory', loot_data: JSON.stringify({ glory: 20 }),
-                planetary_shield_hp: 220.0, max_shield_hp: 220.0, railgun_count: 1,
-                ships: { interceptor: 7, corvette: 3 }
+                planetary_shield_hp: 253.0, max_shield_hp: 253.0, railgun_count: 1,
+                ships: { interceptor: 9, corvette: 4 }
             },
             {
                 id: 'bot_p9', name: 'ELHAGYOTT SZENZOR-ÁLLOMÁS',
                 pos_x: 300, pos_y: 450, size_slots: 3,
                 is_bot: 1, bot_type: 'outpost', difficulty_tier: 1,
                 loot_type: 'resources', loot_data: JSON.stringify({ metal: 1250, energy: 550, isotope: 190, data: 160 }),
-                planetary_shield_hp: 210.0, max_shield_hp: 210.0, railgun_count: 1,
-                ships: { corvette: 6, frigate: 2 }
+                planetary_shield_hp: 241.0, max_shield_hp: 241.0, railgun_count: 1,
+                ships: { corvette: 7, frigate: 3 }
             },
             {
                 id: 'bot_p10', name: 'REZONÁTOR-KRÁTER',
                 pos_x: 440, pos_y: 460, size_slots: 3,
                 is_bot: 1, bot_type: 'outpost', difficulty_tier: 1,
                 loot_type: 'artifact', loot_data: JSON.stringify({ artifact_id: 'artifact_dark_resonator', name: 'Sötét Anyag Rezonátor' }),
-                planetary_shield_hp: 260.0, max_shield_hp: 260.0, railgun_count: 1,
-                ships: { interceptor: 8, frigate: 2 }
+                planetary_shield_hp: 299.0, max_shield_hp: 299.0, railgun_count: 1,
+                ships: { interceptor: 10, frigate: 3 }
             },
 
             // --- TIER 2 (10 Bolygó: Gépgyárak, Nehéz Roncsok, Erődítmények) ---
@@ -726,80 +726,80 @@ class DatabaseService {
                 pos_x: 160, pos_y: 240, size_slots: 4,
                 is_bot: 1, bot_type: 'outpost', difficulty_tier: 2,
                 loot_type: 'resources', loot_data: JSON.stringify({ metal: 1800, energy: 800, isotope: 300, data: 220 }),
-                planetary_shield_hp: 400.0, max_shield_hp: 400.0, railgun_count: 2,
-                ships: { corvette: 8, destroyer: 2 }
+                planetary_shield_hp: 460.0, max_shield_hp: 460.0, railgun_count: 2,
+                ships: { corvette: 10, destroyer: 3 }
             },
             {
                 id: 'bot_p12', name: 'KOZMIKUS RONCS-ERŐD',
                 pos_x: 350, pos_y: 260, size_slots: 4,
                 is_bot: 1, bot_type: 'outpost', difficulty_tier: 2,
                 loot_type: 'glory', loot_data: JSON.stringify({ glory: 25 }),
-                planetary_shield_hp: 450.0, max_shield_hp: 450.0, railgun_count: 2,
-                ships: { destroyer: 4, cruiser: 1 }
+                planetary_shield_hp: 518.0, max_shield_hp: 518.0, railgun_count: 2,
+                ships: { destroyer: 5, cruiser: 2 }
             },
             {
                 id: 'bot_p13', name: 'SÖTÉT CSILLAG ŐRHELY',
                 pos_x: 480, pos_y: 230, size_slots: 4,
                 is_bot: 1, bot_type: 'outpost', difficulty_tier: 2,
                 loot_type: 'artifact', loot_data: JSON.stringify({ artifact_id: 'artifact_dark_resonator', name: 'Sötét Anyag Rezonátor' }),
-                planetary_shield_hp: 500.0, max_shield_hp: 500.0, railgun_count: 2,
-                ships: { frigate: 4, destroyer: 3, cruiser: 1 }
+                planetary_shield_hp: 575.0, max_shield_hp: 575.0, railgun_count: 2,
+                ships: { frigate: 5, destroyer: 4, cruiser: 2 }
             },
             {
                 id: 'bot_p14', name: 'KVANTUM-SZERELŐCSARNOK',
                 pos_x: 270, pos_y: 160, size_slots: 4,
                 is_bot: 1, bot_type: 'outpost', difficulty_tier: 2,
                 loot_type: 'resources', loot_data: JSON.stringify({ metal: 2000, energy: 900, isotope: 350, data: 250 }),
-                planetary_shield_hp: 450.0, max_shield_hp: 450.0, railgun_count: 2,
-                ships: { corvette: 6, frigate: 4, destroyer: 2 }
+                planetary_shield_hp: 518.0, max_shield_hp: 518.0, railgun_count: 2,
+                ships: { corvette: 7, frigate: 5, destroyer: 3 }
             },
             {
                 id: 'bot_p15', name: 'PLAZMA-ÁGYÚTORONY BÁZIS',
                 pos_x: 390, pos_y: 410, size_slots: 4,
                 is_bot: 1, bot_type: 'outpost', difficulty_tier: 2,
                 loot_type: 'glory', loot_data: JSON.stringify({ glory: 30 }),
-                planetary_shield_hp: 550.0, max_shield_hp: 550.0, railgun_count: 3,
-                ships: { heavy_destroyer: 2, destroyer: 3 }
+                planetary_shield_hp: 633.0, max_shield_hp: 633.0, railgun_count: 3,
+                ships: { heavy_destroyer: 3, destroyer: 4 }
             },
             {
                 id: 'bot_p16', name: 'PREKURZOR KÓDEX-SZENTÉLY',
                 pos_x: 580, pos_y: 100, size_slots: 4,
                 is_bot: 1, bot_type: 'outpost', difficulty_tier: 2,
                 loot_type: 'artifact', loot_data: JSON.stringify({ artifact_id: 'artifact_codex', name: 'Prekurzor Hozzáférési Kódex' }),
-                planetary_shield_hp: 500.0, max_shield_hp: 500.0, railgun_count: 2,
-                ships: { frigate: 5, destroyer: 3 }
+                planetary_shield_hp: 575.0, max_shield_hp: 575.0, railgun_count: 2,
+                ships: { frigate: 6, destroyer: 4 }
             },
             {
                 id: 'bot_p17', name: 'NEHÉZIPARI KOHÓ-BÁRKA',
                 pos_x: 600, pos_y: 210, size_slots: 4,
                 is_bot: 1, bot_type: 'outpost', difficulty_tier: 2,
                 loot_type: 'resources', loot_data: JSON.stringify({ metal: 2200, energy: 1000, isotope: 400, data: 300 }),
-                planetary_shield_hp: 480.0, max_shield_hp: 480.0, railgun_count: 2,
-                ships: { corvette: 8, heavy_destroyer: 2 }
+                planetary_shield_hp: 552.0, max_shield_hp: 552.0, railgun_count: 2,
+                ships: { corvette: 10, heavy_destroyer: 3 }
             },
             {
                 id: 'bot_p18', name: 'CIKLON-KORSZAK ERŐDÍTÉS',
                 pos_x: 530, pos_y: 330, size_slots: 4,
                 is_bot: 1, bot_type: 'outpost', difficulty_tier: 2,
                 loot_type: 'glory', loot_data: JSON.stringify({ glory: 30 }),
-                planetary_shield_hp: 520.0, max_shield_hp: 520.0, railgun_count: 2,
-                ships: { frigate: 4, destroyer: 4 }
+                planetary_shield_hp: 598.0, max_shield_hp: 598.0, railgun_count: 2,
+                ships: { frigate: 5, destroyer: 5 }
             },
             {
                 id: 'bot_p19', name: 'KÜLSŐ TACHION-VISSZHANG',
                 pos_x: 650, pos_y: 310, size_slots: 4,
                 is_bot: 1, bot_type: 'outpost', difficulty_tier: 2,
                 loot_type: 'artifact', loot_data: JSON.stringify({ artifact_id: 'artifact_chrono_core', name: 'Kvantum Chrono-Mag' }),
-                planetary_shield_hp: 490.0, max_shield_hp: 490.0, railgun_count: 2,
-                ships: { interceptor: 8, destroyer: 3 }
+                planetary_shield_hp: 564.0, max_shield_hp: 564.0, railgun_count: 2,
+                ships: { interceptor: 10, destroyer: 4 }
             },
             {
                 id: 'bot_p20', name: 'TITÁN-SZIKLA DEPO',
                 pos_x: 210, pos_y: 520, size_slots: 4,
                 is_bot: 1, bot_type: 'outpost', difficulty_tier: 2,
                 loot_type: 'resources', loot_data: JSON.stringify({ metal: 2100, energy: 950, isotope: 380, data: 280 }),
-                planetary_shield_hp: 460.0, max_shield_hp: 460.0, railgun_count: 2,
-                ships: { corvette: 10, destroyer: 3 }
+                planetary_shield_hp: 529.0, max_shield_hp: 529.0, railgun_count: 2,
+                ships: { corvette: 12, destroyer: 4 }
             },
 
             // --- TIER 3 (10 Bolygó: Prekurzor Bástyák, Haladó Hadiszektorok) ---
@@ -808,80 +808,80 @@ class DatabaseService {
                 pos_x: 110, pos_y: 480, size_slots: 5,
                 is_bot: 1, bot_type: 'outpost', difficulty_tier: 3,
                 loot_type: 'resources', loot_data: JSON.stringify({ metal: 3500, energy: 1500, isotope: 600, data: 500 }),
-                planetary_shield_hp: 800.0, max_shield_hp: 800.0, railgun_count: 3,
-                ships: { frigate: 5, heavy_destroyer: 3, cruiser: 2 }
+                planetary_shield_hp: 920.0, max_shield_hp: 920.0, railgun_count: 3,
+                ships: { frigate: 6, heavy_destroyer: 4, cruiser: 3 }
             },
             {
                 id: 'bot_p22', name: 'REZONANCIA-MAG ERŐD',
                 pos_x: 360, pos_y: 500, size_slots: 5,
                 is_bot: 1, bot_type: 'outpost', difficulty_tier: 3,
                 loot_type: 'glory', loot_data: JSON.stringify({ glory: 40 }),
-                planetary_shield_hp: 850.0, max_shield_hp: 850.0, railgun_count: 3,
-                ships: { destroyer: 5, cruiser: 2, battleship: 1 }
+                planetary_shield_hp: 977.0, max_shield_hp: 977.0, railgun_count: 3,
+                ships: { destroyer: 6, cruiser: 3, battleship: 2 }
             },
             {
                 id: 'bot_p23', name: 'PREKURZOR ARCHÍVUM-NEXUS',
                 pos_x: 680, pos_y: 130, size_slots: 5,
                 is_bot: 1, bot_type: 'outpost', difficulty_tier: 3,
                 loot_type: 'artifact', loot_data: JSON.stringify({ artifact_id: 'artifact_codex', name: 'Prekurzor Hozzáférési Kódex' }),
-                planetary_shield_hp: 900.0, max_shield_hp: 900.0, railgun_count: 3,
-                ships: { frigate: 6, destroyer: 4, cruiser: 2 }
+                planetary_shield_hp: 1035.0, max_shield_hp: 1035.0, railgun_count: 3,
+                ships: { frigate: 7, destroyer: 5, cruiser: 3 }
             },
             {
                 id: 'bot_p24', name: 'FEKETE-LYUK VÉDŐGYŰRŰ',
                 pos_x: 590, pos_y: 440, size_slots: 5,
                 is_bot: 1, bot_type: 'outpost', difficulty_tier: 3,
                 loot_type: 'resources', loot_data: JSON.stringify({ metal: 3800, energy: 1800, isotope: 750, data: 600 }),
-                planetary_shield_hp: 950.0, max_shield_hp: 950.0, railgun_count: 3,
-                ships: { heavy_destroyer: 4, cruiser: 3, battleship: 1 }
+                planetary_shield_hp: 1093.0, max_shield_hp: 1093.0, railgun_count: 3,
+                ships: { heavy_destroyer: 5, cruiser: 4, battleship: 2 }
             },
             {
                 id: 'bot_p25', name: 'ANTIMATTER SILÓ-SZIKLA',
                 pos_x: 690, pos_y: 420, size_slots: 5,
                 is_bot: 1, bot_type: 'outpost', difficulty_tier: 3,
                 loot_type: 'glory', loot_data: JSON.stringify({ glory: 45 }),
-                planetary_shield_hp: 900.0, max_shield_hp: 900.0, railgun_count: 3,
-                ships: { destroyer: 6, heavy_destroyer: 3, cruiser: 2 }
+                planetary_shield_hp: 1035.0, max_shield_hp: 1035.0, railgun_count: 3,
+                ships: { destroyer: 7, heavy_destroyer: 4, cruiser: 3 }
             },
             {
                 id: 'bot_p26', name: 'KVANTUM-FOLYOSÓ ŐRSZEM',
                 pos_x: 490, pos_y: 520, size_slots: 5,
                 is_bot: 1, bot_type: 'outpost', difficulty_tier: 3,
                 loot_type: 'artifact', loot_data: JSON.stringify({ artifact_id: 'artifact_dark_resonator', name: 'Sötét Anyag Rezonátor' }),
-                planetary_shield_hp: 920.0, max_shield_hp: 920.0, railgun_count: 3,
-                ships: { frigate: 6, cruiser: 3, battleship: 1 }
+                planetary_shield_hp: 1058.0, max_shield_hp: 1058.0, railgun_count: 3,
+                ships: { frigate: 7, cruiser: 4, battleship: 2 }
             },
             {
                 id: 'bot_p27', name: 'OBLIVION OSTROMPLÁZA',
                 pos_x: 670, pos_y: 230, size_slots: 5,
                 is_bot: 1, bot_type: 'outpost', difficulty_tier: 3,
                 loot_type: 'resources', loot_data: JSON.stringify({ metal: 4000, energy: 2000, isotope: 800, data: 650 }),
-                planetary_shield_hp: 1000.0, max_shield_hp: 1000.0, railgun_count: 4,
-                ships: { heavy_destroyer: 5, cruiser: 3, battleship: 1 }
+                planetary_shield_hp: 1150.0, max_shield_hp: 1150.0, railgun_count: 4,
+                ships: { heavy_destroyer: 6, cruiser: 4, battleship: 2 }
             },
             {
                 id: 'bot_p28', name: 'TITÁN-CSAPATOK KRIPTÁJA',
                 pos_x: 740, pos_y: 330, size_slots: 5,
                 is_bot: 1, bot_type: 'outpost', difficulty_tier: 3,
                 loot_type: 'glory', loot_data: JSON.stringify({ glory: 50 }),
-                planetary_shield_hp: 1100.0, max_shield_hp: 1100.0, railgun_count: 4,
-                ships: { destroyer: 6, cruiser: 4, battleship: 2 }
+                planetary_shield_hp: 1265.0, max_shield_hp: 1265.0, railgun_count: 4,
+                ships: { destroyer: 7, cruiser: 5, battleship: 3 }
             },
             {
                 id: 'bot_p29', name: 'GIGÁSZ CSATAROBOT DOKK',
                 pos_x: 590, pos_y: 520, size_slots: 5,
                 is_bot: 1, bot_type: 'outpost', difficulty_tier: 3,
                 loot_type: 'resources', loot_data: JSON.stringify({ metal: 4200, energy: 2200, isotope: 900, data: 700 }),
-                planetary_shield_hp: 1150.0, max_shield_hp: 1150.0, railgun_count: 4,
-                ships: { heavy_destroyer: 4, cruiser: 4, battleship: 2 }
+                planetary_shield_hp: 1323.0, max_shield_hp: 1323.0, railgun_count: 4,
+                ships: { heavy_destroyer: 5, cruiser: 5, battleship: 3 }
             },
             {
                 id: 'bot_p30', name: 'PREKURZOR OMEGA-BÁSTYA',
                 pos_x: 720, pos_y: 220, size_slots: 5,
                 is_bot: 1, bot_type: 'outpost', difficulty_tier: 3,
                 loot_type: 'artifact', loot_data: JSON.stringify({ artifact_id: 'artifact_codex', name: 'Prekurzor Hozzáférési Kódex' }),
-                planetary_shield_hp: 1200.0, max_shield_hp: 1200.0, railgun_count: 4,
-                ships: { frigate: 8, heavy_destroyer: 4, cruiser: 4, battleship: 2 }
+                planetary_shield_hp: 1380.0, max_shield_hp: 1380.0, railgun_count: 4,
+                ships: { frigate: 10, heavy_destroyer: 5, cruiser: 5, battleship: 3 }
             }
         ];
 
@@ -1516,31 +1516,31 @@ class DatabaseService {
         let fleetDetails = "";
 
         if (bossId === 'boss_1') {
-            requiredGlory = 100;
+            requiredGlory = 200;
             requiredArtifacts = ['artifact_chrono_core'];
-            reqIso = 50;
-            reqData = 100;
-            fleetMet = totalCorvettes >= 6 || totalDestroyers >= 2;
-            fleetDetails = `Haderő: ${totalCorvettes}/6 Korvett VAGY ${totalDestroyers}/2 Romboló`;
+            reqIso = 80;
+            reqData = 150;
+            fleetMet = totalCorvettes >= 12 || totalDestroyers >= 4;
+            fleetDetails = `Haderő: ${totalCorvettes}/12 Korvett VAGY ${totalDestroyers}/4 Romboló`;
             techMet = true;
             techDetails = "Alapszintű flotta-infrastruktúra elegendő.";
         } else if (bossId === 'boss_2') {
-            requiredGlory = 250;
+            requiredGlory = 400;
             requiredArtifacts = ['artifact_chrono_core', 'artifact_dark_resonator'];
-            reqIso = 100;
-            reqData = 200;
-            fleetMet = totalDestroyers >= 4 && (totalFrigates >= 2 || totalCorvettes >= 8);
-            fleetDetails = `Haderő: ${totalDestroyers}/4 Romboló és (${totalFrigates}/2 Fregatt vagy ${totalCorvettes}/8 Korvett)`;
+            reqIso = 160;
+            reqData = 300;
+            fleetMet = totalDestroyers >= 8 && (totalFrigates >= 4 || totalCorvettes >= 16);
+            fleetDetails = `Haderő: ${totalDestroyers}/8 Romboló és (${totalFrigates}/4 Fregatt vagy ${totalCorvettes}/16 Korvett)`;
             techMet = playerTechs.includes('extended_shielding') || playerTechs.includes('heavy_metallurgy');
             techDetails = techMet ? "Kifejlesztve: Kiterjesztett Pajzs VAGY Nehézfém Kohászat!" : "Szükséges: Kiterjesztett Pajzs VAGY Nehézfém Kohászat";
         } else {
             // boss_3 (Omega Leviatán)
-            requiredGlory = 450;
+            requiredGlory = 700;
             requiredArtifacts = ['artifact_chrono_core', 'artifact_dark_resonator', 'artifact_codex'];
-            reqIso = 150;
-            reqData = 300;
-            fleetMet = totalBB >= 3 && totalDestroyers >= 6;
-            fleetDetails = `Haderő: ${totalBB}/3 Csatahajó, ${totalDestroyers}/6 Romboló`;
+            reqIso = 250;
+            reqData = 500;
+            fleetMet = totalBB >= 6 && totalDestroyers >= 10;
+            fleetDetails = `Haderő: ${totalBB}/6 Csatahajó, ${totalDestroyers}/10 Romboló`;
             const hasSiege = playerTechs.includes('siege_warheads');
             const hasAdvancedEnergy = playerTechs.includes('antimatter_containment') || playerTechs.includes('hyperspace_gate');
             techMet = hasSiege && hasAdvancedEnergy;

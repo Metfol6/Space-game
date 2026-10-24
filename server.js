@@ -36,9 +36,9 @@ const TECH_TREE = {
         branch_name: 'Ipar & Bányászat',
         tier: 1,
         prerequisites: [],
-        duration_ticks: 1,
-        cost_data: 60,
-        cost_isotope: 20,
+        duration_ticks: 2,
+        cost_data: 75,
+        cost_isotope: 25,
         icon: '⛏️',
         effect_desc: '+25% Fémtermelés minden birtokolt bolygón'
     },
@@ -49,9 +49,9 @@ const TECH_TREE = {
         branch_name: 'Ipar & Bányászat',
         tier: 2,
         prerequisites: ['deep_core_mining'],
-        duration_ticks: 2,
-        cost_data: 120,
-        cost_isotope: 40,
+        duration_ticks: 3,
+        cost_data: 145,
+        cost_isotope: 50,
         icon: '🔩',
         effect_desc: '+30% hajótest (Hull HP) minden hajóosztálynak'
     },
@@ -62,9 +62,9 @@ const TECH_TREE = {
         branch_name: 'Ipar & Bányászat',
         tier: 2,
         prerequisites: ['deep_core_mining', 'dark_matter_reactor'],
-        duration_ticks: 3,
-        cost_data: 150,
-        cost_isotope: 50,
+        duration_ticks: 4,
+        cost_data: 180,
+        cost_isotope: 60,
         icon: '🏭',
         effect_desc: '-20% hajógyártási Fémköltség'
     },
@@ -75,9 +75,9 @@ const TECH_TREE = {
         branch_name: 'Ipar & Bányászat',
         tier: 3,
         prerequisites: ['automated_dock', 'heavy_metallurgy'],
-        duration_ticks: 4,
-        cost_data: 250,
-        cost_isotope: 80,
+        duration_ticks: 5,
+        cost_data: 300,
+        cost_isotope: 100,
         icon: '💠',
         effect_desc: '+1 építési slot minden bolygón'
     },
@@ -90,9 +90,9 @@ const TECH_TREE = {
         branch_name: 'Energia & Reaktorok',
         tier: 1,
         prerequisites: [],
-        duration_ticks: 1,
-        cost_data: 60,
-        cost_isotope: 20,
+        duration_ticks: 2,
+        cost_data: 75,
+        cost_isotope: 25,
         icon: '⚛️',
         effect_desc: '+30% Energiatermelés minden bolygón'
     },
@@ -103,9 +103,9 @@ const TECH_TREE = {
         branch_name: 'Energia & Reaktorok',
         tier: 2,
         prerequisites: ['dark_matter_reactor'],
-        duration_ticks: 2,
-        cost_data: 120,
-        cost_isotope: 40,
+        duration_ticks: 3,
+        cost_data: 145,
+        cost_isotope: 50,
         icon: '⚡',
         effect_desc: '-25% épület energiafogyasztás (több marad a flottára)'
     },
@@ -116,9 +116,9 @@ const TECH_TREE = {
         branch_name: 'Energia & Reaktorok',
         tier: 3,
         prerequisites: ['superconductor_grid', 'isotope_compression'],
-        duration_ticks: 4,
-        cost_data: 250,
-        cost_isotope: 90,
+        duration_ticks: 5,
+        cost_data: 300,
+        cost_isotope: 110,
         icon: '🌌',
         effect_desc: 'Planetáris pajzs és orbital railgun hatékonysága +50%'
     },
@@ -131,9 +131,9 @@ const TECH_TREE = {
         branch_name: 'Haditechnika & Védelem',
         tier: 1,
         prerequisites: [],
-        duration_ticks: 1,
-        cost_data: 60,
-        cost_isotope: 20,
+        duration_ticks: 2,
+        cost_data: 75,
+        cost_isotope: 25,
         icon: '🎯',
         effect_desc: '+15% Korvett és Romboló sebzés csatában'
     },
@@ -144,9 +144,9 @@ const TECH_TREE = {
         branch_name: 'Haditechnika & Védelem',
         tier: 2,
         prerequisites: ['kinetic_calibration', 'dark_matter_reactor'],
-        duration_ticks: 2,
-        cost_data: 130,
-        cost_isotope: 45,
+        duration_ticks: 3,
+        cost_data: 155,
+        cost_isotope: 55,
         icon: '🛡️',
         effect_desc: '+25% pajzskapacitás minden új hajón'
     },
@@ -157,9 +157,9 @@ const TECH_TREE = {
         branch_name: 'Haditechnika & Védelem',
         tier: 3,
         prerequisites: ['extended_shielding', 'heavy_metallurgy'],
-        duration_ticks: 5,
-        cost_data: 280,
-        cost_isotope: 100,
+        duration_ticks: 6,
+        cost_data: 340,
+        cost_isotope: 120,
         icon: '💥',
         effect_desc: '+50% Csatahajó sebzés csatában'
     },
@@ -172,9 +172,9 @@ const TECH_TREE = {
         branch_name: 'Hajtómű & Logisztika',
         tier: 1,
         prerequisites: [],
-        duration_ticks: 1,
-        cost_data: 60,
-        cost_isotope: 20,
+        duration_ticks: 2,
+        cost_data: 75,
+        cost_isotope: 25,
         icon: '🚀',
         effect_desc: '+25% sebesség minden hajóosztálynak'
     },
@@ -185,9 +185,9 @@ const TECH_TREE = {
         branch_name: 'Hajtómű & Logisztika',
         tier: 2,
         prerequisites: ['ion_thrusters'],
-        duration_ticks: 2,
-        cost_data: 120,
-        cost_isotope: 40,
+        duration_ticks: 3,
+        cost_data: 145,
+        cost_isotope: 50,
         icon: '🔋',
         effect_desc: '-30% Izotóp üzemanyagköltség indításkor'
     },
@@ -198,9 +198,9 @@ const TECH_TREE = {
         branch_name: 'Hajtómű & Logisztika',
         tier: 3,
         prerequisites: ['isotope_compression', 'superconductor_grid'],
-        duration_ticks: 5,
-        cost_data: 300,
-        cost_isotope: 110,
+        duration_ticks: 6,
+        cost_data: 360,
+        cost_isotope: 130,
         icon: '🌀',
         effect_desc: 'Flották minimális sebessége 6.0-ra nő'
     }
@@ -400,12 +400,12 @@ function _resolveScoutMission(fleet, targetPlanet, tick) {
     const reconPowerPerScout = 1 + sensorLvl;
     const totalReconPower = scoutCount * reconPowerPerScout;
 
-    let requiredPower = 5;
-    if (targetPlanet.bot_type === 'boss') requiredPower = 60;
-    else if (targetPlanet.difficulty_tier === 3) requiredPower = 30;
-    else if (targetPlanet.difficulty_tier === 2) requiredPower = 15;
-    else if (targetPlanet.difficulty_tier === 1) requiredPower = 5;
-    else if (targetPlanet.owner_id && targetPlanet.owner_id !== fleet.owner_id) requiredPower = 20;
+    let requiredPower = 6;
+    if (targetPlanet.bot_type === 'boss') requiredPower = 90;
+    else if (targetPlanet.difficulty_tier === 3) requiredPower = 35;
+    else if (targetPlanet.difficulty_tier === 2) requiredPower = 18;
+    else if (targetPlanet.difficulty_tier === 1) requiredPower = 6;
+    else if (targetPlanet.owner_id && targetPlanet.owner_id !== fleet.owner_id) requiredPower = 25;
 
     const isSuccess = totalReconPower >= requiredPower;
     const stealthChance = Math.min(0.98, 0.40 + stealthLvl * 0.06);

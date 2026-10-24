@@ -185,7 +185,7 @@ function runTests() {
 
     // 3. Kritériumok feloldása a teszthez
     // A) Dicsőség és Ereklye
-    db.db.prepare("UPDATE players SET glory_points = 150 WHERE id = 'player'").run();
+    db.db.prepare("UPDATE players SET glory_points = 200 WHERE id = 'player'").run();
     db.addPlayerArtifact('player', 'artifact_chrono_core', 'Kvantum Chrono-Mag');
 
     // B) Erőforrások biztosítása (min. 50 Iso, 100 Dat)
@@ -211,8 +211,8 @@ function runTests() {
     // 4. Boss Harc szimuláció (resolveBossCombat)
     const playerTechs = db.getPlayerResearch('player');
     const armada = new Fleet('player', 'Cygnus Ostrom Armada', bossInit.pos_x, bossInit.pos_y, playerTechs);
-    for (let i = 0; i < 15; i++) armada.ships.push(new ShipInstance('corvette', playerTechs));
-    for (let i = 0; i < 4; i++) armada.ships.push(new ShipInstance('destroyer', playerTechs));
+    for (let i = 0; i < 25; i++) armada.ships.push(new ShipInstance('corvette', playerTechs));
+    for (let i = 0; i < 8; i++) armada.ships.push(new ShipInstance('destroyer', playerTechs));
 
     const bossFightResult = CombatEngine.resolveBossCombat(armada, bossInit, playerTechs, 8);
     console.log("Boss 1 Harc Kimenetel:", bossFightResult.won ? "GYŐZELEM" : "MEGTORPANÁS / VERESÉG");

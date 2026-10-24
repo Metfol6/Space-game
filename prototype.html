@@ -2476,11 +2476,11 @@
       const currentBoss = allBosses.find(b => (b.bossId || b.id) === selectedId) || STATE.boss || {
         bossId: selectedId,
         name: selectedId === 'boss_1' ? 'Cygnus Bastion (Ősi Előőrs)' : (selectedId === 'boss_2' ? 'Void Citadel (Üresség Fellegvár)' : 'Omega Leviatán (Kronos-Leviatán)'),
-        hull: selectedId === 'boss_1' ? 2500 : (selectedId === 'boss_2' ? 4500 : 6000),
-        max_hull: selectedId === 'boss_1' ? 2500 : (selectedId === 'boss_2' ? 4500 : 6000),
-        shield: selectedId === 'boss_1' ? 1200 : (selectedId === 'boss_2' ? 2200 : 3000),
-        max_shield: selectedId === 'boss_1' ? 1200 : (selectedId === 'boss_2' ? 2200 : 3000),
-        damage: selectedId === 'boss_1' ? 250 : (selectedId === 'boss_2' ? 420 : 550),
+        hull: selectedId === 'boss_1' ? 11250 : (selectedId === 'boss_2' ? 18750 : 30000),
+        max_hull: selectedId === 'boss_1' ? 11250 : (selectedId === 'boss_2' ? 18750 : 30000),
+        shield: selectedId === 'boss_1' ? 6250 : (selectedId === 'boss_2' ? 11250 : 17500),
+        max_shield: selectedId === 'boss_1' ? 6250 : (selectedId === 'boss_2' ? 11250 : 17500),
+        damage: selectedId === 'boss_1' ? 875 : (selectedId === 'boss_2' ? 1375 : 2125),
         state: 'dormant'
       };
 
@@ -2534,14 +2534,14 @@
 
       const bossLootBadge = document.getElementById('boss-badge-loot');
       if (bossLootBadge) {
-        bossLootBadge.innerText = selectedId === 'boss_1' ? '+3,000 Fém, +1,500 E, +150 Dicsőség' : (selectedId === 'boss_2' ? '+5,000 Fém, +2,500 E, +300 Dicsőség' : '+10,000 Fém, +5,000 E, +600 Dicsőség');
+        bossLootBadge.innerText = selectedId === 'boss_1' ? '+7,500 Fém, +3,750 E, +375 Dicsőség' : (selectedId === 'boss_2' ? '+12,500 Fém, +6,250 E, +750 Dicsőség' : '+25,000 Fém, +12,500 E, +1,500 Dicsőség');
       }
 
       const headerDesc = document.getElementById('boss-header-desc');
       if (headerDesc) {
-        if (selectedId === 'boss_1') headerDesc.innerText = '1. Fő Boss: Ősi felderítő állomás a Cygnus-peremen • 4,500 HP / 2,500 Pajzs • Belépő: 100 Dicsőség.';
-        else if (selectedId === 'boss_2') headerDesc.innerText = '2. Fő Boss: Mélyűri Precursor fellegvár • 7,500 HP / 4,500 Pajzs • Belépő: 250 Dicsőség.';
-        else headerDesc.innerText = '3. Fő Boss: Kolosszális Kronos-Leviatán Csillagbárka • 12,000 HP / 7,000 Pajzs • A végső űruralkodás kulcsa!';
+        if (selectedId === 'boss_1') headerDesc.innerText = '1. Fő Boss: Ősi felderítő állomás a Cygnus-peremen • 11,250 HP / 6,250 Pajzs • Belépő: 200 Dicsőség.';
+        else if (selectedId === 'boss_2') headerDesc.innerText = '2. Fő Boss: Mélyűri Precursor fellegvár • 18,750 HP / 11,250 Pajzs • Belépő: 400 Dicsőség.';
+        else headerDesc.innerText = '3. Fő Boss: Kolosszális Kronos-Leviatán Csillagbárka • 30,000 HP / 17,500 Pajzs • Belépő: 700 Dicsőség.';
       }
 
       // Hull & Shield csíkok
@@ -3750,7 +3750,7 @@
                 <span>🔬</span>
                 <span>HOGYAN MŰKÖDIK A TECHNOLÓGIAI FA?</span>
               </div>
-              <div>A játékban 4 fő technológiai ág található. Minden ág Tier 1 kutatással indul (1 óra/kör), és az előfeltételek feloldásával juthatsz el a haladó Tier 2 és a legerősebb Tier 3 végjáték technológiákhoz. A kutatásokhoz a laboratóriumok által termelt Adatpontok (Dat) és Izotóp szükséges.</div>
+              <div>A játékban 4 fő technológiai ág található. Minden ág Tier 1 kutatással indul (2 óra/kör), és az előfeltételek feloldásával juthatsz el a haladó Tier 2 és a legerősebb Tier 3 végjáték technológiákhoz. A kutatásokhoz a laboratóriumok által termelt Adatpontok (Dat) és Izotóp szükséges.</div>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -4044,10 +4044,10 @@
                   <span>30 BOT ERŐD & TACHION KÉMKEDÉS</span>
                 </div>
                 <div class="text-[11px] text-slate-300 space-y-1">
-                  <div>• <b>Tier 1 (10 db):</b> Kalózfészkek (Szükséges szonda-pont: <b>5</b>).</div>
-                  <div>• <b>Tier 2 (10 db):</b> Robot gépgyárak (Szükséges szonda-pont: <b>15</b>).</div>
-                  <div>• <b>Tier 3 (10 db):</b> Prekurzor erődök (Szükséges szonda-pont: <b>30</b>).</div>
-                  <div>• <b>3 Boss Citadella:</b> Végjáték bástyák (Szükséges szonda-pont: <b>60</b>).</div>
+                  <div>• <b>Tier 1 (10 db):</b> Kalózfészkek (Szükséges szonda-pont: <b>6</b>).</div>
+                  <div>• <b>Tier 2 (10 db):</b> Robot gépgyárak (Szükséges szonda-pont: <b>18</b>).</div>
+                  <div>• <b>Tier 3 (10 db):</b> Prekurzor erődök (Szükséges szonda-pont: <b>35</b>).</div>
+                  <div>• <b>3 Boss Citadella:</b> Végjáték bástyák (Szükséges szonda-pont: <b>90</b>).</div>
                   <div class="text-amber-300 pt-1">• <b>Kémkedés:</b> Küldj szondát a bolygó paneljéről! A szonda nem harcol; felméri a helyőrséget és felfedi a rejtett zsákmányt. Lopakodás fejlesztésével a szondák nem vesznek el!</div>
                 </div>
               </div>
@@ -4073,9 +4073,9 @@
                   <span>3 FŐ BOSS CITADELLA (VÉGJÁTÉK)</span>
                 </div>
                 <div class="text-[11px] text-slate-300 space-y-1">
-                  <div>1. <b>Cygnus Bastion:</b> 4,500 HP / 2,500 Pajzs • Belépő: 100 Dicsőség & Kvantum Chrono-Mag.</div>
-                  <div>2. <b>Void Citadel:</b> 7,500 HP / 4,500 Pajzs • Belépő: 250 Dicsőség & Sötét Anyag Rezonátor.</div>
-                  <div>3. <b>Omega Leviatán:</b> 12,000 HP / 7,000 Pajzs • Belépő: 450 Dicsőség & Prekurzor Kódex.</div>
+                  <div>1. <b>Cygnus Bastion:</b> 11,250 HP / 6,250 Pajzs • Belépő: 200 Dicsőség & Kvantum Chrono-Mag.</div>
+                  <div>2. <b>Void Citadel:</b> 18,750 HP / 11,250 Pajzs • Belépő: 400 Dicsőség & Sötét Anyag Rezonátor.</div>
+                  <div>3. <b>Omega Leviatán:</b> 30,000 HP / 17,500 Pajzs • Belépő: 700 Dicsőség & Prekurzor Kódex.</div>
                   <div class="text-red-300 pt-1">• A Bossok kizárólag a <b>[3 BOSS CITADELLA]</b> menüből támadhatók.</div>
                 </div>
               </div>

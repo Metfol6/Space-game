@@ -638,9 +638,9 @@ class CombatEngine {
         let bossHull = initialBossState.hull;
         let bossShield = initialBossState.shield;
         const bossMaxShield = initialBossState.max_shield || 3000;
-        const beamDmg = initialBossState.damage || (initialBossState.id === 'boss_1' ? 280 : (initialBossState.id === 'boss_2' ? 420 : 650));
-        const pulseDmg = initialBossState.id === 'boss_1' ? 30 : (initialBossState.id === 'boss_2' ? 45 : 60);
-        const maxRegen = initialBossState.id === 'boss_1' ? 200 : (initialBossState.id === 'boss_2' ? 350 : 500);
+        const beamDmg = initialBossState.damage || (initialBossState.id === 'boss_1' ? 700 : (initialBossState.id === 'boss_2' ? 1050 : 1625));
+        const pulseDmg = initialBossState.id === 'boss_1' ? 75 : (initialBossState.id === 'boss_2' ? 112 : 150);
+        const maxRegen = initialBossState.id === 'boss_1' ? 500 : (initialBossState.id === 'boss_2' ? 875 : 1250);
 
         let roundNum = 1;
         let bossDefeated = false;
