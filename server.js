@@ -311,7 +311,23 @@ function processTick() {
             const targetPlanet = allPlanets.find(p => p.id === fleet.target_planet_id);
 
             if (targetPlanet) {
-                if (targetPlanet.owner_id === fleet.owner_id) {
+                const isPureScout = (fleet.ships.scout > 0) &&
+                    (fleet.ships.interceptor || 0) === 0 &&
+                    (fleet.ships.corvette || 0) === 0 &&
+                    (fleet.ships.frigate || 0) === 0 &&
+                    (fleet.ships.destroyer || 0) === 0 &&
+                    (fleet.ships.heavy_destroyer || 0) === 0 &&
+                    (fleet.ships.cruiser || 0) === 0 &&
+                    (fleet.ships.battleship || 0) === 0;
+
+                if (targetPlanet.is_trade_station || targetPlanet.id === 'station_trade') {
+                    // Kereskedelmi állomás dokkolás
+                    console.log(`[KERESKEDELMI DOKKOLÁS] ${fleet.name} sikeresen megérkezett a(z) ${targetPlanet.name} állomásra.`);
+                    _mergeFleetIntoPlanet(fleet, targetPlanet);
+                } else if (isPureScout && (targetPlanet.is_bot || targetPlanet.owner_id !== fleet.owner_id)) {
+                    // Tachion Felderítési Akció (Harc nélküli kémkedés)
+                    _resolveScoutMission(fleet, targetPlanet, nextTick);
+                } else if (targetPlanet.owner_id === fleet.owner_id) {
                     // Saját bolygó: flotta összevonása
                     _mergeFleetIntoPlanet(fleet, targetPlanet);
                 } else if (targetPlanet.owner_id === null || targetPlanet.owner_id === 'neutral') {
@@ -371,6 +387,55 @@ function _mergeFleetIntoPlanet(fleet, planet) {
     for (const st of ALL_SHIP_TYPES) {
         const count = fleet.ships[st] || 0;
         if (count > 0) upd.run(count, sf.fleetId, st);
+    }
+}
+
+function _resolveScoutMission(fleet, targetPlanet, tick) {
+    const scoutCount = fleet.ships.scout || 1;
+    const upg = db.getShipUpgrades(fleet.owner_id);
+    const sensorLvl = (upg.scout && upg.scout.sensors) || 0;
+    const stealthLvl = (upg.scout && upg.scout.stealth) || 0;
+    const hullLvl = (upg.scout && upg.scout.hull) || 0;
+
+    const reconPowerPerScout = 1 + sensorLvl;
+    const totalReconPower = scoutCount * reconPowerPerScout;
+
+    let requiredPower = 5;
+    if (targetPlanet.bot_type === 'boss') requiredPower = 60;
+    else if (targetPlanet.difficulty_tier === 3) requiredPower = 30;
+    else if (targetPlanet.difficulty_tier === 2) requiredPower = 15;
+    else if (targetPlanet.difficulty_tier === 1) requiredPower = 5;
+    else if (targetPlanet.owner_id && targetPlanet.owner_id !== fleet.owner_id) requiredPower = 20;
+
+    const isSuccess = totalReconPower >= requiredPower;
+    const stealthChance = Math.min(0.98, 0.40 + stealthLvl * 0.06);
+    const undetected = Math.random() <= stealthChance;
+
+    let survivingScouts = scoutCount;
+    if (!undetected) {
+        const lost = Math.min(scoutCount, Math.max(1, Math.floor(scoutCount * (0.35 - hullLvl * 0.02))));
+        survivingScouts = Math.max(0, scoutCount - lost);
+    }
+
+    if (isSuccess) {
+        db.scoutPlanet(targetPlanet.id, fleet.owner_id);
+        const lootDesc = targetPlanet.loot_type ? (targetPlanet.loot_type === 'artifact' ? 'Ősi Ereklye' : (targetPlanet.loot_type === 'glory' ? 'Kozmikus Dicsőség' : 'Nyersanyag Raktár')) : 'Ismeretlen';
+        const msg = `[🕵️ TACHION FELDERÍTÉS SIKERES] ${scoutCount} db szonda feltárta a(z) ${targetPlanet.name} világot! (Erő: ${totalReconPower}/${requiredPower}) • Felfedett kincs: ${lootDesc} • Túlélő szondák: ${survivingScouts}/${scoutCount}`;
+        recentAIActions.push(msg);
+        console.log(msg);
+    } else {
+        const msg = `[⚠️ FELDERÍTÉS SIKERTELEN] A szondák nem tudták áttörni az interferenciát ${targetPlanet.name} felett! (Elért erő: ${totalReconPower}, szükséges: ${requiredPower}) • Túlélők: ${survivingScouts}/${scoutCount}`;
+        recentAIActions.push(msg);
+        console.log(msg);
+    }
+
+    // Túlélő szondák visszatérése a kiindulási bolygóra
+    if (survivingScouts > 0 && fleet.origin_planet_id) {
+        const origin = db.getAllPlanets().find(p => p.id === fleet.origin_planet_id);
+        if (origin) {
+            fleet.ships.scout = survivingScouts;
+            _mergeFleetIntoPlanet(fleet, origin);
+        }
     }
 }
 
@@ -611,6 +676,15 @@ const server = http.createServer((req, res) => {
         const playerObj = db.getPlayer(playerId) || db.getPlayer('player');
         _evaluateMissions(playerObj.id);
         const opponentId = playerObj.id === 'player' ? 'enemy' : 'player';
+        const allPlanets = db.getAllPlanets();
+        const movingFleets = db.getMovingFleets();
+        const incomingThreats = movingFleets.filter(f => 
+            f.owner_id !== playerObj.id && 
+            allPlanets.some(p => p.id === f.target_planet_id && p.owner_id === playerObj.id)
+        );
+        const freighterCargo = db.getFreighterCargoCapacity(playerObj.id);
+        const tradeStation = allPlanets.find(p => p.is_trade_station === 1 || p.id === 'station_trade');
+
         const state = {
             tick: db.getGameState(),
             currentPlayerId: playerObj.id,
@@ -618,8 +692,11 @@ const server = http.createServer((req, res) => {
             gloryPoints: playerObj?.glory_points || 0,
             activeBuffs: db.getPlayerBuffs(playerObj.id),
             artifacts: db.getPlayerArtifacts(playerObj.id),
-            planets: db.getAllPlanets(),
-            movingFleets: db.getMovingFleets(),
+            planets: allPlanets,
+            movingFleets,
+            incomingThreats,
+            freighterCargo,
+            tradeStation,
             combatLogs: db.getCombatLogs(10),
             missions: db.getMissions(),
             techTree: TECH_TREE,
@@ -645,6 +722,23 @@ const server = http.createServer((req, res) => {
         };
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify(state));
+        return;
+    }
+
+    if (pathname === '/api/trade-resources' && req.method === 'POST') {
+        _parseJsonBody(req, res, body => {
+            const { pairKey, amount } = body;
+            const playerId = _getReqPlayerId(req, parsedUrl, body);
+            if (!pairKey || !amount) {
+                return _errorResponse(res, 400, "Hiányzó cserepár vagy összeg!");
+            }
+            const result = db.tradeResources(playerId, pairKey, amount);
+            if (result.error) {
+                return _errorResponse(res, 400, result.error);
+            }
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify(result));
+        });
         return;
     }
 

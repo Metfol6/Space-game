@@ -488,14 +488,14 @@ function runTests() {
     console.log("✓ Felderítő Szonda harcképtelensége (0 DMG / 0 támadás) igazolva!");
 
     // Scout 18 szintig fejleszthető és a 19. blokkolva
-    for (let l = 1; l <= 10; l++) db.upgradeShipSubsystem('player', 'scout', 'weapon');
+    for (let l = 1; l <= 10; l++) db.upgradeShipSubsystem('player', 'scout', 'stealth');
     for (let l = 1; l <= 8; l++) db.upgradeShipSubsystem('player', 'scout', 'hull');
     const scoutUpgrades = db.getShipUpgrades('player').scout;
     const scoutTotalLvl = Object.values(scoutUpgrades).reduce((a, b) => a + b, 0);
     console.log("Scout elért szintek:", scoutUpgrades, "Összesen:", scoutTotalLvl);
     if (scoutTotalLvl !== 18) throw new Error(`Scout keretnek 18 szintnek kell lennie! Kapott: ${scoutTotalLvl}`);
 
-    const blockedScout19 = db.upgradeShipSubsystem('player', 'scout', 'engine');
+    const blockedScout19 = db.upgradeShipSubsystem('player', 'scout', 'sensors');
     console.log("Scout 19. szint kísérlet (60% plafon teszt):", blockedScout19);
     if (!blockedScout19.error || blockedScout19.code !== 'MAX_CAP_REACHED') {
         throw new Error("A Scout 19. szintjét blokkolnia kellett volna MAX_CAP_REACHED-del!");
@@ -822,7 +822,85 @@ function runTests() {
     }
     console.log("✓ PvP Rivális Célpont Táblázat (getHumanPlayers) sikeresen igazolva!");
 
-    console.log("\n>>> MINDEN ÚJ HAJÓOSZTÁLY, KÉPESSÉG, 3 BOSS, REJTETT ZSÁKMÁNY ÉS TÉRKÉP-PVP RENDSZER SIKERESEN IGAZOLVA! <<<");
+    // =========================================================================
+    // [TEST 13] Kereskedelmi Állomás, Teherszállító Rework, Szonda Kémkedés és Riadó Rendszer
+    // =========================================================================
+    console.log("\n=== [TEST 13] Kereskedelmi Állomás, Teherszállító Rework, Szonda Kémkedés és Riadó Rendszer ===");
+    
+    // 1. Kereskedelmi Állomás ellenőrzése
+    const planetsAll = db.getAllPlanets();
+    const tradeHub = planetsAll.find(p => p.id === 'station_trade');
+    if (!tradeHub || tradeHub.is_trade_station !== 1) {
+        throw new Error("A Kereskedelmi Állomás (station_trade) hiányzik vagy nincs is_trade_station jelölése!");
+    }
+    console.log("✓ Nexus Kereskedelmi Központ (station_trade) sikeresen regisztrálva!");
+
+    // 2. Teherszállító (Freighter) 0 DMG és raktér kapacitás tesztje
+    const freighterShip = new ShipInstance('freighter');
+    if (freighterShip.damage !== 0 && SHIP_SPECS.freighter.damage !== 0) {
+        throw new Error("A Nehéz Teherszállító sebzésének 0-nak kell lennie (fegyvertelen logisztikai hajó)!");
+    }
+    const freightCargo = db.getFreighterCargoCapacity('player');
+    console.log("Játékos Teherszállító raktér kapacitás:", freightCargo);
+    if (freightCargo.perShipCapacity < 500 || freightCargo.totalCargoCapacity < 500) {
+        throw new Error("A minimális raktérkapacitásnak legalább 500-nak kell lennie!");
+    }
+    console.log("✓ Nehéz Teherszállító 0 DMG és Kvantum Raktérkapacitás igazolva!");
+
+    // 3. Tőzsde / Nyersanyagcsere tesztje
+    const initMetal = db.getPlayer('player').metal;
+    const initEnergy = db.getPlayer('player').energy;
+    const tradeResult = db.tradeResources('player', 'metal_to_energy', 100);
+    console.log("Tőzsdei átváltás eredménye (100 Fém -> 40 E):", tradeResult);
+    if (!tradeResult.success || tradeResult.spent !== 100 || tradeResult.received !== 40) {
+        throw new Error("A nyersanyag-váltás sikertelen vagy helytelen arányú!");
+    }
+    const postTradePlayer = db.getPlayer('player');
+    if (postTradePlayer.metal !== initMetal - 100 || postTradePlayer.energy !== initEnergy + 40) {
+        throw new Error("A játékos nyersanyagai nem frissültek helyesen a csere után!");
+    }
+    console.log("✓ Kereskedelmi Állomás erőforrás-tőzsde sikeresen igazolva!");
+
+    // 4. Szonda 3 alrendszere (Stealth, Hull, Sensors) és Tachion Kémkedés
+    const scoutSubs = Object.keys(SHIP_SUBSYSTEMS.scout);
+    console.log("Scout alrendszerek:", scoutSubs);
+    if (!scoutSubs.includes('stealth') || !scoutSubs.includes('hull') || !scoutSubs.includes('sensors')) {
+        throw new Error("A Scout alrendszereinek pontosan [stealth, hull, sensors]-nek kell lenniük!");
+    }
+    const scoutReport = db.scoutPlanet('bot_p1', 'player');
+    console.log("Tachion Kémkedési Jelentés [bot_p1]:", scoutReport.name, "Loot:", scoutReport.lootType, "Helyőrség:", scoutReport.stationedFleet);
+    const scoutedPlanet = db.getAllPlanets().find(p => p.id === 'bot_p1');
+    if (!scoutedPlanet.scouted_by_player) {
+        throw new Error("A scoutPlanet függvénynek be kellett volna állítania a scouted_by_player = 1 státuszt!");
+    }
+    console.log("✓ Tachion Felderítési és Kémkedési Rendszer sikeresen igazolva!");
+
+    // 5. Beérkező ellenséges flotta riasztás (incomingThreats szűrés)
+    const testThreatFleet = {
+        id: 'fleet_threat_test',
+        owner_id: 'enemy',
+        name: 'Vektor-9 Ostromflotta',
+        current_x: 200, current_y: 200,
+        dest_x: 140, dest_y: 120,
+        origin_planet_id: 'p4',
+        target_planet_id: 'p1', // Kék játékos bázisa!
+        departure_tick: 1, arrival_tick: 4,
+        state: 'in_transit'
+    };
+    db.db.prepare("INSERT OR REPLACE INTO fleets (id, owner_id, name, current_x, current_y, dest_x, dest_y, origin_planet_id, target_planet_id, departure_tick, arrival_tick, state) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)").run(
+        testThreatFleet.id, testThreatFleet.owner_id, testThreatFleet.name, testThreatFleet.current_x, testThreatFleet.current_y, testThreatFleet.dest_x, testThreatFleet.dest_y, testThreatFleet.origin_planet_id, testThreatFleet.target_planet_id, testThreatFleet.departure_tick, testThreatFleet.arrival_tick, testThreatFleet.state
+    );
+    const movingAll = db.getMovingFleets();
+    const threats = movingAll.filter(f => f.owner_id !== 'player' && planetsAll.some(p => p.id === f.target_planet_id && p.owner_id === 'player'));
+    console.log("Észlelt beérkező fenyegetések (Incoming Threats):", threats.length, "db");
+    if (threats.length === 0 || threats[0].id !== 'fleet_threat_test') {
+        throw new Error("A korai előrejelző riadónak észlelnie kellett a játékos felé tartó ellenséges flottát!");
+    }
+    // Teszt flotta takarítása
+    db.db.prepare("DELETE FROM fleets WHERE id = 'fleet_threat_test'").run();
+    console.log("✓ Korai Előrejelző Radar (Incoming Threats) sikeresen igazolva!");
+
+    console.log("\n>>> MINDEN ÚJ HAJÓOSZTÁLY, KÉPESSÉG, 3 BOSS, REJTETT ZSÁKMÁNY, TÉRKÉP-PVP ÉS KERESKEDELEM/KÉMKEDÉS SIKERESEN IGAZOLVA! <<<");
 }
 
 try {

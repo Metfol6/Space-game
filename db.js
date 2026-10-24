@@ -45,9 +45,9 @@ const SHIP_TECH_REQUIREMENTS = {
 
 const SUBSYSTEM_HOTSPOTS = {
     scout: {
-        weapon: { x: 20, y: 50, label: 'Orr-Szenzor & EMP Zavarmag', icon: '⚡' },
+        stealth: { x: 20, y: 50, label: 'Álcázó Mező & Lopakodás', icon: '🕵️' },
         hull: { x: 50, y: 55, label: 'Könnyített Titán Törzs', icon: '🛡️' },
-        engine: { x: 82, y: 50, label: 'Tachion Hajtómű & Fúvókák', icon: '🚀' }
+        sensors: { x: 82, y: 50, label: 'Mélyűri Tachion Szkenner', icon: '📡' }
     },
     interceptor: {
         weapon: { x: 80, y: 50, label: 'Iker Plazmaágyúk', icon: '🔫' },
@@ -63,7 +63,7 @@ const SUBSYSTEM_HOTSPOTS = {
         avionics: { x: 22, y: 38, label: 'Mélyűr Zavarórendszer', icon: '📻' }
     },
     freighter: {
-        weapon: { x: 82, y: 52, label: 'Önvédelmi Védelmi Gépágyú', icon: '🎯' },
+        cargo_hold: { x: 82, y: 52, label: 'Kvantum Raktérkapacitás', icon: '📦' },
         hull: { x: 48, y: 50, label: 'Megerősített Teherkonténer Váz', icon: '🛡️' },
         shield: { x: 62, y: 35, label: 'Védőhálós Szállítópajzs', icon: '🌐' },
         engine: { x: 16, y: 50, label: 'Nehézteher Hajtómű-Array', icon: '🚀' }
@@ -113,9 +113,9 @@ const SUBSYSTEM_HOTSPOTS = {
 
 const SUBSYSTEM_BONUS_TABLES = {
     scout: {
-        enemy_accuracy_penalty: [0, 0.05, 0.10, 0.15, 0.20, 0.25, 0.30, 0.35, 0.40, 0.45, 0.50],
+        stealth: [0, 0.25, 0.32, 0.40, 0.48, 0.56, 0.65, 0.74, 0.82, 0.90, 0.98],
         hull: [0, 15, 30, 50, 75, 105, 140, 180, 225, 275, 330],
-        speed: [0, 2.0, 4.0, 6.0, 8.5, 11.0, 14.0, 17.5, 21.0, 25.0, 30.0]
+        sensors: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
     },
     interceptor: {
         damage: [0, 10, 20, 30, 42, 54, 66, 78, 90, 100, 110],
@@ -131,7 +131,7 @@ const SUBSYSTEM_BONUS_TABLES = {
         evasion: [0, 0.08, 0.16, 0.24, 0.32, 0.40, 0.47, 0.54, 0.60, 0.66, 0.72]
     },
     freighter: {
-        damage: [0, 6, 12, 18, 25, 33, 42, 52, 62, 72, 85],
+        cargo_hold: [0, 450, 900, 1400, 1950, 2550, 3200, 3900, 4650, 5450, 6500],
         hull: [0, 50, 105, 165, 230, 300, 375, 455, 540, 630, 725],
         shield: [0, 25, 52, 82, 115, 150, 190, 235, 285, 340, 400],
         speed: [0, 0.6, 1.2, 1.9, 2.7, 3.5, 4.4, 5.4, 6.5, 7.7, 9.0]
@@ -224,7 +224,7 @@ function generateSubsystemLevels(shipType, slotKey) {
         scout: { hull: 40, shield: 0, damage: 0, speed: 9.0 },
         interceptor: { hull: 70, shield: 25, damage: 45, speed: 10.0 },
         corvette: { hull: 120, shield: 40, damage: 35, speed: 5.5 },
-        freighter: { hull: 350, shield: 60, damage: 20, speed: 4.0 },
+        freighter: { hull: 350, shield: 60, damage: 0, speed: 4.0, cargo: 500 },
         colony_ship: { hull: 200, shield: 50, damage: 0, speed: 3.0 },
         frigate: { hull: 280, shield: 120, damage: 85, speed: 4.5 },
         destroyer: { hull: 450, shield: 200, damage: 110, speed: 3.5 },
@@ -240,16 +240,22 @@ function generateSubsystemLevels(shipType, slotKey) {
         let desc = '';
         let stats = {};
 
-        if (slotKey === 'weapon') {
-            if (shipType === 'scout') {
-                const pen = (tables.enemy_accuracy_penalty && tables.enemy_accuracy_penalty[lvl]) || 0;
-                stats = { enemy_accuracy_penalty: pen };
-                desc = `-${Math.round(pen * 100)}% ellenséges pontosság az EMP mező miatt`;
-            } else {
-                const dmg = (tables.damage && tables.damage[lvl]) || 0;
-                stats = { damage: dmg };
-                desc = `+${dmg} sebzés (${baseStats.damage} -> ${baseStats.damage + dmg} DMG)`;
-            }
+        if (slotKey === 'stealth') {
+            const st = (tables.stealth && tables.stealth[lvl]) || (0.20 + lvl * 0.075);
+            stats = { stealth: st };
+            desc = `+${Math.round(st * 100)}% lopakodási és álcázási túlélési esély kémkedéskor`;
+        } else if (slotKey === 'sensors') {
+            const pwr = (tables.sensors && tables.sensors[lvl]) || lvl;
+            stats = { recon_power: pwr };
+            desc = `+${pwr} felderítő erő / szonda (${1 + pwr} pont / egység)`;
+        } else if (slotKey === 'cargo_hold') {
+            const c = (tables.cargo_hold && tables.cargo_hold[lvl]) || (450 * lvl);
+            stats = { cargo_hold: c };
+            desc = `+${c} raktér (500 -> ${500 + c} kapacitás / hajó)`;
+        } else if (slotKey === 'weapon') {
+            const dmg = (tables.damage && tables.damage[lvl]) || 0;
+            stats = { damage: dmg };
+            desc = `+${dmg} sebzés (${baseStats.damage} -> ${baseStats.damage + dmg} DMG)`;
         } else if (slotKey === 'hull') {
             const h = (tables.hull && tables.hull[lvl]) || 0;
             stats = { hull: h };
@@ -316,9 +322,9 @@ function generateSubsystemLevels(shipType, slotKey) {
 
 const SHIP_SUBSYSTEMS = {
     scout: {
-        weapon: { slotKey: 'weapon', name: 'EMP Zavaró Pulzus', icon: '⚡', legacyId: 'scout_emp_pulse', levels: generateSubsystemLevels('scout', 'weapon') },
+        stealth: { slotKey: 'stealth', name: 'Álcázó Mező & Lopakodás', icon: '🕵️', legacyId: 'scout_stealth', levels: generateSubsystemLevels('scout', 'stealth') },
         hull: { slotKey: 'hull', name: 'Könnyített Titán Páncél', icon: '🛡️', legacyId: 'scout_hull_reinforce', levels: generateSubsystemLevels('scout', 'hull') },
-        engine: { slotKey: 'engine', name: 'Tachion Hajtómű & Fúvókák', icon: '🚀', legacyId: 'scout_tachyon_sensor', levels: generateSubsystemLevels('scout', 'engine') }
+        sensors: { slotKey: 'sensors', name: 'Mélyűri Tachion Szkenner', icon: '📡', legacyId: 'scout_sensors', levels: generateSubsystemLevels('scout', 'sensors') }
     },
     interceptor: {
         weapon: { slotKey: 'weapon', name: 'Iker Plazmaágyúk', icon: '🔫', legacyId: 'int_plasma_cannons', levels: generateSubsystemLevels('interceptor', 'weapon') },
@@ -334,7 +340,7 @@ const SHIP_SUBSYSTEMS = {
         avionics: { slotKey: 'avionics', name: 'Mélyűr Zavarórendszer', icon: '📻', legacyId: 'corv_jamming_suite', requiredTech: 'dark_matter_reactor', levels: generateSubsystemLevels('corvette', 'avionics') }
     },
     freighter: {
-        weapon: { slotKey: 'weapon', name: 'Önvédelmi Védelmi Gépágyú', icon: '🎯', legacyId: 'freight_defense_cannon', levels: generateSubsystemLevels('freighter', 'weapon') },
+        cargo_hold: { slotKey: 'cargo_hold', name: 'Kvantum Raktérkapacitás', icon: '📦', legacyId: 'freight_cargo_hold', levels: generateSubsystemLevels('freighter', 'cargo_hold') },
         hull: { slotKey: 'hull', name: 'Megerősített Teherkonténer Váz', icon: '🛡️', legacyId: 'freight_cargo_hull', requiredTech: 'heavy_metallurgy', levels: generateSubsystemLevels('freighter', 'hull') },
         shield: { slotKey: 'shield', name: 'Védőhálós Szállítópajzs', icon: '🌐', legacyId: 'freight_barrier_shield', levels: generateSubsystemLevels('freighter', 'shield') },
         engine: { slotKey: 'engine', name: 'Nehézteher Hajtómű-Array', icon: '🚀', legacyId: 'freight_hauler_drives', levels: generateSubsystemLevels('freighter', 'engine') }
@@ -517,6 +523,25 @@ class DatabaseService {
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         `);
+
+        // 9. Kereskedelmi Állomás és Kémkedési oszlopok migrációja
+        try { this.db.prepare("ALTER TABLE planets ADD COLUMN is_trade_station INTEGER NOT NULL DEFAULT 0").run(); } catch(e){}
+        try { this.db.prepare("ALTER TABLE planets ADD COLUMN scouted_by_player INTEGER NOT NULL DEFAULT 0").run(); } catch(e){}
+
+        // Kereskedelmi Konzorcium és Állomás (Nexus Kereskedelmi Központ) magvetése
+        this.db.prepare(`
+            INSERT OR IGNORE INTO players (id, username, color_hex, metal, energy, isotope, data_points, is_ai)
+            VALUES ('neutral', 'Galaktikus Kereskedelmi Konzorcium', '#38bdf8', 0, 0, 0, 0, 1)
+        `).run();
+
+        const hasTradeStation = this.db.prepare("SELECT id FROM planets WHERE id = 'station_trade'").get();
+        if (!hasTradeStation) {
+            this.db.prepare(`
+                INSERT INTO planets (id, name, pos_x, pos_y, size_slots, owner_id, base_metal_rate, base_energy_rate, planetary_shield_hp, max_shield_hp, railgun_count, status, is_bot, bot_type, loot_type, loot_data, loot_revealed, difficulty_tier, is_trade_station, scouted_by_player)
+                VALUES ('station_trade', 'NEXUS KERESKEDELMI KÖZPONT', 410, 290, 4, 'neutral', 0, 0, 500, 500, 0, 'normal', 0, NULL, NULL, NULL, 0, 1, 1, 1)
+            `).run();
+            this.db.prepare("INSERT OR IGNORE INTO fleets (id, owner_id, name, current_x, current_y, state) VALUES ('fleet_station_trade', 'neutral', 'Kereskedelmi Állomás Helyőrség', 410, 290, 'stationed')").run();
+        }
 
         // 3 Fő Boss Bolygó (Prekurzor Citadellák - Végjáték Titánok)
         const bossList = [
@@ -940,8 +965,8 @@ class DatabaseService {
 
     getHumanPlayers(excludePlayerId = null) {
         const query = excludePlayerId 
-            ? "SELECT id, username, color_hex, metal, energy, isotope, data_points, glory_points, is_ai, created_at FROM players WHERE id NOT IN ('bot_hostile', 'precursor_boss', ?)"
-            : "SELECT id, username, color_hex, metal, energy, isotope, data_points, glory_points, is_ai, created_at FROM players WHERE id NOT IN ('bot_hostile', 'precursor_boss')";
+            ? "SELECT id, username, color_hex, metal, energy, isotope, data_points, glory_points, is_ai, created_at FROM players WHERE id NOT IN ('bot_hostile', 'precursor_boss', 'neutral', ?)"
+            : "SELECT id, username, color_hex, metal, energy, isotope, data_points, glory_points, is_ai, created_at FROM players WHERE id NOT IN ('bot_hostile', 'precursor_boss', 'neutral')";
         const players = excludePlayerId 
             ? this.db.prepare(query).all(excludePlayerId)
             : this.db.prepare(query).all();
@@ -1865,6 +1890,93 @@ class DatabaseService {
             VALUES (?, ?, ?, ?)
             ON CONFLICT(player_id, ship_type) DO UPDATE SET selected_modules = excluded.selected_modules
         `).run(id, playerId, shipType, json);
+    }
+
+    getFreighterCargoCapacity(playerId = 'player') {
+        const upg = this.getShipUpgrades(playerId);
+        const cargoLvl = (upg.freighter && upg.freighter.cargo_hold) || 0;
+        const bonusCargo = (SUBSYSTEM_BONUS_TABLES.freighter && SUBSYSTEM_BONUS_TABLES.freighter.cargo_hold && SUBSYSTEM_BONUS_TABLES.freighter.cargo_hold[cargoLvl]) || 0;
+        const perShip = 500 + bonusCargo;
+        
+        let freighterCount = 0;
+        const planets = this.getAllPlanets().filter(p => p.owner_id === playerId);
+        for (const p of planets) {
+            freighterCount += (p.stationedFleet && p.stationedFleet.freighter) || 0;
+        }
+        const fleets = this.db.prepare("SELECT id FROM fleets WHERE owner_id = ?").all(playerId);
+        for (const f of fleets) {
+            const shipRow = this.db.prepare("SELECT count FROM fleet_ships WHERE fleet_id = ? AND ship_type = 'freighter'").get(f.id);
+            if (shipRow) freighterCount += (shipRow.count || 0);
+        }
+        return {
+            freighterCount,
+            perShipCapacity: perShip,
+            totalCargoCapacity: Math.max(500, freighterCount * perShip)
+        };
+    }
+
+    tradeResources(playerId = 'player', pairKey, amount) {
+        amount = Math.max(1, Math.round(Number(amount) || 0));
+        const player = this.getPlayer(playerId);
+        if (!player) return { error: "Ismeretlen parancsnokság!" };
+
+        const cargoInfo = this.getFreighterCargoCapacity(playerId);
+        if (amount > cargoInfo.totalCargoCapacity) {
+            return { 
+                error: `A művelet meghaladja a flottád raktérkapacitását! Max raktér: ${cargoInfo.totalCargoCapacity} egység (Teherszállítók száma: ${cargoInfo.freighterCount} db).`,
+                maxCargo: cargoInfo.totalCargoCapacity
+            };
+        }
+
+        const RATES = {
+            'metal_to_energy':   { from: 'metal', to: 'energy',   ratio: 0.40, name: 'Fém -> Energia' },
+            'metal_to_isotope':  { from: 'metal', to: 'isotope',  ratio: 0.10, name: 'Fém -> Izotóp' },
+            'metal_to_data':     { from: 'metal', to: 'data_points', ratio: 0.15, name: 'Fém -> Adatpont' },
+            'energy_to_metal':   { from: 'energy', to: 'metal',   ratio: 2.00, name: 'Energia -> Fém' },
+            'energy_to_isotope': { from: 'energy', to: 'isotope', ratio: 0.20, name: 'Energia -> Izotóp' },
+            'isotope_to_metal':  { from: 'isotope', to: 'metal',  ratio: 7.50, name: 'Izotóp -> Fém' },
+            'isotope_to_energy': { from: 'isotope', to: 'energy', ratio: 4.00, name: 'Izotóp -> Energia' },
+            'data_to_metal':     { from: 'data_points', to: 'metal', ratio: 4.00, name: 'Adatpont -> Fém' },
+            'data_to_isotope':   { from: 'data_points', to: 'isotope', ratio: 0.50, name: 'Adatpont -> Izotóp' }
+        };
+
+        const config = RATES[pairKey];
+        if (!config) return { error: "Érvénytelen kereskedelmi cserepár!" };
+
+        if (player[config.from] < amount) {
+            return { error: `Nincs elég forrásod ehhez az ügylethez! Rendelkezésre áll: ${Math.floor(player[config.from])}, szükséges: ${amount}` };
+        }
+
+        const received = Math.round(amount * config.ratio);
+        player[config.from] -= amount;
+        player[config.to] = (player[config.to] || 0) + received;
+
+        this.updatePlayerResources(playerId, player.metal, player.energy, player.isotope, player.data_points);
+        return {
+            success: true,
+            pairKey,
+            spent: amount,
+            fromResource: config.from,
+            received,
+            toResource: config.to,
+            player: this.getPlayer(playerId)
+        };
+    }
+
+    scoutPlanet(planetId, playerId = 'player') {
+        const planet = this.getAllPlanets().find(p => p.id === planetId);
+        if (!planet) return { error: "Ismeretlen bolygó!" };
+        this.db.prepare("UPDATE planets SET scouted_by_player = 1 WHERE id = ?").run(planetId);
+        return {
+            success: true,
+            planetId,
+            name: planet.name,
+            lootType: planet.loot_type,
+            lootData: planet.loot_data,
+            stationedFleet: planet.stationedFleet,
+            shieldHp: planet.shieldHp,
+            railguns: planet.railgunCount
+        };
     }
 }
 

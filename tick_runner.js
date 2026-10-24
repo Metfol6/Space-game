@@ -22,8 +22,9 @@ const SHIP_SPECS = {
         cost_isotope: 10.0,
         fuel_weight: 0.25,
         cargo_capacity: 0,
-        ability_name: "EMP Zavarmag & Felderítés",
-        ability_desc: "Harcképtelen. EMP mezővel gyengíti a célzó ellenség pontosságát."
+        recon_power: 1,
+        ability_name: "Tachion Kémkedés & Lopakodás",
+        ability_desc: "Harcképtelen. Képes felderíteni a védelmet és a rejtett zsákmányt. Lopakodással elkerüli a megsemmisülést."
     },
     interceptor: {
         name: "Gyors Elfogóvadász",
@@ -66,8 +67,8 @@ const SHIP_SPECS = {
         symbol: "📦",
         hull: 350.0,
         shield: 60.0,
-        damage: 20.0,
-        accuracy: 0.60,
+        damage: 0.0,
+        accuracy: 0.50,
         evasion: 0.05,
         speed: 4.0,
         upkeep_energy: 2.0,
@@ -75,9 +76,9 @@ const SHIP_SPECS = {
         cost_energy: 60.0,
         cost_isotope: 15.0,
         fuel_weight: 2.0,
-        cargo_capacity: 1500,
-        ability_name: "Tömeges Transzport & Roncsmentés",
-        ability_desc: "Önvédelmi tüzérség. +50% extra roncsmentési zsákmány csata után."
+        cargo_capacity: 500,
+        ability_name: "Kereskedelmi Raktér & Logisztika",
+        ability_desc: "Fegyvertelen nehéz logisztikai szállítóhajó. Szükséges a Kereskedelmi Állomáson való árucseréhez és nyersanyag-szállításhoz."
     },
     colony_ship: {
         name: "Kolóniahajó",
@@ -194,18 +195,19 @@ class ShipInstance {
         const spec = SHIP_SPECS[shipType] || SHIP_SPECS.corvette;
         this.shipType = shipType;
 
-        this.subsystems = { weapon: 0, hull: 0, shield: 0, engine: 0, avionics: 0 };
+        this.subsystems = { weapon: 0, hull: 0, shield: 0, engine: 0, avionics: 0, cargo_hold: 0, stealth: 0, sensors: 0 };
         this.installedModules = [];
 
+        const allSlotKeys = ['weapon', 'hull', 'shield', 'engine', 'avionics', 'cargo_hold', 'stealth', 'sensors'];
         if (Array.isArray(installedModules)) {
             this.installedModules = [...installedModules];
             for (const item of installedModules) {
-                if (['weapon', 'hull', 'shield', 'engine', 'avionics'].includes(item)) {
+                if (allSlotKeys.includes(item)) {
                     this.subsystems[item] = 1;
                 }
             }
         } else if (typeof installedModules === 'object' && installedModules !== null) {
-            for (const k of ['weapon', 'hull', 'shield', 'engine', 'avionics']) {
+            for (const k of allSlotKeys) {
                 this.subsystems[k] = installedModules[k] || 0;
             }
         }

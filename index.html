@@ -134,6 +134,15 @@
         <span class="animate-pulse">☠️</span>
         <span class="hidden md:inline">3 BOSS CITADELLA</span>
       </button>
+      <button id="btn-trade" onclick="openTradeModal()" class="bg-amber-950/90 hover:bg-amber-900 active:scale-95 text-amber-200 border border-amber-500 font-mono text-xs font-bold px-2.5 py-1.5 rounded flex items-center gap-1.5 shadow-lg shadow-amber-950 transition-all" title="Nexus Kereskedelmi Állomás & Tőzsde">
+        <span>🏪</span>
+        <span class="hidden md:inline">PIAC</span>
+        <span class="text-[10px] bg-amber-900 px-1 py-0.2 rounded border border-amber-700 font-mono" id="header-trade-badge">TŐZSDE</span>
+      </button>
+      <button id="btn-sound-toggle" onclick="toggleMute()" class="bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700 font-mono text-xs font-bold px-2 py-1.5 rounded flex items-center gap-1 shadow transition-all" title="Hangeffektek némítása / bekapcsolása">
+        <span id="sound-toggle-icon">🔊</span>
+        <span id="sound-toggle-text" class="hidden lg:inline">HANG: BE</span>
+      </button>
       <button id="btn-next-tick" onclick="advanceTick()" class="bg-cyan-600 hover:bg-cyan-500 active:scale-95 text-white font-mono text-xs font-bold px-3 py-1.5 rounded border border-cyan-400 flex items-center gap-1 shadow-lg shadow-cyan-950 transition-all">
         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7"></path></svg>
         <span>+1 ÓRA (TICK)</span>
@@ -207,6 +216,20 @@
       <div class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-red-500 inline-block"></span> Ellenséges Sektor (Vektor-9)</div>
       <div class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-slate-500 inline-block"></span> Semleges Bolygó</div>
       <div class="flex items-center gap-1.5"><span class="text-cyan-400 font-bold">▲ ◆ ⬟</span> Mozgó / Állomásozó Flotta</div>
+    </div>
+
+    <!-- KÖZELEDŐ ELLENSÉGES FLOTTA RIADÓ SÁV (EARLY WARNING RADAR) -->
+    <div id="threat-alert-banner" class="hidden absolute top-3 left-1/2 -translate-x-1/2 bg-red-950/95 border-2 border-red-500 text-red-100 px-4 py-2 rounded-xl text-xs font-mono flex items-center gap-3 shadow-2xl shadow-red-950 z-30 animate-pulse">
+      <span class="text-xl">⚠️</span>
+      <div>
+        <div class="font-bold text-red-300 flex items-center gap-2">
+          <span>HADMŰVELETI RIADÓ // ELLENSÉGES TÁMADÁS ÉSZLELVE!</span>
+          <span class="bg-red-900 border border-red-600 px-1.5 py-0.2 rounded text-[10px] text-red-200" id="threat-eta-badge">⏱️ 2 KÖR</span>
+        </div>
+        <div id="threat-alert-text" class="text-[11px] text-red-200">
+          Ellenséges flotta közeledik a bázisod felé! Készülj fel a védelemre!
+        </div>
+      </div>
     </div>
 
     <!-- FIGYELMEZTETÉSI SÁV (Upkeep hiány vagy riadó) -->
@@ -890,6 +913,7 @@
       }
       playBeep(freq = 880, duration = 0.05, type = 'sine') {
         try {
+          if (STATE && STATE.isMuted) return;
           this.init();
           if (!this.ctx) return;
           const osc = this.ctx.createOscillator();
@@ -1167,7 +1191,11 @@
         const dist = Math.hypot(p.x - clickX, p.y - clickY);
         if (dist <= 18) {
           audio.playBeep(600, 0.05);
-          openPlanetDrawer(p.id);
+          if (p.is_trade_station || p.id === 'station_trade') {
+            openTradeModal();
+          } else {
+            openPlanetDrawer(p.id);
+          }
           return;
         }
       }
@@ -1192,27 +1220,74 @@
         ctx.beginPath(); ctx.moveTo(-500, y); ctx.lineTo(1000, y); ctx.stroke();
       }
 
-      // Mozgó flották útvonalvektorai
-      STATE.movingFleets.forEach(fleet => {
-        ctx.strokeStyle = fleet.owner === 'player' ? 'rgba(6, 182, 212, 0.4)' : 'rgba(239, 68, 68, 0.4)';
-        ctx.lineWidth = 1.5;
-        ctx.setLineDash([4, 4]);
+      // Mozgó flották hipertér-vektorai és valós idejű repülési animációja
+      const movingList = STATE.movingFleets || [];
+      movingList.forEach(fleet => {
+        const pOrig = STATE.planets.find(p => p.id === fleet.origin_planet_id);
+        const pDest = STATE.planets.find(p => p.id === fleet.target_planet_id);
+        const startX = pOrig ? pOrig.x : (fleet.current_x || 0);
+        const startY = pOrig ? pOrig.y : (fleet.current_y || 0);
+        const endX = pDest ? pDest.x : (fleet.dest_x || startX);
+        const endY = pDest ? pDest.y : (fleet.dest_y || startY);
+
+        const isMine = (fleet.owner_id === myId || fleet.owner === myId);
+        const totalDuration = Math.max(1, (fleet.arrival_tick || 5) - (fleet.departure_tick || 0));
+        const elapsed = (STATE.tick || 1) - (fleet.departure_tick || 0);
+        const progress = Math.min(1.0, Math.max(0.0, elapsed / totalDuration));
+
+        const curX = startX + (endX - startX) * progress;
+        const curY = startY + (endY - startY) * progress;
+        const remainingTicks = Math.max(1, (fleet.arrival_tick || 1) - (STATE.tick || 1));
+
+        // 1. Hipertér-folyosó szaggatott vonal
+        ctx.strokeStyle = isMine ? 'rgba(56, 189, 248, 0.65)' : 'rgba(239, 68, 68, 0.75)';
+        ctx.lineWidth = isMine ? 2 : 2.5;
+        ctx.setLineDash([5, 5]);
         ctx.beginPath();
-        ctx.moveTo(fleet.startX, fleet.startY);
-        ctx.lineTo(fleet.targetX, fleet.targetY);
+        ctx.moveTo(startX, startY);
+        ctx.lineTo(endX, endY);
         ctx.stroke();
         ctx.setLineDash([]);
 
-        // Mozgó flotta ikonja
-        ctx.fillStyle = fleet.owner === 'player' ? '#06b6d4' : '#ef4444';
+        // 2. Mozgó hajó irányvektora és ikonja
+        const angle = Math.atan2(endY - startY, endX - startX);
+        ctx.save();
+        ctx.translate(curX, curY);
+        ctx.rotate(angle);
+        
+        // Fénycsík / hajtómű láng
+        ctx.fillStyle = isMine ? 'rgba(56, 189, 248, 0.8)' : 'rgba(239, 68, 68, 0.9)';
         ctx.beginPath();
-        ctx.arc(fleet.currentX, fleet.currentY, 6, 0, Math.PI * 2);
+        ctx.moveTo(-10, 0);
+        ctx.lineTo(-18, -4);
+        ctx.lineTo(-18, 4);
+        ctx.closePath();
         ctx.fill();
 
-        // ETA címke
-        ctx.fillStyle = '#94a3b8';
-        ctx.font = '10px monospace';
-        ctx.fillText(`ETA: ${Math.ceil(fleet.remainingHours)}h`, fleet.currentX + 10, fleet.currentY - 6);
+        // Hajótest (nyíl alakú vadászgép / flotta jelkép)
+        ctx.fillStyle = isMine ? '#38bdf8' : '#ef4444';
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(8, 0);
+        ctx.lineTo(-7, -6);
+        ctx.lineTo(-4, 0);
+        ctx.lineTo(-7, 6);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+
+        // 3. Információs címke a flotta felett
+        const shipCounts = fleet.ships || {};
+        const totalCount = typeof shipCounts === 'object' 
+          ? Object.values(shipCounts).reduce((a, b) => a + (Number(b) || 0), 0)
+          : (fleet.shipCount || 1);
+
+        ctx.fillStyle = isMine ? '#7dd3fc' : '#fca5a5';
+        ctx.font = 'bold 9px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText(`▲ ${totalCount} hajó • ⏱️ ${remainingTicks} kör`, curX, curY - 10);
       });
 
       // Bolygók kirajzolása (BOSSOK KIZÁRVA, CSAK SAJÁT, SEMLEGES ÉS A 30 KIS BOT VILÁG)
@@ -1432,16 +1507,41 @@
       const lootEl = document.getElementById('drawer-loot-container');
       if (lootEl) {
         if (p.is_bot) {
-          if (!p.loot_revealed) {
+          if (p.scouted_by_player && !p.loot_revealed) {
+            let scoutedLootText = '📦 Nyersanyag Siló (+Fém, +Energia, +Izotóp)';
+            if (p.loot_type === 'artifact') scoutedLootText = '🏺 Ősi Prekurzor Ereklye (Kulcs a Bossokhoz!)';
+            else if (p.loot_type === 'glory') scoutedLootText = '🏆 Kozmikus Dicsőség Lelőhely';
+            lootEl.innerHTML = `
+              <div class="bg-cyan-950/60 border border-cyan-400 p-2.5 rounded-lg text-cyan-200">
+                <div class="flex items-center gap-1.5 font-bold text-cyan-300 text-xs">
+                  <span>🕵️</span>
+                  <span>TACHION SZONDÁVAL FELDERÍTVE!</span>
+                  <span class="text-[9px] bg-cyan-900 px-1 py-0.2 rounded border border-cyan-700 font-bold">KÉMKEDÉS SIKERES</span>
+                </div>
+                <div class="text-[11px] text-cyan-100 font-mono font-bold mt-1">
+                  Rejtett kincs: ${scoutedLootText}
+                </div>
+                <div class="text-[9px] text-cyan-300 mt-0.5">A védelmi flotta összetétele és a leendő zsákmány pontosan azonosítva!</div>
+              </div>
+            `;
+          } else if (!p.loot_revealed) {
+            const reqPwr = (p.difficulty_tier === 3 ? 30 : (p.difficulty_tier === 2 ? 15 : 5));
             lootEl.innerHTML = `
               <div class="bg-amber-950/40 border border-amber-500/70 p-2.5 rounded-lg text-amber-200">
-                <div class="flex items-center gap-1.5 font-bold text-amber-300 text-xs">
-                  <span>❓</span>
-                  <span>ISMERETLEN ZSÁKMÁNY (LEGYŐZÉS UTÁN DERÜL KI!)</span>
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center gap-1.5 font-bold text-amber-300 text-xs">
+                    <span>❓</span>
+                    <span>ISMERETLEN ZSÁKMÁNY</span>
+                  </div>
+                  <span class="text-[9px] text-amber-400 font-bold bg-amber-950 px-1.5 py-0.2 rounded border border-amber-800">SZÜKSÉGES ERŐ: ${reqPwr}</span>
                 </div>
                 <div class="text-[10px] text-slate-300 mt-1">
-                  A bolygó kincse titkos. Győzd le a védelmi helyőrséget a zsákmány felfedéséhez és megszerzéséhez! (Nyersanyag csomag, Prekurzor Ereklye, vagy Dicsőség Pont).
+                  A kincs titkos. Küldj <b>Felderítő Szondát</b> a feltáráshoz harc nélkül, vagy győzd le a védelmet!
                 </div>
+                <button onclick="openDispatchModal('${p.id}')" class="mt-2 w-full bg-cyan-950/80 hover:bg-cyan-900 border border-cyan-600 text-cyan-300 text-[10px] font-bold py-1 rounded flex items-center justify-center gap-1">
+                  <span>🛰️</span>
+                  <span>SZONDÁK / FLOTTA INDÍTÁSA</span>
+                </button>
               </div>
             `;
           } else {
@@ -3777,7 +3877,7 @@
           <div class="space-y-3">
             <div class="bg-slate-900/80 border border-slate-800 p-3 rounded-xl text-slate-300 text-xs">
               <span class="font-bold text-cyan-300">10 HAJÓOSZTÁLY ÉS TECHNOLÓGIAI FELOLDÁSI KÖVETELMÉNYEK:</span>
-              <p class="mt-1 text-[11px] text-slate-400">Az alábbi táblázat mutatja, hogy melyik hadihajót melyik technológiával tudod feloldani a bolygói Hajógyárban:</p>
+              <p class="mt-1 text-[11px] text-slate-400">Az alábbi táblázat mutatja a 10 hajóosztály feloldási feltételeit, harcértékeit és speciális képességeit:</p>
             </div>
 
             <div class="overflow-x-auto">
@@ -3786,7 +3886,7 @@
                   <tr>
                     <th class="p-2.5">Hajóosztály</th>
                     <th class="p-2.5">Szükséges Tech</th>
-                    <th class="p-2.5">Különleges Képesség</th>
+                    <th class="p-2.5">Különleges Képesség & Funkció</th>
                     <th class="p-2.5">Harcérték (HP/Shield/DMG)</th>
                     <th class="p-2.5">Sebesség</th>
                   </tr>
@@ -3795,7 +3895,7 @@
                   <tr class="hover:bg-slate-800/50">
                     <td class="p-2.5 font-bold text-cyan-300">⌖ Felderítő Szonda</td>
                     <td class="p-2.5 text-emerald-400 font-bold">Kezdéskor elérhető</td>
-                    <td class="p-2.5 text-slate-300">Tachion szonár, harcképtelen (0 DMG), azonnali felderítés</td>
+                    <td class="p-2.5 text-slate-300"><b>Tachion Kémkedés:</b> 0 DMG. Rejtett zsákmányt & helyőrséget derít fel harc nélkül. Fejleszthető Szenzorika, Lopakodás & Burkolat!</td>
                     <td class="p-2.5 text-slate-400">40 / 0 / 0</td>
                     <td class="p-2.5 text-sky-400 font-bold">9.0 /h</td>
                   </tr>
@@ -3809,8 +3909,8 @@
                   <tr class="hover:bg-slate-800/50">
                     <td class="p-2.5 font-bold text-cyan-300">📦 Nehéz Teherszállító</td>
                     <td class="p-2.5 text-emerald-400 font-bold">Kezdéskor elérhető</td>
-                    <td class="p-2.5 text-slate-300">+50% extra roncsmentési zsákmány (Fém & Izotóp) csata után</td>
-                    <td class="p-2.5 text-slate-400">350 / 60 / 20</td>
+                    <td class="p-2.5 text-slate-300"><b>Logisztikai Szállító:</b> 0 DMG. Fejleszthető <b>Kvantum Raktér (500–6500)</b>! Nexus Tőzsdei kereskedelmet és csata utáni zsákmányt szállít.</td>
+                    <td class="p-2.5 text-slate-400">350 / 60 / 0</td>
                     <td class="p-2.5 text-sky-400 font-bold">4.0 /h</td>
                   </tr>
                   <tr class="hover:bg-slate-800/50 bg-sky-950/20">
@@ -3875,7 +3975,7 @@
                 <span>🛠️</span>
                 <span>BIRODALMI HAJÓDOKK & A 60%-OS SZINTPLAFON</span>
               </div>
-              <div>Minden hajóosztály 5 független alrendszerrel rendelkezik (Fő Fegyverzet, Páncélzat, Energiapajzs, Hajtómű, Szenzorika). Mind az 5 alrendszer 1-től 10-ig fejleszthető (összesen 50 szint lehetőség hajónként). A birodalmi reaktorkapacitás miatt azonban szigorú szabályok érvényesek:</div>
+              <div>Minden hajóosztály független alrendszerekkel rendelkezik. Mindegyik alrendszer 1-től 10-ig fejleszthető. A birodalmi reaktorkapacitás és hajótest méret alapján szigorú <b>60%-os szintplafon</b> érvényesül, így taktikai választásra van szükség:</div>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-3 gap-3 font-mono text-xs">
@@ -3884,7 +3984,7 @@
                   <span>1. KUTATÁSI KERET (TIER 1)</span>
                   <span class="text-[10px] bg-cyan-950 px-1.5 py-0.5 rounded border border-cyan-700 text-cyan-300">20% LIMIT</span>
                 </div>
-                <div class="text-[11px] text-slate-300">Kezdéskor legfeljebb <b>10 szint</b> osztható szét a hajó 5 alrendszere között.</div>
+                <div class="text-[11px] text-slate-300">Kezdéskor legfeljebb <b>10 szint</b> osztható szét a hadihajók alrendszerei között.</div>
               </div>
 
               <div class="bg-slate-900/80 border border-purple-700/60 p-3 rounded-lg space-y-1.5">
@@ -3892,7 +3992,7 @@
                   <span>2. KUTATÁSI KERET (TIER 2)</span>
                   <span class="text-[10px] bg-purple-950 px-1.5 py-0.5 rounded border border-purple-700 text-purple-300">40% LIMIT</span>
                 </div>
-                <div class="text-[11px] text-slate-300">Tier 2 kutatásokkal a keret <b>20 szintre</b> bővül hajónként.</div>
+                <div class="text-[11px] text-slate-300">Tier 2 kutatásokkal a keret <b>20 szintre</b> bővül hadihajónként.</div>
               </div>
 
               <div class="bg-slate-900/80 border border-amber-500/60 p-3 rounded-lg space-y-1.5">
@@ -3900,16 +4000,29 @@
                   <span>3. MAX PLAFON (TIER 3)</span>
                   <span class="text-[10px] bg-amber-950 px-1.5 py-0.5 rounded border border-amber-600 text-amber-300">60% MAX LIMIT</span>
                 </div>
-                <div class="text-[11px] text-slate-300">A legfelsőbb birodalmi határ <b>30 szint (60%)</b>. Egyetlen hajó sem haladhatja meg a 30 szintet!</div>
+                <div class="text-[11px] text-slate-300">A legfelsőbb határ: <b>Hadihajók: 30 szint</b> (5x10-ből) • <b>Teherszállító: 24 szint</b> (4x10-ből) • <b>Szonda: 18 szint</b> (3x10-ből).</div>
               </div>
             </div>
 
-            <div class="p-3 bg-slate-900/90 border border-slate-800 rounded-xl text-xs space-y-2">
-              <div class="font-bold text-white flex items-center gap-1.5">
-                <span>🔄</span>
-                <span>Alrendszer Kiszerelése & Szintek Felszabadítása:</span>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs font-mono">
+              <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-3 space-y-1.5">
+                <div class="font-bold text-cyan-300 flex items-center gap-1.5">
+                  <span>⌖</span>
+                  <span>SZONDA & TEHERSZÁLLÍTÓ KÜLÖNLEGES SLOTOI:</span>
+                </div>
+                <div class="text-slate-300 text-[11px] space-y-1">
+                  <div>• <b>Felderítő Szonda (3 slot):</b> <i>Lopakodás</i> (álcázás), <i>Burkolat HP</i>, <i>Tachion Szenzorok</i> (Recon Power 1–10/db).</div>
+                  <div>• <b>Nehéz Teherszállító (4 slot):</b> <i>Kvantum Raktér</i> (500–6500 egység), <i>Burkolat HP</i>, <i>Energiapajzs</i>, <i>Hajtómű</i>.</div>
+                </div>
               </div>
-              <div class="text-slate-300 text-[11px]">Ha megváltoztatnád a haditervedet, a Hajódokkban bármelyik alrendszer szintjét azonnal nullázhatod a <b>[KISZERELÉS]</b> gombbal. Ekkor a befektetett nyersanyagok <b>50%-át azonnal visszakapod</b>, és a felhasznált szintkeret újra kioszthatóvá válik!</div>
+
+              <div class="p-3 bg-slate-900/90 border border-slate-800 rounded-xl text-xs space-y-1.5">
+                <div class="font-bold text-white flex items-center gap-1.5">
+                  <span>🔄</span>
+                  <span>Alrendszer Kiszerelése & Nyersanyag Visszatérítés:</span>
+                </div>
+                <div class="text-slate-300 text-[11px]">Ha megváltoztatnád a haditervedet, a Hajódokkban bármelyik alrendszer szintjét azonnal nullázhatod a <b>[KISZERELÉS]</b> gombbal. Ekkor a befektetett nyersanyagok <b>50%-át azonnal visszakapod</b>, és a felhasznált szintkeret újra kioszthatóvá válik!</div>
+              </div>
             </div>
           </div>
         `;
@@ -3919,25 +4032,41 @@
             <div class="bg-amber-950/40 border border-amber-500/60 p-3 rounded-xl text-amber-200 text-xs">
               <div class="font-bold text-amber-300 text-sm mb-1 flex items-center gap-2">
                 <span>🪐</span>
-                <span>30 BOT VILÁG & A 3 FŐ BOSS CITADELLA</span>
+                <span>30 BOT VILÁG, 3 FŐ BOSS & NEXUS KERESKEDELEM</span>
               </div>
-              <div>A galaxisban 30 kisebb bot világ és 3 kolosszális Boss Citadella található. A bot világok a csillagtérképen közvetlenül láthatók és támadhatók, míg a 3 Boss a fejléc <b>[3 BOSS CITADELLA]</b> menüjéből érhető el.</div>
+              <div>A galaxisban 30 kisebb bot erőd, 3 kolosszális Boss Citadella és a semleges <b>NEXUS KERESKEDELMI KÖZPONT</b> található. Az ellenséges flották mozgását a csillagtérképen valós időben követheted, a feléd tartó fenyegetéseket pedig a <b>Korai Radar</b> jelzi!</div>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs font-mono">
               <div class="bg-slate-900/80 border border-slate-800 p-3 rounded-xl space-y-2">
                 <div class="font-bold text-cyan-300 flex items-center gap-2 border-b border-slate-800 pb-1.5">
                   <span>🪐</span>
-                  <span>30 KIS BOT VILÁG (TIER 1 - 3)</span>
+                  <span>30 BOT ERŐD & TACHION KÉMKEDÉS</span>
                 </div>
                 <div class="text-[11px] text-slate-300 space-y-1">
-                  <div>• <b>Tier 1 (10 db):</b> Kalózfészkek és bányák (Könnyű helyőrség).</div>
-                  <div>• <b>Tier 2 (10 db):</b> Robot gépgyárak és erődítmények (Közepes flotta).</div>
-                  <div>• <b>Tier 3 (10 db):</b> Prekurzor bástyák és silók (Nehéz flotta & railgunok).</div>
-                  <div class="text-amber-300 pt-1">• <b>Rejtett Zsákmány:</b> A kincs ismeretlen, amíg le nem győzöd a védelmet (Nyersanyag, Ereklye, vagy Dicsőség).</div>
+                  <div>• <b>Tier 1 (10 db):</b> Kalózfészkek (Szükséges szonda-pont: <b>5</b>).</div>
+                  <div>• <b>Tier 2 (10 db):</b> Robot gépgyárak (Szükséges szonda-pont: <b>15</b>).</div>
+                  <div>• <b>Tier 3 (10 db):</b> Prekurzor erődök (Szükséges szonda-pont: <b>30</b>).</div>
+                  <div>• <b>3 Boss Citadella:</b> Végjáték bástyák (Szükséges szonda-pont: <b>60</b>).</div>
+                  <div class="text-amber-300 pt-1">• <b>Kémkedés:</b> Küldj szondát a bolygó paneljéről! A szonda nem harcol; felméri a helyőrséget és felfedi a rejtett zsákmányt. Lopakodás fejlesztésével a szondák nem vesznek el!</div>
                 </div>
               </div>
 
+              <div class="bg-amber-950/30 border border-amber-700/60 p-3 rounded-xl space-y-2">
+                <div class="font-bold text-amber-300 flex items-center gap-2 border-b border-amber-900 pb-1.5">
+                  <span>🏪</span>
+                  <span>NEXUS KERESKEDELMI KÖZPONT & TŐZSDE</span>
+                </div>
+                <div class="text-[11px] text-slate-300 space-y-1">
+                  <div>• <b>Elhelyezkedés:</b> Koordináták [410, 290] a térkép központjában.</div>
+                  <div>• <b>9 Hivatalos Árváltás:</b> Fém ⇄ Energia, Fém ⇄ Izotóp, Energia ⇄ Izotóp, Adatpontok ⇄ Nyersanyagok.</div>
+                  <div>• <b>Szállítási Raktér:</b> A tranzakciókhoz birtokolt Nehéz Teherszállító flotta szükséges (alap: 500, max: 6,500/hajó).</div>
+                  <div class="text-emerald-300 pt-1">• <b>Elérés:</b> Kattints a fejléc <b>[🏪 PIAC]</b> gombjára vagy magára az állomásra a térképen!</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs font-mono">
               <div class="bg-red-950/40 border border-red-700/60 p-3 rounded-xl space-y-2">
                 <div class="font-bold text-red-300 flex items-center gap-2 border-b border-red-900 pb-1.5">
                   <span>☠️</span>
@@ -3947,27 +4076,186 @@
                   <div>1. <b>Cygnus Bastion:</b> 4,500 HP / 2,500 Pajzs • Belépő: 100 Dicsőség & Kvantum Chrono-Mag.</div>
                   <div>2. <b>Void Citadel:</b> 7,500 HP / 4,500 Pajzs • Belépő: 250 Dicsőség & Sötét Anyag Rezonátor.</div>
                   <div>3. <b>Omega Leviatán:</b> 12,000 HP / 7,000 Pajzs • Belépő: 450 Dicsőség & Prekurzor Kódex.</div>
-                  <div class="text-red-300 pt-1">• <b>Megjegyzés:</b> A Bossok a térképről le vannak véve a tisztaság érdekében, kizárólag a Boss felületről támadhatók!</div>
+                  <div class="text-red-300 pt-1">• A Bossok kizárólag a <b>[3 BOSS CITADELLA]</b> menüből támadhatók.</div>
                 </div>
               </div>
-            </div>
 
-            <div class="bg-sky-950/30 border border-sky-800/60 p-3 rounded-xl text-xs space-y-1">
-              <div class="font-bold text-sky-300">⏱️ FLOTTA MENETIDŐ & GYORSÍTÁSOK:</div>
-              <div class="text-[11px] text-slate-300">Az alapesetben 5 körös utazási idő technológiákkal és modulokkal akár <b>1–2 körre</b> csökkenthető:</div>
-              <div class="text-[10px] text-slate-400 font-mono">
-                • Ionos Impulzus-hajtómű kutatás: <b>-1 kör</b><br>
-                • Hipertér-Ugrómotor kutatás: <b>-1 kör</b><br>
-                • Küldetés Sebesség bónusz (buff): <b>-1 kör</b><br>
-                • Hajódokk Hajtómű alrendszer (Lv.2+): <b>-1 kör</b><br>
-                • <b>Minimális menetidő:</b> 1 kör (azonnali ugrás a következő órában).
+              <div class="bg-sky-950/30 border border-sky-800/60 p-3 rounded-xl space-y-2">
+                <div class="font-bold text-sky-300 flex items-center gap-2 border-b border-sky-900 pb-1.5">
+                  <span>🚨</span>
+                  <span>FENYEGETÉS RADAR & HANGNÉMÍTÁS</span>
+                </div>
+                <div class="text-[11px] text-slate-300 space-y-1">
+                  <div>• <b>Korai Riasztás:</b> Ha ellenséges vagy renegát flotta indul a bolygóid ellen, vörös riadó banner jelenik meg hátralévő körökkel és becsült flottaerővel.</div>
+                  <div>• <b>Flotta Menetidő:</b> Alapesetben 5 kör, hajtómű kutatásokkal és modulokkal 1–2 körre csökkenthető.</div>
+                  <div>• <b>Némítás:</b> A fejléc <b>[🔊 HANG: BE]</b> gombjával azonnal elnémítható minden hanghatás és riasztó, az állapot automatikusan elmentődik.</div>
+                </div>
               </div>
             </div>
           </div>
         `;
       }
     }
-    window.renderGuideContent = renderGuideContent;
+        window.renderGuideContent = renderGuideContent;
+
+
+    // =========================================================================
+    // 4/H. HANGNÉMÍTÁS ÉS KERESKEDELMI TŐZSDE VEZÉRLÉS
+    // =========================================================================
+    STATE.isMuted = (localStorage.getItem('space4x_muted') === 'true');
+
+    function toggleMute() {
+      STATE.isMuted = !STATE.isMuted;
+      localStorage.setItem('space4x_muted', STATE.isMuted);
+      updateSoundButton();
+      if (!STATE.isMuted) audio.playSelect();
+    }
+    window.toggleMute = toggleMute;
+
+    function updateSoundButton() {
+      const icon = document.getElementById('sound-toggle-icon');
+      const text = document.getElementById('sound-toggle-text');
+      const btn = document.getElementById('btn-sound-toggle');
+      if (icon) icon.innerText = STATE.isMuted ? '🔇' : '🔊';
+      if (text) text.innerText = STATE.isMuted ? 'NÉMÍTVA' : 'HANG: BE';
+      if (btn) {
+        if (STATE.isMuted) {
+          btn.className = 'bg-red-950/70 hover:bg-red-900 border border-red-700 text-red-300 font-mono text-xs font-bold px-2.5 py-1.5 rounded flex items-center gap-1 shadow transition-all';
+        } else {
+          btn.className = 'bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700 font-mono text-xs font-bold px-2.5 py-1.5 rounded flex items-center gap-1 shadow transition-all';
+        }
+      }
+    }
+    window.updateSoundButton = updateSoundButton;
+
+    function updateThreatAlertBanner() {
+      const banner = document.getElementById('threat-alert-banner');
+      if (!banner) return;
+      const threats = STATE.incomingThreats || [];
+      if (threats.length > 0) {
+        const threat = threats[0];
+        const targetPlanet = STATE.planets.find(p => p.id === threat.target_planet_id);
+        const targetName = targetPlanet ? targetPlanet.name : 'főbázisod';
+        const eta = Math.max(1, (threat.arrival_tick || 1) - (STATE.tick || 1));
+        const totalShips = threat.ships ? Object.values(threat.ships).reduce((a, b) => a + (Number(b) || 0), 0) : 1;
+
+        const badge = document.getElementById('threat-eta-badge');
+        if (badge) badge.innerText = `⏱️ ${eta} KÖR`;
+
+        const txt = document.getElementById('threat-alert-text');
+        if (txt) {
+          txt.innerText = `Veszély! ${threat.name || 'Ellenséges haderő'} közeledik a(z) ${targetName} felé (~ ${totalShips} hajó). Becsapódás: ${eta} kör múlva!`;
+        }
+        banner.classList.remove('hidden');
+        if (!STATE.isMuted && STATE.lastThreatTick !== STATE.tick) {
+          STATE.lastThreatTick = STATE.tick;
+          audio.playAlarm();
+        }
+      } else {
+        banner.classList.add('hidden');
+      }
+    }
+
+    function openTradeModal() {
+      audio.playSelect();
+      renderTradeModal();
+      document.getElementById('modal-trade').classList.remove('hidden');
+    }
+    window.openTradeModal = openTradeModal;
+
+    function renderTradeModal() {
+      const cargo = STATE.freighterCargo || { freighterCount: 0, totalCargoCapacity: 500, perShipCapacity: 500 };
+      const capEl = document.getElementById('trade-cargo-capacity');
+      if (capEl) capEl.innerText = `${cargo.totalCargoCapacity.toLocaleString()} egység / ügylet`;
+
+      const cntEl = document.getElementById('trade-freighter-count');
+      if (cntEl) cntEl.innerText = `${cargo.freighterCount} db (hajónként ${cargo.perShipCapacity} egység)`;
+
+      const container = document.getElementById('trade-exchange-container');
+      if (!container) return;
+
+      const pRes = STATE.resources || { metal: 0, energy: 0, isotope: 0, data: 0 };
+
+      const TRADES = [
+        { key: 'metal_to_energy',   name: 'Fém ➔ Energia',       from: 'metal',       fromName: 'Fém',      to: 'energy',      toName: 'Energia',    ratio: 0.40, desc: '100 Fém = 40 Energia',   icon: '⚡' },
+        { key: 'metal_to_isotope',  name: 'Fém ➔ Izotóp',        from: 'metal',       fromName: 'Fém',      to: 'isotope',     toName: 'Izotóp',     ratio: 0.10, desc: '100 Fém = 10 Izotóp',    icon: '🔮' },
+        { key: 'metal_to_data',     name: 'Fém ➔ Adatpont',      from: 'metal',       fromName: 'Fém',      to: 'data_points', toName: 'Adatpont',   ratio: 0.15, desc: '100 Fém = 15 Adat',      icon: '💾' },
+        { key: 'energy_to_metal',   name: 'Energia ➔ Fém',       from: 'energy',      fromName: 'Energia',  to: 'metal',       toName: 'Fém',        ratio: 2.00, desc: '50 Energia = 100 Fém',   icon: '⛏️' },
+        { key: 'energy_to_isotope', name: 'Energia ➔ Izotóp',    from: 'energy',      fromName: 'Energia',  to: 'isotope',     toName: 'Izotóp',     ratio: 0.20, desc: '50 Energia = 10 Izotóp',  icon: '🔮' },
+        { key: 'isotope_to_metal',  name: 'Izotóp ➔ Fém',        from: 'isotope',     fromName: 'Izotóp',   to: 'metal',       toName: 'Fém',        ratio: 7.50, desc: '20 Izotóp = 150 Fém',   icon: '🔩' },
+        { key: 'isotope_to_energy', name: 'Izotóp ➔ Energia',    from: 'isotope',     fromName: 'Izotóp',   to: 'energy',      toName: 'Energia',    ratio: 4.00, desc: '20 Izotóp = 80 Energia',  icon: '⚛️' },
+        { key: 'data_to_metal',     name: 'Adatpont ➔ Fém',      from: 'data_points', fromName: 'Adatpont', to: 'metal',       toName: 'Fém',        ratio: 4.00, desc: '30 Adat = 120 Fém',      icon: '⛏️' },
+        { key: 'data_to_isotope',   name: 'Adatpont ➔ Izotóp',   from: 'data_points', fromName: 'Adatpont', to: 'isotope',     toName: 'Izotóp',     ratio: 0.50, desc: '30 Adat = 15 Izotóp',    icon: '🔮' }
+      ];
+
+      container.innerHTML = `
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+          ${TRADES.map(t => {
+            const curVal = Math.floor(pRes[t.from] || (STATE.player ? STATE.player[t.from] : 0) || 0);
+            const maxTrade = Math.min(curVal, cargo.totalCargoCapacity);
+            return `
+              <div class="bg-slate-900/90 border border-amber-900/60 rounded-xl p-3 flex flex-col justify-between space-y-2 hover:border-amber-500/60 transition-all">
+                <div>
+                  <div class="flex items-center justify-between border-b border-amber-950 pb-1.5">
+                    <span class="font-bold text-amber-300 flex items-center gap-1.5 text-xs">
+                      <span>${t.icon}</span>
+                      <span>${t.name}</span>
+                    </span>
+                    <span class="text-[9px] text-amber-400 font-mono font-bold bg-amber-950/80 px-1.5 py-0.2 rounded border border-amber-800">PIAC</span>
+                  </div>
+                  <div class="text-[10px] text-slate-300 mt-1.5">${t.desc}</div>
+                  <div class="text-[10px] text-slate-400 mt-0.5">Rendelkezésre áll: <b class="text-cyan-300">${curVal} ${t.fromName}</b></div>
+                </div>
+
+                <div class="pt-2 border-t border-slate-800/80 space-y-1.5">
+                  <div class="flex items-center gap-1">
+                    <input type="number" id="trade-input-${t.key}" value="${Math.min(100, maxTrade)}" min="1" max="${maxTrade}" class="w-full bg-slate-950 border border-slate-700 text-white px-2 py-1 rounded text-xs font-mono">
+                    <button onclick="executeTrade('${t.key}')" class="bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs px-3 py-1 rounded whitespace-nowrap active:scale-95 transition-all">VÁLTÁS</button>
+                  </div>
+                  <button onclick="document.getElementById('trade-input-${t.key}').value = ${maxTrade}; executeTrade('${t.key}');" class="w-full bg-slate-950 hover:bg-slate-800 text-amber-300/80 border border-amber-900/80 text-[10px] py-0.5 rounded font-bold transition-all">MAX RAKTÉR (${maxTrade}) VÁLTÁSA</button>
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      `;
+    }
+    window.renderTradeModal = renderTradeModal;
+
+    async function executeTrade(pairKey) {
+      const inputEl = document.getElementById('trade-input-' + pairKey);
+      const amount = inputEl ? Number(inputEl.value) : 100;
+      if (!amount || amount <= 0) {
+        alert("Kérlek adj meg egy érvényes mennyiséget!");
+        return;
+      }
+
+      if (SERVER_ONLINE) {
+        try {
+          const res = await fetch(`${API_BASE}/api/trade-resources`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-Player-Id': STATE.currentPlayerId || 'player' },
+            body: JSON.stringify({ pairKey, amount })
+          });
+          const data = await res.json();
+          if (res.ok) {
+            audio.playVictory();
+            alert(`Sikeres tőzsdei ügylet! Levonva: ${data.spent} ${data.fromResource}, Jóváírva: +${data.received} ${data.toResource}`);
+            await checkServerConnection();
+            renderTradeModal();
+            return;
+          } else {
+            audio.playAlarm();
+            alert(data.error || "Hiba a csere során!");
+            return;
+          }
+        } catch(e) {
+          alert("Hálózati hiba a kereskedés során!");
+          return;
+        }
+      }
+    }
+    window.executeTrade = executeTrade;
 
     // Indítás és PWA Service Worker regisztráció
     window.onload = async () => {
@@ -3990,7 +4278,7 @@
       // ESC billentyű modal bezárás
       window.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
-          ['modal-guide', 'modal-pvp-roster', 'modal-shipyard-refit', 'modal-tech', 'modal-boss', 'modal-logs', 'modal-combat-log', 'modal-dispatch', 'modal-shipyard'].forEach(id => {
+          ['modal-trade', 'modal-guide', 'modal-pvp-roster', 'modal-shipyard-refit', 'modal-tech', 'modal-boss', 'modal-logs', 'modal-combat-log', 'modal-dispatch', 'modal-shipyard'].forEach(id => {
             const m = document.getElementById(id);
             if (m && !m.classList.contains('hidden')) closeModal(id);
           });

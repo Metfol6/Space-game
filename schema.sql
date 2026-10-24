@@ -37,7 +37,9 @@ CREATE TABLE IF NOT EXISTS planets (
     loot_data TEXT NULL, -- JSON data
     loot_revealed INTEGER NOT NULL DEFAULT 0,
     defeated_by_player_id TEXT NULL,
-    difficulty_tier INTEGER NOT NULL DEFAULT 1
+    difficulty_tier INTEGER NOT NULL DEFAULT 1,
+    is_trade_station INTEGER NOT NULL DEFAULT 0,
+    scouted_by_player INTEGER NOT NULL DEFAULT 0
 );
 
 -- 3. Bolygói építmények és slotok
