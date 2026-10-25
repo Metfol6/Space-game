@@ -224,5 +224,60 @@ CREATE TABLE IF NOT EXISTS chat_messages (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- 17. Szövetségek (Alliances)
+CREATE TABLE IF NOT EXISTS alliances (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL UNIQUE,
+    tag TEXT NOT NULL UNIQUE,
+    description TEXT,
+    leader_id TEXT NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 18. Szövetségi Tagság (Alliance Members)
+CREATE TABLE IF NOT EXISTS alliance_members (
+    id TEXT PRIMARY KEY,
+    alliance_id TEXT NOT NULL REFERENCES alliances(id) ON DELETE CASCADE,
+    player_id TEXT NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+    role TEXT NOT NULL DEFAULT 'member', -- 'leader', 'officer', 'member'
+    joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(player_id)
+);
+
+-- 19. Szövetségi Közös Hadműveletek (Alliance Operations / War Room)
+CREATE TABLE IF NOT EXISTS alliance_operations (
+    id TEXT PRIMARY KEY,
+    alliance_id TEXT NOT NULL REFERENCES alliances(id) ON DELETE CASCADE,
+    creator_id TEXT NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+    target_type TEXT NOT NULL, -- 'boss', 'player', 'planet'
+    target_id TEXT NOT NULL,
+    target_name TEXT NOT NULL,
+    target_tick INTEGER NOT NULL,
+    status TEXT NOT NULL DEFAULT 'recruiting', -- 'recruiting', 'in_progress', 'completed', 'canceled'
+    max_participants INTEGER NOT NULL, -- 5 for boss, 3 for player
+    created_at_tick INTEGER NOT NULL
+);
+
+-- 20. Hadművelet Résztvevői (Operation Participants)
+CREATE TABLE IF NOT EXISTS alliance_operation_participants (
+    id TEXT PRIMARY KEY,
+    operation_id TEXT NOT NULL REFERENCES alliance_operations(id) ON DELETE CASCADE,
+    player_id TEXT NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+    ships TEXT NOT NULL DEFAULT '{}', -- JSON: pl. {"corvette": 10, "destroyer": 4}
+    joined_at_tick INTEGER NOT NULL,
+    UNIQUE(operation_id, player_id)
+);
+
+-- 21. Szövetséges Védelmi Flották (Allied Defense Stationed Fleets)
+CREATE TABLE IF NOT EXISTS allied_defense_fleets (
+    id TEXT PRIMARY KEY,
+    planet_id TEXT NOT NULL REFERENCES planets(id) ON DELETE CASCADE,
+    owner_id TEXT NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+    fleet_id TEXT NOT NULL,
+    arrival_tick INTEGER NOT NULL,
+    state TEXT NOT NULL DEFAULT 'stationed'
+);
+
+
 
 

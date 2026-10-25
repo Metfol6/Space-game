@@ -524,6 +524,58 @@ class DatabaseService {
             );
         `);
 
+        // 10. Szövetségi Rendszer és Közös Hadműveletek Táblái
+        this.db.exec(`
+            CREATE TABLE IF NOT EXISTS alliances (
+                id TEXT PRIMARY KEY,
+                name TEXT NOT NULL UNIQUE,
+                tag TEXT NOT NULL UNIQUE,
+                description TEXT,
+                leader_id TEXT NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+
+            CREATE TABLE IF NOT EXISTS alliance_members (
+                id TEXT PRIMARY KEY,
+                alliance_id TEXT NOT NULL REFERENCES alliances(id) ON DELETE CASCADE,
+                player_id TEXT NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+                role TEXT NOT NULL DEFAULT 'member',
+                joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(player_id)
+            );
+
+            CREATE TABLE IF NOT EXISTS alliance_operations (
+                id TEXT PRIMARY KEY,
+                alliance_id TEXT NOT NULL REFERENCES alliances(id) ON DELETE CASCADE,
+                creator_id TEXT NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+                target_type TEXT NOT NULL,
+                target_id TEXT NOT NULL,
+                target_name TEXT NOT NULL,
+                target_tick INTEGER NOT NULL,
+                status TEXT NOT NULL DEFAULT 'recruiting',
+                max_participants INTEGER NOT NULL,
+                created_at_tick INTEGER NOT NULL
+            );
+
+            CREATE TABLE IF NOT EXISTS alliance_operation_participants (
+                id TEXT PRIMARY KEY,
+                operation_id TEXT NOT NULL REFERENCES alliance_operations(id) ON DELETE CASCADE,
+                player_id TEXT NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+                ships TEXT NOT NULL DEFAULT '{}',
+                joined_at_tick INTEGER NOT NULL,
+                UNIQUE(operation_id, player_id)
+            );
+
+            CREATE TABLE IF NOT EXISTS allied_defense_fleets (
+                id TEXT PRIMARY KEY,
+                planet_id TEXT NOT NULL REFERENCES planets(id) ON DELETE CASCADE,
+                owner_id TEXT NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+                fleet_id TEXT NOT NULL,
+                arrival_tick INTEGER NOT NULL,
+                state TEXT NOT NULL DEFAULT 'stationed'
+            );
+        `);
+
         // 9. Kereskedelmi Állomás és Kémkedési oszlopok migrációja
         try { this.db.prepare("ALTER TABLE planets ADD COLUMN is_trade_station INTEGER NOT NULL DEFAULT 0").run(); } catch(e){}
         try { this.db.prepare("ALTER TABLE planets ADD COLUMN scouted_by_player INTEGER NOT NULL DEFAULT 0").run(); } catch(e){}
@@ -1961,6 +2013,412 @@ class DatabaseService {
             toResource: config.to,
             player: this.getPlayer(playerId)
         };
+    }
+
+    // =========================================================================
+    // SZÖVETSÉGI RENDSZER (ALLIANCE SYSTEM) ÉS KÖZÖS HADMŰVELETEK
+    // =========================================================================
+
+    createAlliance(name, tag, leaderId, description = '') {
+        const cleanName = (name || '').trim();
+        let cleanTag = (tag || '').trim().toUpperCase().replace(/[\[\]]/g, '');
+        if (!cleanName || cleanName.length < 3) return { error: "A szövetség nevének legalább 3 karakterből kell állnia!" };
+        if (!cleanTag || cleanTag.length < 2 || cleanTag.length > 5) return { error: "A szövetségi tag 2-5 karakter hosszú lehet!" };
+
+        // Ellenőrzés: a játékos nem lehet még szövetségben
+        const existingMember = this.db.prepare("SELECT alliance_id FROM alliance_members WHERE player_id = ?").get(leaderId);
+        if (existingMember) return { error: "Már tagja vagy egy szövetségnek! Előbb lépj ki onnan." };
+
+        // Egyediség ellenőrzése
+        const nameTaken = this.db.prepare("SELECT id FROM alliances WHERE name = ? OR tag = ?").get(cleanName, cleanTag);
+        if (nameTaken) return { error: "Ez a szövetségnév vagy tag már foglalt!" };
+
+        const allianceId = `alliance_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+        this.db.prepare(`
+            INSERT INTO alliances (id, name, tag, description, leader_id)
+            VALUES (?, ?, ?, ?, ?)
+        `).run(allianceId, cleanName, `[${cleanTag}]`, description, leaderId);
+
+        this.db.prepare(`
+            INSERT INTO alliance_members (id, alliance_id, player_id, role)
+            VALUES (?, ?, ?, 'leader')
+        `).run(`mem_${Date.now()}_${leaderId}`, allianceId, leaderId);
+
+        return { success: true, alliance: this.getAlliance(allianceId) };
+    }
+
+    getAlliance(allianceId) {
+        const row = this.db.prepare("SELECT * FROM alliances WHERE id = ?").get(allianceId);
+        if (!row) return null;
+
+        const membersRows = this.db.prepare(`
+            SELECT m.id, m.alliance_id, m.player_id, m.role, m.joined_at,
+                   p.username, p.color_hex, p.glory_points, p.is_ai
+            FROM alliance_members m
+            JOIN players p ON m.player_id = p.id
+            WHERE m.alliance_id = ?
+            ORDER BY CASE m.role WHEN 'leader' THEN 1 WHEN 'officer' THEN 2 ELSE 3 END, m.joined_at ASC
+        `).all(allianceId);
+
+        for (const m of membersRows) {
+            const basePlanet = this.db.prepare("SELECT id, name FROM planets WHERE owner_id = ? ORDER BY id ASC LIMIT 1").get(m.player_id);
+            m.base_planet_name = basePlanet ? basePlanet.name : 'Mobil Bázis';
+        }
+
+        row.members = membersRows;
+        row.memberCount = membersRows.length;
+        const leader = membersRows.find(m => m.role === 'leader');
+        row.leaderName = leader ? leader.username : 'Ismeretlen';
+        return row;
+    }
+
+    getAllianceByPlayer(playerId) {
+        const member = this.db.prepare("SELECT alliance_id, role FROM alliance_members WHERE player_id = ?").get(playerId);
+        if (!member) return null;
+        const alliance = this.getAlliance(member.alliance_id);
+        if (alliance) {
+            alliance.currentPlayerRole = member.role;
+        }
+        return alliance;
+    }
+
+    getAllAlliances() {
+        const rows = this.db.prepare("SELECT * FROM alliances ORDER BY created_at DESC").all();
+        return rows.map(r => this.getAlliance(r.id));
+    }
+
+    joinAlliance(allianceId, playerId) {
+        const existingMember = this.db.prepare("SELECT alliance_id FROM alliance_members WHERE player_id = ?").get(playerId);
+        if (existingMember) return { error: "Már tagja vagy egy szövetségnek! Előbb lépj ki onnan." };
+
+        const alliance = this.db.prepare("SELECT * FROM alliances WHERE id = ?").get(allianceId);
+        if (!alliance) return { error: "A megadott szövetség nem található!" };
+
+        this.db.prepare(`
+            INSERT INTO alliance_members (id, alliance_id, player_id, role)
+            VALUES (?, ?, ?, 'member')
+        `).run(`mem_${Date.now()}_${playerId}`, allianceId, playerId);
+
+        return { success: true, alliance: this.getAlliance(allianceId) };
+    }
+
+    leaveAlliance(playerId) {
+        const member = this.db.prepare("SELECT * FROM alliance_members WHERE player_id = ?").get(playerId);
+        if (!member) return { error: "Nem vagy tagja egyetlen szövetségnek sem!" };
+
+        const allianceId = member.alliance_id;
+        const otherMembers = this.db.prepare("SELECT * FROM alliance_members WHERE alliance_id = ? AND player_id != ?").all(allianceId, playerId);
+
+        if (member.role === 'leader') {
+            if (otherMembers.length > 0) {
+                // Új vezető kijelölése
+                const newLeader = otherMembers[0];
+                this.db.prepare("UPDATE alliances SET leader_id = ? WHERE id = ?").run(newLeader.player_id, allianceId);
+                this.db.prepare("UPDATE alliance_members SET role = 'leader' WHERE id = ?").run(newLeader.id);
+            } else {
+                // Ha ő volt az egyetlen tag, a szövetség feloszlik
+                this.db.prepare("DELETE FROM alliance_operations WHERE alliance_id = ?").run(allianceId);
+                this.db.prepare("DELETE FROM alliances WHERE id = ?").run(allianceId);
+            }
+        }
+
+        // Töröljük a tagságot
+        this.db.prepare("DELETE FROM alliance_members WHERE player_id = ?").run(playerId);
+
+        // Ha volt folyamatban lévő felajánlott hajója hadműveletben, visszakapja
+        const opParts = this.db.prepare("SELECT * FROM alliance_operation_participants WHERE player_id = ?").all(playerId);
+        for (const opPart of opParts) {
+            const ships = JSON.parse(opPart.ships || '{}');
+            const basePlanet = this.db.prepare("SELECT id FROM planets WHERE owner_id = ? ORDER BY id ASC LIMIT 1").get(playerId);
+            if (basePlanet) {
+                const sf = this.db.prepare("SELECT id FROM fleets WHERE origin_planet_id = ? AND state = 'stationed'").get(basePlanet.id);
+                if (sf) {
+                    for (const [st, cnt] of Object.entries(ships)) {
+                        this.db.prepare("UPDATE fleet_ships SET count = count + ? WHERE fleet_id = ? AND ship_type = ?").run(cnt, sf.id, st);
+                    }
+                }
+            }
+            this.db.prepare("DELETE FROM alliance_operation_participants WHERE id = ?").run(opPart.id);
+        }
+
+        return { success: true };
+    }
+
+    isAllied(playerA, playerB) {
+        if (!playerA || !playerB) return false;
+        if (playerA === playerB) return true;
+        const memA = this.db.prepare("SELECT alliance_id FROM alliance_members WHERE player_id = ?").get(playerA);
+        const memB = this.db.prepare("SELECT alliance_id FROM alliance_members WHERE player_id = ?").get(playerB);
+        if (!memA || !memB) return false;
+        return memA.alliance_id === memB.alliance_id;
+    }
+
+    // =========================================================================
+    // KÖZÖS TÁMADÁSI HADMŰVELETEK (WAR ROOM)
+    // =========================================================================
+
+    createAllianceOperation(allianceId, creatorId, targetType, targetId, targetTick, initialShips = {}) {
+        // Ellenőrzés: a készítő szövetségtag
+        const member = this.db.prepare("SELECT * FROM alliance_members WHERE alliance_id = ? AND player_id = ?").get(allianceId, creatorId);
+        if (!member) return { error: "Csak szövetségi tag hozhat létre hadműveletet!" };
+
+        // Szövetséges célpont ellenőrzése (nem támadhatjuk a szövetségest)
+        if (targetType === 'player') {
+            if (this.isAllied(creatorId, targetId)) {
+                return { error: "Nem indíthatsz támadást a saját szövetségesed ellen!" };
+            }
+        } else if (targetType === 'planet') {
+            const planet = this.db.prepare("SELECT owner_id FROM planets WHERE id = ?").get(targetId);
+            if (planet && this.isAllied(creatorId, planet.owner_id)) {
+                return { error: "Ez a bolygó egy szövetségesed birtokában van!" };
+            }
+        }
+
+        // Célpont név és MAX LÉTSZÁM meghatározása:
+        // Bossra: max 5 fő; Más játékosra / bolygóra: max 3 fő
+        let maxParticipants = 3;
+        let targetName = targetId;
+
+        if (targetType === 'boss') {
+            maxParticipants = 5;
+            const b = this.getBossState(targetId);
+            targetName = b ? b.name : `BOSS (${targetId})`;
+        } else if (targetType === 'player') {
+            maxParticipants = 3;
+            const p = this.getPlayer(targetId);
+            targetName = p ? `Parancsnok: ${p.username}` : `Játékos (${targetId})`;
+        } else {
+            maxParticipants = 3;
+            const pl = this.db.prepare("SELECT name FROM planets WHERE id = ?").get(targetId);
+            targetName = pl ? pl.name : `Bolygó (${targetId})`;
+        }
+
+        const curTick = this.getGameState();
+        const execTick = Math.max(curTick + 1, parseInt(targetTick) || (curTick + 2));
+        const opId = `op_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+
+        this.db.prepare(`
+            INSERT INTO alliance_operations (id, alliance_id, creator_id, target_type, target_id, target_name, target_tick, status, max_participants, created_at_tick)
+            VALUES (?, ?, ?, ?, ?, ?, ?, 'recruiting', ?, ?)
+        `).run(opId, allianceId, creatorId, targetType, targetId, targetName, execTick, maxParticipants, curTick);
+
+        // Készítő hajóinak felajánlása (ha adott meg)
+        let hasShips = false;
+        for (const cnt of Object.values(initialShips)) {
+            if (cnt > 0) hasShips = true;
+        }
+
+        if (hasShips) {
+            const joinRes = this.joinAllianceOperation(opId, creatorId, initialShips);
+            if (joinRes.error) return joinRes;
+        }
+
+        return { success: true, operation: this.getOperation(opId) };
+    }
+
+    getAllianceOperations(allianceId) {
+        const rows = this.db.prepare("SELECT * FROM alliance_operations WHERE alliance_id = ? ORDER BY status ASC, target_tick ASC").all(allianceId);
+        return rows.map(r => this.getOperation(r.id));
+    }
+
+    getOperation(operationId) {
+        const op = this.db.prepare("SELECT * FROM alliance_operations WHERE id = ?").get(operationId);
+        if (!op) return null;
+
+        const creator = this.getPlayer(op.creator_id);
+        op.creatorName = creator ? creator.username : 'Ismeretlen';
+
+        const parts = this.db.prepare(`
+            SELECT p.id, p.operation_id, p.player_id, p.ships, p.joined_at_tick,
+                   pl.username, pl.color_hex
+            FROM alliance_operation_participants p
+            JOIN players pl ON p.player_id = pl.id
+            WHERE p.operation_id = ?
+            ORDER BY p.joined_at_tick ASC
+        `).all(operationId);
+
+        let totalShipsCount = 0;
+        for (const part of parts) {
+            try {
+                part.shipsParsed = JSON.parse(part.ships || '{}');
+            } catch(e) {
+                part.shipsParsed = {};
+            }
+            let pCount = 0;
+            for (const cnt of Object.values(part.shipsParsed)) pCount += (cnt || 0);
+            part.totalShips = pCount;
+            totalShipsCount += pCount;
+        }
+
+        op.participants = parts;
+        op.currentParticipants = parts.length;
+        op.totalShipsCount = totalShipsCount;
+        op.isFull = parts.length >= op.max_participants;
+        return op;
+    }
+
+    joinAllianceOperation(operationId, playerId, ships) {
+        const op = this.db.prepare("SELECT * FROM alliance_operations WHERE id = ?").get(operationId);
+        if (!op) return { error: "A hadművelet nem található!" };
+        if (op.status !== 'recruiting') return { error: "Ehhez a hadművelethez már nem lehet csatlakozni (lezárult vagy folyamatban van)!" };
+
+        // Szövetségi tagság ellenőrzése
+        const mem = this.db.prepare("SELECT * FROM alliance_members WHERE alliance_id = ? AND player_id = ?").get(op.alliance_id, playerId);
+        if (!mem) return { error: "Csak a szövetség tagjai csatlakozhatnak a hadművelethez!" };
+
+        // Már csatlakozott-e
+        const existing = this.db.prepare("SELECT id FROM alliance_operation_participants WHERE operation_id = ? AND player_id = ?").get(operationId, playerId);
+        if (existing) return { error: "Már felajánlottál flottát ehhez a hadművelethez!" };
+
+        // Létszámkorlát ellenőrzése (Boss: max 5, Játékos/bolygó: max 3)
+        const currentCountRow = this.db.prepare("SELECT COUNT(*) as count FROM alliance_operation_participants WHERE operation_id = ?").get(operationId);
+        const currentCount = currentCountRow ? currentCountRow.count : 0;
+        if (currentCount >= op.max_participants) {
+            return { error: `A hadművelet elérte a maximális létszámot (${op.max_participants} fő)! Bossra max 5, játékosra max 3 fő mehet.` };
+        }
+
+        // Hajók ellenőrzése a játékos birtokolt bolygóin
+        const playerPlanets = this.db.prepare("SELECT id FROM planets WHERE owner_id = ?").all(playerId);
+        if (!playerPlanets || playerPlanets.length === 0) return { error: "Nincs birtokolt bolygód, ahonnan hajókat küldhetnél!" };
+
+        let totalShipsSelected = 0;
+        for (const [st, cnt] of Object.entries(ships)) {
+            const requested = parseInt(cnt) || 0;
+            if (requested > 0) {
+                let totalAvail = 0;
+                for (const p of playerPlanets) {
+                    const sf = this.db.prepare("SELECT id FROM fleets WHERE origin_planet_id = ? AND state = 'stationed'").get(p.id);
+                    if (sf) {
+                        const row = this.db.prepare("SELECT count FROM fleet_ships WHERE fleet_id = ? AND ship_type = ?").get(sf.id, st);
+                        if (row) totalAvail += row.count;
+                    }
+                }
+                if (requested > totalAvail) {
+                    return { error: `Nincs elég ${st} a flottáidban (${totalAvail} áll rendelkezésre, ${requested} felajánlva)!` };
+                }
+                totalShipsSelected += requested;
+            }
+        }
+
+        if (totalShipsSelected === 0) {
+            return { error: "Válassz ki legalább 1 hajót a közös hadművelethez!" };
+        }
+
+        // Hajók levonása a játékos állomásozó flottáiból
+        for (const [st, cnt] of Object.entries(ships)) {
+            let remainingToDeduct = parseInt(cnt) || 0;
+            if (remainingToDeduct > 0) {
+                for (const p of playerPlanets) {
+                    if (remainingToDeduct <= 0) break;
+                    const sf = this.db.prepare("SELECT id FROM fleets WHERE origin_planet_id = ? AND state = 'stationed'").get(p.id);
+                    if (sf) {
+                        const row = this.db.prepare("SELECT count FROM fleet_ships WHERE fleet_id = ? AND ship_type = ?").get(sf.id, st);
+                        if (row && row.count > 0) {
+                            const take = Math.min(row.count, remainingToDeduct);
+                            this.db.prepare("UPDATE fleet_ships SET count = count - ? WHERE fleet_id = ? AND ship_type = ?").run(take, sf.id, st);
+                            remainingToDeduct -= take;
+                        }
+                    }
+                }
+            }
+        }
+
+        const partId = `part_${Date.now()}_${playerId}`;
+        this.db.prepare(`
+            INSERT INTO alliance_operation_participants (id, operation_id, player_id, ships, joined_at_tick)
+            VALUES (?, ?, ?, ?, ?)
+        `).run(partId, operationId, playerId, JSON.stringify(ships), this.getGameState());
+
+        return { success: true, operation: this.getOperation(operationId) };
+    }
+
+    cancelAllianceOperation(operationId, playerId) {
+        const op = this.db.prepare("SELECT * FROM alliance_operations WHERE id = ?").get(operationId);
+        if (!op) return { error: "A hadművelet nem található!" };
+
+        const member = this.db.prepare("SELECT role FROM alliance_members WHERE alliance_id = ? AND player_id = ?").get(op.alliance_id, playerId);
+        if (op.creator_id !== playerId && (!member || member.role !== 'leader')) {
+            return { error: "Csak a készítő vagy a szövetség vezetője törölheti a hadműveletet!" };
+        }
+
+        // Hajók visszajuttatása a résztvevőknek
+        const parts = this.db.prepare("SELECT * FROM alliance_operation_participants WHERE operation_id = ?").all(operationId);
+        for (const part of parts) {
+            const ships = JSON.parse(part.ships || '{}');
+            const basePlanet = this.db.prepare("SELECT id FROM planets WHERE owner_id = ? ORDER BY id ASC LIMIT 1").get(part.player_id);
+            if (basePlanet) {
+                const sf = this.db.prepare("SELECT id FROM fleets WHERE origin_planet_id = ? AND state = 'stationed'").get(basePlanet.id);
+                if (sf) {
+                    for (const [st, cnt] of Object.entries(ships)) {
+                        this.db.prepare("UPDATE fleet_ships SET count = count + ? WHERE fleet_id = ? AND ship_type = ?").run(cnt, sf.id, st);
+                    }
+                }
+            }
+        }
+
+        this.db.prepare("UPDATE alliance_operations SET status = 'canceled' WHERE id = ?").run(operationId);
+        return { success: true };
+    }
+
+    // =========================================================================
+    // SZÖVETSÉGES VÉDELEM (ALLIED DEFENSE GARRISONS)
+    // =========================================================================
+
+    getStationedDefenseFleets(planetId) {
+        const rows = this.db.prepare(`
+            SELECT d.id, d.planet_id, d.owner_id, d.fleet_id, d.arrival_tick, d.state,
+                   p.username as owner_name, p.color_hex as owner_color
+            FROM allied_defense_fleets d
+            JOIN players p ON d.owner_id = p.id
+            WHERE d.planet_id = ? AND d.state = 'stationed'
+        `).all(planetId);
+
+        for (const row of rows) {
+            const shipsRows = this.db.prepare("SELECT ship_type, count FROM fleet_ships WHERE fleet_id = ? AND count > 0").all(row.fleet_id);
+            const ships = {};
+            for (const s of shipsRows) ships[s.ship_type] = s.count;
+            row.ships = ships;
+        }
+        return rows;
+    }
+
+    stationDefenseFleet(planetId, ownerId, fleetId, arrivalTick) {
+        const id = `def_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+        this.db.prepare(`
+            INSERT INTO allied_defense_fleets (id, planet_id, owner_id, fleet_id, arrival_tick, state)
+            VALUES (?, ?, ?, ?, ?, 'stationed')
+        `).run(id, planetId, ownerId, fleetId, arrivalTick);
+        return id;
+    }
+
+    recallDefenseFleet(alliedDefenseId, playerId) {
+        const row = this.db.prepare("SELECT * FROM allied_defense_fleets WHERE id = ?").get(alliedDefenseId);
+        if (!row) return { error: "A védelmi flotta nem található!" };
+        if (row.owner_id !== playerId) return { error: "Csak a saját védelmi flottádat hívhatod vissza!" };
+
+        // Védelmi hajók áthelyezése a játékos saját bázisára
+        const basePlanet = this.db.prepare("SELECT id FROM planets WHERE owner_id = ? ORDER BY id ASC LIMIT 1").get(playerId);
+        if (!basePlanet) return { error: "Nincs bázisbolygó a visszahíváshoz!" };
+
+        const baseFleet = this.db.prepare("SELECT id FROM fleets WHERE origin_planet_id = ? AND state = 'stationed'").get(basePlanet.id);
+        const shipsToReturn = this.db.prepare("SELECT ship_type, count FROM fleet_ships WHERE fleet_id = ? AND count > 0").all(row.fleet_id);
+
+        for (const s of shipsToReturn) {
+            const existing = this.db.prepare("SELECT id FROM fleet_ships WHERE fleet_id = ? AND ship_type = ?").get(baseFleet.id, s.ship_type);
+            if (existing) {
+                this.db.prepare("UPDATE fleet_ships SET count = count + ? WHERE fleet_id = ? AND ship_type = ?").run(s.count, baseFleet.id, s.ship_type);
+            } else {
+                this.db.prepare("INSERT INTO fleet_ships (id, fleet_id, ship_type, count, current_hull_total, current_shield_total) VALUES (?, ?, ?, ?, ?, ?)")
+                    .run(`${baseFleet.id}_${s.ship_type}`, baseFleet.id, s.ship_type, s.count, s.count * 100, 0);
+            }
+        }
+
+        // Töröljük a védelmi helyőrséget
+        this.db.prepare("DELETE FROM fleet_ships WHERE fleet_id = ?").run(row.fleet_id);
+        this.db.prepare("DELETE FROM fleets WHERE id = ?").run(row.fleet_id);
+        this.db.prepare("DELETE FROM allied_defense_fleets WHERE id = ?").run(alliedDefenseId);
+
+        return { success: true, message: "A védelmi flotta sikeresen visszatért a bázisodra!" };
     }
 
     scoutPlanet(planetId, playerId = 'player') {

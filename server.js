@@ -330,6 +330,9 @@ function processTick() {
                 } else if (targetPlanet.owner_id === fleet.owner_id) {
                     // Saját bolygó: flotta összevonása
                     _mergeFleetIntoPlanet(fleet, targetPlanet);
+                } else if (db.isAllied(targetPlanet.owner_id, fleet.owner_id)) {
+                    // Szövetséges bolygó: Védelmi Erősítésként beáll az állomásozó helyőrségbe!
+                    _stationAlliedDefense(fleet, targetPlanet, nextTick);
                 } else if (targetPlanet.owner_id === null || targetPlanet.owner_id === 'neutral') {
                     // Semleges bolygó: csak akkor kolonizálható, ha van legalább 1 Kolóniahajó!
                     if (fleet.ships.colony_ship > 0) {
@@ -375,10 +378,243 @@ function processTick() {
         recentAIActions = [];
     }
 
+    // 4/A. Ütemezett Szövetségi Hadműveletek Automatikus Indítása
+    const openOps = db.db.prepare("SELECT id FROM alliance_operations WHERE status = 'recruiting' AND target_tick <= ?").all(nextTick);
+    for (const opRow of openOps) {
+        console.log(`[SZÖVETSÉGI TÁMADÁS AUTOMATIKUS INDÍTÁSA] Hadművelet: ${opRow.id} (Elérte a célkört: #${nextTick})`);
+        _executeAllianceOperation(opRow.id);
+    }
+
     // 4. Küldetésellenőrzés
     _evaluateMissions();
 
     return { tick: nextTick, aiActions: recentAIActions };
+}
+
+function _stationAlliedDefense(fleet, targetPlanet, tick) {
+    const defenseFleetId = `f_def_${fleet.owner_id}_${targetPlanet.id}_${Date.now()}`;
+    const pOwner = db.getPlayer(fleet.owner_id);
+    const ownerName = pOwner ? pOwner.username : fleet.owner_id;
+    const fleetName = `Szövetségi Védelem (${ownerName})`;
+    db.db.prepare(`
+        INSERT INTO fleets (id, owner_id, name, current_x, current_y, origin_planet_id, target_planet_id, state)
+        VALUES (?, ?, ?, ?, ?, ?, ?, 'stationed')
+    `).run(defenseFleetId, fleet.owner_id, fleetName, targetPlanet.pos_x, targetPlanet.pos_y, targetPlanet.id, targetPlanet.id);
+
+    const insShip = db.db.prepare(`INSERT INTO fleet_ships (id, fleet_id, ship_type, count, current_hull_total, current_shield_total) VALUES (?, ?, ?, ?, ?, ?)`);
+    for (const st of ALL_SHIP_TYPES) {
+        const count = fleet.ships[st] || 0;
+        if (count > 0) {
+            const spec = SHIP_SPECS[st] || { hull: 100, shield: 0 };
+            insShip.run(`${defenseFleetId}_${st}`, defenseFleetId, st, count, count * spec.hull, count * spec.shield);
+        }
+    }
+
+    db.stationDefenseFleet(targetPlanet.id, fleet.owner_id, defenseFleetId, tick);
+    const msg = `[🛡️ SZÖVETSÉGES VÉDELEM] ${ownerName} védelmi flottája megérkezett a(z) ${targetPlanet.name} világra és beállt a helyőrségbe!`;
+    recentAIActions.push(msg);
+    console.log(msg);
+}
+
+function _executeAllianceOperation(opId) {
+    const op = db.getOperation(opId);
+    if (!op || op.status !== 'recruiting') {
+        return { error: "A hadművelet nem található vagy már nem aktív!" };
+    }
+    if (op.participants.length === 0) {
+        return { error: "Nincs egyetlen résztvevő sem a hadműveletben!" };
+    }
+
+    const curTick = db.getGameState();
+    const participantCount = op.participants.length;
+
+    if (op.target_type === 'boss') {
+        const boss = db.getBossState(op.target_id);
+        if (!boss || boss.state === 'defeated') {
+            return { error: "Ez a Boss Citadella már megsemmisült vagy nem létezik!" };
+        }
+
+        // Összeállítjuk az egyesített szövetségi armadát
+        const armada = new Fleet(op.creator_id, `Szövetségi Ostrom Armada (${op.target_name})`, boss.pos_x, boss.pos_y, [], []);
+        for (const part of op.participants) {
+            const pTechs = db.getPlayerResearch(part.player_id);
+            const pUpgs = db.getShipUpgrades(part.player_id);
+            const pBuffs = db.getPlayerBuffs(part.player_id, curTick);
+
+            for (const [st, cnt] of Object.entries(part.shipsParsed || {})) {
+                for (let i = 0; i < cnt; i++) {
+                    const inst = new ShipInstance(st, pTechs, pUpgs[st], pBuffs);
+                    inst.ownerId = part.player_id;
+                    armada.ships.push(inst);
+                }
+            }
+        }
+
+        const creatorTechs = db.getPlayerResearch(op.creator_id);
+        const combatResult = CombatEngine.resolveBossCombat(armada, boss, creatorTechs, 8, participantCount);
+
+        if (combatResult.bossDefeated) {
+            db.updateBossState(op.target_id, 0, 0, 'defeated', curTick);
+            const salvageM = combatResult.salvageMetal || boss.salvage_metal || 7500;
+            const salvageI = combatResult.salvageIsotope || boss.salvage_isotope || 3000;
+            const baseGlory = op.target_id === 'boss_1' ? 400 : (op.target_id === 'boss_2' ? 800 : 1600);
+
+            // Zsákmány szétosztása a résztvevők között
+            const shareM = Math.round(salvageM / participantCount);
+            const shareI = Math.round(salvageI / participantCount);
+            const shareG = Math.round(baseGlory / participantCount);
+
+            for (const part of op.participants) {
+                const p = db.getPlayer(part.player_id);
+                if (p) {
+                    p.metal += shareM;
+                    p.isotope += shareI;
+                    p.glory_points = (p.glory_points || 0) + shareG;
+                    db.updatePlayerResources(p.id, p.metal, p.energy, p.isotope, p.data_points);
+                    db.db.prepare("UPDATE players SET glory_points = ? WHERE id = ?").run(p.glory_points, p.id);
+
+                    if (op.target_id === 'boss_1') db.db.prepare("UPDATE missions SET status = 'completed' WHERE id = 'm7'").run();
+                    if (op.target_id === 'boss_2') db.db.prepare("UPDATE missions SET status = 'completed' WHERE id = 'm8'").run();
+                    if (op.target_id === 'boss_3') db.db.prepare("UPDATE missions SET status = 'completed' WHERE id = 'm9'").run();
+                }
+            }
+
+            const winMsg = `[👑 SZÖVETSÉGI DIADAL!] A(z) ${op.target_name} elesett! ${participantCount} parancsnok osztozik a zsákmányon (fejenként: +${shareG} GP, +${shareM} Fém, +${shareI} Izotóp)!`;
+            recentAIActions.push(winMsg);
+            db.saveCombatLog(curTick, boss.pos_x, boss.pos_y, boss.name, op.creator_id, op.target_id, op.creator_id, combatResult.log, salvageM, salvageI);
+        } else {
+            db.updateBossState(op.target_id, combatResult.finalBossHull, combatResult.finalBossShield, 'active', null);
+            const retreatMsg = `[MEGTORPANÁS] A szövetségi hadtest visszavonult a(z) '${boss.name}' elől!`;
+            recentAIActions.push(retreatMsg);
+            db.saveCombatLog(curTick, boss.pos_x, boss.pos_y, boss.name, op.creator_id, op.target_id, op.target_id, combatResult.log, 0, 0);
+        }
+
+        // Túlélő hajók visszajuttatása a tulajdonosok bázisára
+        for (const ship of armada.ships) {
+            if (ship.isAlive && ship.ownerId) {
+                const basePlanet = db.db.prepare("SELECT id FROM planets WHERE owner_id = ? ORDER BY id ASC LIMIT 1").get(ship.ownerId);
+                if (basePlanet) {
+                    const sf = db.db.prepare("SELECT id FROM fleets WHERE origin_planet_id = ? AND state = 'stationed'").get(basePlanet.id);
+                    if (sf) {
+                        const existing = db.db.prepare("SELECT id FROM fleet_ships WHERE fleet_id = ? AND ship_type = ?").get(sf.id, ship.shipType);
+                        if (existing) {
+                            db.db.prepare("UPDATE fleet_ships SET count = count + 1 WHERE fleet_id = ? AND ship_type = ?").run(sf.id, ship.shipType);
+                        } else {
+                            db.db.prepare("INSERT INTO fleet_ships (id, fleet_id, ship_type, count, current_hull_total, current_shield_total) VALUES (?, ?, ?, 1, 100, 0)").run(`${sf.id}_${ship.shipType}`, sf.id, ship.shipType);
+                        }
+                    }
+                }
+            }
+        }
+
+        db.db.prepare("UPDATE alliance_operations SET status = 'completed' WHERE id = ?").run(opId);
+        return { success: true, combatResult, bossDefeated: combatResult.bossDefeated };
+    } else {
+        // Célpont: Más játékos bolygója vagy bot világ
+        const planets = db.getAllPlanets();
+        const targetPlanet = planets.find(p => p.id === op.target_id || p.owner_id === op.target_id);
+        if (!targetPlanet) return { error: "A célpont bolygó nem található!" };
+
+        // Szövetséges ellenőrzés
+        if (db.isAllied(op.creator_id, targetPlanet.owner_id)) {
+            return { error: "A célpont a szövetségesed birtokában van!" };
+        }
+
+        const armada = new Fleet(op.creator_id, `Szövetségi Hadtest (${op.target_name})`, targetPlanet.pos_x, targetPlanet.pos_y, [], []);
+        for (const part of op.participants) {
+            const pTechs = db.getPlayerResearch(part.player_id);
+            const pUpgs = db.getShipUpgrades(part.player_id);
+            const pBuffs = db.getPlayerBuffs(part.player_id, curTick);
+
+            for (const [st, cnt] of Object.entries(part.shipsParsed || {})) {
+                for (let i = 0; i < cnt; i++) {
+                    const inst = new ShipInstance(st, pTechs, pUpgs[st], pBuffs);
+                    inst.ownerId = part.player_id;
+                    armada.ships.push(inst);
+                }
+            }
+        }
+
+        // Védő sereg: helyőrség + szövetséges védelmi erők
+        const defenderOwnerId = targetPlanet.owner_id || 'bot_hostile';
+        const defenderTechs = targetPlanet.owner_id ? db.getPlayerResearch(targetPlanet.owner_id) : [];
+        const defenderBuffs = targetPlanet.owner_id ? db.getPlayerBuffs(targetPlanet.owner_id, curTick) : [];
+        const fb = new Fleet(defenderOwnerId, `${targetPlanet.name} Helyőrség & Szövetségi Védelem`, targetPlanet.pos_x, targetPlanet.pos_y, defenderTechs, defenderBuffs);
+
+        // Alap helyőrség
+        const sf = targetPlanet.stationedFleet;
+        for (const st of ALL_SHIP_TYPES) {
+            const cnt = sf[st] || 0;
+            for (let i = 0; i < cnt; i++) fb.ships.push(new ShipInstance(st, defenderTechs, {}, defenderBuffs));
+        }
+
+        // Szövetséges állomásozó védelem hozzáadása
+        const stationedDefenses = db.getStationedDefenseFleets(targetPlanet.id);
+        for (const def of stationedDefenses) {
+            const defTechs = db.getPlayerResearch(def.owner_id);
+            const defUpgs = db.getShipUpgrades(def.owner_id);
+            for (const [st, cnt] of Object.entries(def.ships || {})) {
+                for (let i = 0; i < cnt; i++) {
+                    fb.ships.push(new ShipInstance(st, defTechs, defUpgs[st], []));
+                }
+            }
+        }
+
+        const creatorTechs = db.getPlayerResearch(op.creator_id);
+        const combatResult = CombatEngine.resolveCombat(armada, fb, 5, creatorTechs, defenderTechs);
+
+        if (combatResult.winnerId === op.creator_id) {
+            // Támadók győztek!
+            if (targetPlanet.is_bot) {
+                db.claimBotLoot(targetPlanet.id, op.creator_id);
+                db.db.prepare("UPDATE planets SET owner_id = ?, status = 'looted', loot_revealed = 1 WHERE id = ?").run(op.creator_id, targetPlanet.id);
+            } else {
+                db.db.prepare("UPDATE planets SET owner_id = ? WHERE id = ?").run(op.creator_id, targetPlanet.id);
+                // Védelmi erők elestek
+                db.db.prepare("DELETE FROM allied_defense_fleets WHERE planet_id = ?").run(targetPlanet.id);
+            }
+
+            // Dicsőség szétosztása
+            const baseGlory = combatResult.baseGlory || 150;
+            const shareG = Math.round(baseGlory / participantCount);
+            for (const part of op.participants) {
+                const p = db.getPlayer(part.player_id);
+                if (p) {
+                    p.glory_points = (p.glory_points || 0) + shareG;
+                    db.db.prepare("UPDATE players SET glory_points = ? WHERE id = ?").run(p.glory_points, p.id);
+                }
+            }
+
+            const winMsg = `[⚔️ SZÖVETSÉGI OSTROM SIKER] A hadtest bevette a(z) ${targetPlanet.name} világot! (+${shareG} GP / résztvevő)`;
+            recentAIActions.push(winMsg);
+            db.saveCombatLog(curTick, targetPlanet.pos_x, targetPlanet.pos_y, targetPlanet.name, op.creator_id, defenderOwnerId, op.creator_id, combatResult.log, combatResult.salvageMetal, combatResult.salvageIsotope);
+        } else {
+            const defMsg = `[🛡️ VÉDELMI SIKER] A(z) ${targetPlanet.name} védői sikeresen visszaverték a szövetségi támadást!`;
+            recentAIActions.push(defMsg);
+            db.saveCombatLog(curTick, targetPlanet.pos_x, targetPlanet.pos_y, targetPlanet.name, op.creator_id, defenderOwnerId, defenderOwnerId, combatResult.log, combatResult.salvageMetal, combatResult.salvageIsotope);
+        }
+
+        // Túlélők visszatérése
+        for (const ship of armada.ships) {
+            if (ship.isAlive && ship.ownerId) {
+                const basePlanet = db.db.prepare("SELECT id FROM planets WHERE owner_id = ? ORDER BY id ASC LIMIT 1").get(ship.ownerId);
+                if (basePlanet) {
+                    const sf = db.db.prepare("SELECT id FROM fleets WHERE origin_planet_id = ? AND state = 'stationed'").get(basePlanet.id);
+                    if (sf) {
+                        const existing = db.db.prepare("SELECT id FROM fleet_ships WHERE fleet_id = ? AND ship_type = ?").get(sf.id, ship.shipType);
+                        if (existing) {
+                            db.db.prepare("UPDATE fleet_ships SET count = count + 1 WHERE fleet_id = ? AND ship_type = ?").run(sf.id, ship.shipType);
+                        } else {
+                            db.db.prepare("INSERT INTO fleet_ships (id, fleet_id, ship_type, count, current_hull_total, current_shield_total) VALUES (?, ?, ?, 1, 100, 0)").run(`${sf.id}_${ship.shipType}`, sf.id, ship.shipType);
+                        }
+                    }
+                }
+            }
+        }
+
+        db.db.prepare("UPDATE alliance_operations SET status = 'completed' WHERE id = ?").run(opId);
+        return { success: true, combatResult, victory: combatResult.winnerId === op.creator_id };
+    }
 }
 
 function _mergeFleetIntoPlanet(fleet, planet) {
@@ -601,6 +837,18 @@ function _resolvePlanetBattle(attackerFleet, planet, tick) {
         for (let i = 0; i < cnt; i++) fb.ships.push(new ShipInstance(st, techsB, upgB[st], buffsB));
     }
 
+    // Szövetséges állomásozó védelmi flotta bevonása a védelembe!
+    const stationedDefenses = db.getStationedDefenseFleets(planet.id);
+    for (const def of stationedDefenses) {
+        const defTechs = db.getPlayerResearch(def.owner_id);
+        const defUpgs = db.getShipUpgrades(def.owner_id);
+        for (const [st, cnt] of Object.entries(def.ships || {})) {
+            for (let i = 0; i < cnt; i++) {
+                fb.ships.push(new ShipInstance(st, defTechs, defUpgs[st], []));
+            }
+        }
+    }
+
     const battleResult = CombatEngine.resolveCombat(fa, fb, 5, techsA, techsB);
 
     // Dicsőség pontok kiszámítása csökkenő hozadékkal
@@ -718,6 +966,8 @@ const server = http.createServer((req, res) => {
             allPlayers: db.getAllPlayers(),
             recentChat: db.getChatMessages(30),
             pvpTargets: db.getHumanPlayers(playerObj.id),
+            playerAlliance: db.getAllianceByPlayer(playerObj.id),
+            allianceOperations: db.getAllianceByPlayer(playerObj.id) ? db.getAllianceOperations(db.getAllianceByPlayer(playerObj.id).id) : [],
             recentAIActions
         };
         res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -744,6 +994,143 @@ const server = http.createServer((req, res) => {
 
     // Parancsnokok listája és Frakcióválasztó
     
+    // =========================================================================
+    // SZÖVETSÉGI RENDSZER (ALLIANCE & OPERATIONS) API VÉGPONTOK
+    // =========================================================================
+
+    if (pathname === '/api/alliance' && req.method === 'GET') {
+        const playerId = _getReqPlayerId(req, parsedUrl);
+        const alliance = db.getAllianceByPlayer(playerId);
+        const operations = alliance ? db.getAllianceOperations(alliance.id) : [];
+        const publicAlliances = db.getAllAlliances();
+        const planets = db.getAllPlanets();
+        const myPlanets = planets.filter(p => p.owner_id === playerId);
+        const stationedOnMyPlanets = [];
+        for (const mp of myPlanets) {
+            const defs = db.getStationedDefenseFleets(mp.id);
+            if (defs.length > 0) {
+                stationedOnMyPlanets.push({ planetId: mp.id, planetName: mp.name, defenses: defs });
+            }
+        }
+
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({
+            success: true,
+            alliance,
+            operations,
+            publicAlliances,
+            stationedOnMyPlanets
+        }));
+        return;
+    }
+
+    if (pathname === '/api/create-alliance' && req.method === 'POST') {
+        _parseJsonBody(req, res, body => {
+            const playerId = _getReqPlayerId(req, parsedUrl, body);
+            const { name, tag, description } = body;
+            const resData = db.createAlliance(name, tag, playerId, description);
+            if (resData.error) return _errorResponse(res, 400, resData.error);
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify(resData));
+        });
+        return;
+    }
+
+    if (pathname === '/api/join-alliance' && req.method === 'POST') {
+        _parseJsonBody(req, res, body => {
+            const playerId = _getReqPlayerId(req, parsedUrl, body);
+            const { allianceId } = body;
+            const resData = db.joinAlliance(allianceId, playerId);
+            if (resData.error) return _errorResponse(res, 400, resData.error);
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify(resData));
+        });
+        return;
+    }
+
+    if (pathname === '/api/leave-alliance' && req.method === 'POST') {
+        _parseJsonBody(req, res, body => {
+            const playerId = _getReqPlayerId(req, parsedUrl, body);
+            const resData = db.leaveAlliance(playerId);
+            if (resData.error) return _errorResponse(res, 400, resData.error);
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify(resData));
+        });
+        return;
+    }
+
+    if (pathname === '/api/create-alliance-operation' && req.method === 'POST') {
+        _parseJsonBody(req, res, body => {
+            const playerId = _getReqPlayerId(req, parsedUrl, body);
+            const alliance = db.getAllianceByPlayer(playerId);
+            if (!alliance) return _errorResponse(res, 400, "Nem vagy tagja egyetlen szövetségnek sem!");
+
+            const { targetType, targetId, targetTick, initialShips } = body;
+            const resData = db.createAllianceOperation(alliance.id, playerId, targetType, targetId, targetTick, initialShips || {});
+            if (resData.error) return _errorResponse(res, 400, resData.error);
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify(resData));
+        });
+        return;
+    }
+
+    if (pathname === '/api/join-alliance-operation' && req.method === 'POST') {
+        _parseJsonBody(req, res, body => {
+            const playerId = _getReqPlayerId(req, parsedUrl, body);
+            const { operationId, ships } = body;
+            const resData = db.joinAllianceOperation(operationId, playerId, ships || {});
+            if (resData.error) return _errorResponse(res, 400, resData.error);
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify(resData));
+        });
+        return;
+    }
+
+    if (pathname === '/api/cancel-alliance-operation' && req.method === 'POST') {
+        _parseJsonBody(req, res, body => {
+            const playerId = _getReqPlayerId(req, parsedUrl, body);
+            const { operationId } = body;
+            const resData = db.cancelAllianceOperation(operationId, playerId);
+            if (resData.error) return _errorResponse(res, 400, resData.error);
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify(resData));
+        });
+        return;
+    }
+
+    if (pathname === '/api/launch-alliance-operation' && req.method === 'POST') {
+        _parseJsonBody(req, res, body => {
+            const playerId = _getReqPlayerId(req, parsedUrl, body);
+            const { operationId } = body;
+            const op = db.getOperation(operationId);
+            if (!op) return _errorResponse(res, 404, "A hadművelet nem található!");
+            if (op.creator_id !== playerId) {
+                const mem = db.db.prepare("SELECT role FROM alliance_members WHERE alliance_id = ? AND player_id = ?").get(op.alliance_id, playerId);
+                if (!mem || mem.role !== 'leader') {
+                    return _errorResponse(res, 403, "Csak a szervező vagy a szövetség vezetője indíthatja el a hadtestet!");
+                }
+            }
+
+            const resData = _executeAllianceOperation(operationId);
+            if (resData.error) return _errorResponse(res, 400, resData.error);
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify(resData));
+        });
+        return;
+    }
+
+    if (pathname === '/api/recall-defense' && req.method === 'POST') {
+        _parseJsonBody(req, res, body => {
+            const playerId = _getReqPlayerId(req, parsedUrl, body);
+            const { alliedDefenseId } = body;
+            const resData = db.recallDefenseFleet(alliedDefenseId, playerId);
+            if (resData.error) return _errorResponse(res, 400, resData.error);
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify(resData));
+        });
+        return;
+    }
+
     if (pathname === '/api/pvp-roster' && req.method === 'GET') {
         const playerId = _getReqPlayerId(req, parsedUrl);
         const targets = db.getHumanPlayers(playerId);

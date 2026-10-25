@@ -134,6 +134,11 @@
         <span class="animate-pulse">☠️</span>
         <span class="hidden md:inline">3 BOSS CITADELLA</span>
       </button>
+      <button id="btn-alliance" onclick="openAllianceModal()" class="bg-indigo-950/90 hover:bg-indigo-900 active:scale-95 text-indigo-200 border border-indigo-500 font-mono text-xs font-bold px-2.5 py-1.5 rounded flex items-center gap-1.5 shadow-lg shadow-indigo-950 transition-all" title="Szövetségi Rendszer & Közös Hadműveletek">
+        <span>🤝</span>
+        <span class="hidden md:inline">SZÖVETSÉG</span>
+        <span class="text-[10px] bg-indigo-900 px-1.5 py-0.2 rounded border border-indigo-700 font-mono text-cyan-300" id="header-alliance-badge">NINCS</span>
+      </button>
       <button id="btn-trade" onclick="openTradeModal()" class="bg-amber-950/90 hover:bg-amber-900 active:scale-95 text-amber-200 border border-amber-500 font-mono text-xs font-bold px-2.5 py-1.5 rounded flex items-center gap-1.5 shadow-lg shadow-amber-950 transition-all" title="Nexus Kereskedelmi Állomás & Tőzsde">
         <span>🏪</span>
         <span class="hidden md:inline">PIAC</span>
@@ -591,6 +596,10 @@
           <span>🪐</span>
           <span>4. 30 Bot Világ & Bossok</span>
         </button>
+        <button id="guide-tab-alliance" onclick="switchGuideTab('alliance')" class="px-3 py-1.5 rounded text-xs font-bold font-mono transition-all flex items-center gap-1.5 bg-slate-900/70 border border-slate-800 text-slate-400 hover:text-slate-200">
+          <span>🤝</span>
+          <span>5. Szövetség & Underdog</span>
+        </button>
       </div>
 
       <!-- Útmutató Tartalom (Görgethető törzs) -->
@@ -627,6 +636,56 @@
       <div class="p-3 bg-slate-950 border-t border-slate-900 text-[11px] text-slate-400 flex items-center justify-between">
         <span>🛡️ Farmolás-védelem aktív (Dicsőség szorzó: 100% → 60% → 35% → 20% → 10%)</span>
         <button onclick="closeModal('modal-pvp-roster')" class="bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded font-bold">Bezárás</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SZÖVETSÉG ÉS HADMŰVELETI KÖZPONT (WAR ROOM) MODÁL -->
+  <div id="modal-alliance" class="hidden fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-3 font-mono text-xs">
+    <div class="bg-slate-900 border border-indigo-500/80 rounded-2xl max-w-4xl w-full max-h-[92vh] flex flex-col shadow-2xl overflow-hidden">
+      <!-- Modal Fejléc -->
+      <div class="p-3.5 bg-gradient-to-r from-indigo-950 to-slate-900 border-b border-indigo-800 flex items-center justify-between shrink-0">
+        <div class="flex items-center gap-2.5">
+          <span class="text-2xl">🤝</span>
+          <div>
+            <h2 class="text-sm sm:text-base font-bold text-indigo-300 tracking-wider flex items-center gap-2">
+              <span>GALAKTIKUS SZÖVETSÉG & HADMŰVELETI KÖZPONT</span>
+              <span id="alliance-modal-tag" class="text-[10px] bg-indigo-900 border border-indigo-700 text-indigo-200 px-2 py-0.5 rounded font-bold">WAR ROOM</span>
+            </h2>
+            <div class="text-[11px] text-slate-400">
+              Közös támadások (Boss: max 5 fő, Játékos: max 3 fő), underdog bónuszok és szövetségi védelem.
+            </div>
+          </div>
+        </div>
+        <button onclick="closeModal('modal-alliance')" class="text-slate-400 hover:text-white text-base px-2 py-1 rounded hover:bg-slate-800 transition-colors">✕</button>
+      </div>
+
+      <!-- Fülek (Tabs) -->
+      <div class="flex border-b border-indigo-950/80 bg-slate-950/70 px-3 py-2 gap-2 overflow-x-auto shrink-0">
+        <button id="alliance-tab-roster" onclick="switchAllianceTab('roster')" class="px-3 py-1.5 rounded text-xs font-bold font-mono transition-all flex items-center gap-1.5 bg-indigo-900/90 text-indigo-200 border border-indigo-400 shadow">
+          <span>👥</span>
+          <span>1. Szövetség & Tagság</span>
+        </button>
+        <button id="alliance-tab-ops" onclick="switchAllianceTab('ops')" class="px-3 py-1.5 rounded text-xs font-bold font-mono transition-all flex items-center gap-1.5 bg-slate-900/70 border border-slate-800 text-slate-400 hover:text-slate-200">
+          <span>⚔️</span>
+          <span>2. Hadműveleti Központ (Közös Támadás)</span>
+          <span id="alliance-ops-badge" class="text-[9px] px-1 py-0.2 rounded bg-amber-950 text-amber-300 border border-amber-700">0</span>
+        </button>
+        <button id="alliance-tab-defense" onclick="switchAllianceTab('defense')" class="px-3 py-1.5 rounded text-xs font-bold font-mono transition-all flex items-center gap-1.5 bg-slate-900/70 border border-slate-800 text-slate-400 hover:text-slate-200">
+          <span>🛡️</span>
+          <span>3. Szövetségi Védelem (Garrison)</span>
+        </button>
+      </div>
+
+      <!-- Tartalomterület -->
+      <div class="flex-1 overflow-y-auto p-4 space-y-4" id="alliance-content-area">
+        <!-- JS generálja a fül tartalmát -->
+      </div>
+
+      <!-- Modal Lábléc -->
+      <div class="p-3 bg-slate-950 border-t border-slate-900 text-[11px] text-slate-400 flex items-center justify-between shrink-0">
+        <span>💡 <i>A szövetségesek nem támadhatják egymást, és védelmet állomásoztathatnak egymás bolygóin.</i></span>
+        <button onclick="closeModal('modal-alliance')" class="bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded font-bold">Bezárás</button>
       </div>
     </div>
   </div>
@@ -707,6 +766,39 @@
           <span>💥 Fegyverzet: <b id="boss-stat-dmg" class="text-red-400 font-bold">550 DMG</b></span>
           <span>🌀 Típus: <b id="boss-stat-type" class="text-purple-400 font-bold">Precursor Bástya</b></span>
           <span>⚡ Regeneráció: <b id="boss-stat-reg" class="text-amber-400 font-bold">+400 Pajzs/kör</b></span>
+        </div>
+      </div>
+
+      <!-- Boss Underdog Harci Bónuszok Kártya -->
+      <div class="px-4 py-2.5 bg-indigo-950/40 border-b border-indigo-900/60 shrink-0">
+        <div class="flex items-center justify-between mb-1.5">
+          <span class="text-[11px] font-bold text-indigo-300 flex items-center gap-1.5">
+            <span>⚡</span>
+            <span>BOSS UNDERDOG HARCI BÓNUSZOK (SZÖVETSÉG)</span>
+          </span>
+          <span class="text-[9px] text-amber-300 font-bold">"Minél kevesebb fős a támadás, annál több a bónusz!"</span>
+        </div>
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[10px] font-mono">
+          <div class="p-2 bg-slate-900/90 rounded border border-amber-500/50 text-amber-300 shadow">
+            <div class="font-bold flex items-center justify-between"><span>🥇 1 FŐ</span><span class="text-[9px] bg-amber-950 px-1 rounded border border-amber-700">SOLO</span></div>
+            <div class="text-white text-[11px] font-bold mt-0.5">+45% DMG</div>
+            <div class="text-amber-200/80 text-[9px]">+25% Ellenállás</div>
+          </div>
+          <div class="p-2 bg-slate-900/90 rounded border border-sky-500/50 text-sky-300 shadow">
+            <div class="font-bold flex items-center justify-between"><span>🥈 2 FŐ</span><span class="text-[9px] bg-sky-950 px-1 rounded border border-sky-700">DUO</span></div>
+            <div class="text-white text-[11px] font-bold mt-0.5">+25% DMG</div>
+            <div class="text-sky-200/80 text-[9px]">+15% Ellenállás</div>
+          </div>
+          <div class="p-2 bg-slate-900/90 rounded border border-indigo-500/50 text-indigo-300 shadow">
+            <div class="font-bold flex items-center justify-between"><span>🥉 3 FŐ</span><span class="text-[9px] bg-indigo-950 px-1 rounded border border-indigo-700">TRIO</span></div>
+            <div class="text-white text-[11px] font-bold mt-0.5">+10% DMG</div>
+            <div class="text-indigo-200/80 text-[9px]">+8% Ellenállás</div>
+          </div>
+          <div class="p-2 bg-slate-900/90 rounded border border-slate-700 text-slate-400 shadow">
+            <div class="font-bold flex items-center justify-between"><span>🛡️ 4–5 FŐ</span><span class="text-[9px] bg-slate-950 px-1 rounded border border-slate-800">ARMADA</span></div>
+            <div class="text-slate-300 text-[11px] font-bold mt-0.5">0% Bónusz</div>
+            <div class="text-slate-400 text-[9px]">Tömegerő előny</div>
+          </div>
         </div>
       </div>
 
@@ -4096,8 +4188,629 @@
         `;
       }
     }
-        window.renderGuideContent = renderGuideContent;
+              } else if (tabKey === 'alliance') {
+        container.innerHTML = `
+          <div class="space-y-4 font-mono">
+            <div class="bg-indigo-950/40 border border-indigo-500/60 p-3.5 rounded-xl text-indigo-200 text-xs space-y-1">
+              <div class="font-bold text-indigo-300 text-sm flex items-center gap-2">
+                <span>🤝</span>
+                <span>SZÖVETSÉG, KÖZÖS HADTEST (WAR ROOM) & UNDERDOG BÓNUSZOK</span>
+              </div>
+              <div>A játékosok szövetséget alapíthatnak, kölcsönösen védhetik egymást, és közös hadtesteket indíthatnak a galaxis veszedelmei ellen.</div>
+            </div>
 
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+              <div class="bg-slate-900/80 border border-red-700/60 p-3 rounded-xl space-y-2">
+                <div class="font-bold text-red-300 flex items-center gap-2 border-b border-red-900 pb-1.5">
+                  <span>⚔️</span>
+                  <span>KÖZÖS TÁMADÁS LÉTSZÁMKORLÁTOK</span>
+                </div>
+                <div class="text-[11px] text-slate-300 space-y-1">
+                  <div>• <b>Fő Boss Citadellák:</b> Legfeljebb <b>5 FŐ</b> támadhat egyszerre a szövetségből.</div>
+                  <div>• <b>Más Játékos / Bot Bolygó:</b> Legfeljebb <b>3 FŐ</b> szövetséges indulhat közös ostromra.</div>
+                  <div>• <b>Baráti Védelem:</b> A szövetségesek nem támadhatják meg egymást; ha szövetséges bolygójára indítasz flottát, az <b>védelmi erősítésként</b> beáll a helyőrségbe!</div>
+                </div>
+              </div>
+
+              <div class="bg-slate-900/80 border border-amber-600/60 p-3 rounded-xl space-y-2">
+                <div class="font-bold text-amber-300 flex items-center gap-2 border-b border-amber-900 pb-1.5">
+                  <span>⚡</span>
+                  <span>BOSS UNDERDOG BOOST ("MINÉL KEVESEBB, ANNÁL TÖBB")</span>
+                </div>
+                <div class="text-[11px] text-slate-300 space-y-1">
+                  <div>• <b>🥇 1 Fő (Solo):</b> <b class="text-amber-300">+45% Sebzés (DMG)</b> és <b class="text-emerald-300">+25% Védelmi Ellenállás</b>.</div>
+                  <div>• <b>🥈 2 Fő (Duo):</b> <b class="text-sky-300">+25% Sebzés (DMG)</b> és <b class="text-emerald-300">+15% Védelmi Ellenállás</b>.</div>
+                  <div>• <b>🥉 3 Fő (Trio):</b> <b class="text-indigo-300">+10% Sebzés (DMG)</b> és <b class="text-emerald-300">+8% Védelmi Ellenállás</b>.</div>
+                  <div>• <b>🛡️ 4–5 Fő (Armada):</b> 0% bónusz (a masszív összevont haderő és a sok hajó a taktikai fölény).</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+    }
+    window.renderGuideContent = renderGuideContent;
+
+
+    // =========================================================================
+    // 4/I. SZÖVETSÉGI RENDSZER ÉS KÖZÖS HADMŰVELETI KÖZPONT (WAR ROOM)
+    // =========================================================================
+    STATE.allianceData = null;
+    STATE.activeAllianceTab = 'roster';
+
+    async function fetchAllianceData() {
+      try {
+        const pId = STATE.currentPlayerId || 'player';
+        const res = await fetch(`${API_BASE}/api/alliance?playerId=${pId}`);
+        const data = await res.json();
+        if (data && data.success) {
+          STATE.allianceData = data;
+          updateAllianceHeaderBadge();
+        }
+      } catch (e) {
+        console.error("Hiba a szövetségi adatok lekérésekor:", e);
+      }
+    }
+
+    function updateAllianceHeaderBadge() {
+      const badge = document.getElementById('header-alliance-badge');
+      if (badge) {
+        if (STATE.allianceData && STATE.allianceData.alliance) {
+          badge.innerText = STATE.allianceData.alliance.tag || 'SZÖV';
+          badge.className = 'text-[10px] bg-indigo-900 px-1.5 py-0.2 rounded border border-indigo-400 font-mono text-emerald-300 font-bold';
+        } else {
+          badge.innerText = 'NINCS';
+          badge.className = 'text-[10px] bg-slate-900 px-1.5 py-0.2 rounded border border-slate-700 font-mono text-slate-400';
+        }
+      }
+      const opsBadge = document.getElementById('alliance-ops-badge');
+      if (opsBadge) {
+        const opsCount = (STATE.allianceData && STATE.allianceData.operations) ? STATE.allianceData.operations.filter(o => o.status === 'recruiting').length : 0;
+        opsBadge.innerText = opsCount;
+      }
+    }
+
+    function openAllianceModal() {
+      switchAllianceTab(STATE.activeAllianceTab || 'roster');
+      document.getElementById('modal-alliance').classList.remove('hidden');
+      fetchAllianceData().then(() => renderAllianceModal());
+    }
+    window.openAllianceModal = openAllianceModal;
+
+    function switchAllianceTab(tabKey) {
+      STATE.activeAllianceTab = tabKey;
+      ['roster', 'ops', 'defense'].forEach(t => {
+        const btn = document.getElementById('alliance-tab-' + t);
+        if (btn) {
+          if (t === tabKey) {
+            btn.className = 'px-3 py-1.5 rounded text-xs font-bold font-mono transition-all flex items-center gap-1.5 bg-indigo-900/90 text-indigo-200 border border-indigo-400 shadow';
+          } else {
+            btn.className = 'px-3 py-1.5 rounded text-xs font-bold font-mono transition-all flex items-center gap-1.5 bg-slate-900/70 border border-slate-800 text-slate-400 hover:text-slate-200';
+          }
+        }
+      });
+      renderAllianceModal();
+    }
+    window.switchAllianceTab = switchAllianceTab;
+
+    function renderAllianceModal() {
+      const container = document.getElementById('alliance-content-area');
+      if (!container) return;
+
+      const ad = STATE.allianceData || { alliance: null, operations: [], publicAlliances: [], stationedOnMyPlanets: [] };
+      const alliance = ad.alliance;
+      const tab = STATE.activeAllianceTab || 'roster';
+
+      const tagEl = document.getElementById('alliance-modal-tag');
+      if (tagEl) {
+        tagEl.innerText = alliance ? alliance.tag : 'NINCS SZÖVETSÉG';
+      }
+
+      if (tab === 'roster') {
+        if (alliance) {
+          container.innerHTML = `
+            <div class="space-y-4 font-mono">
+              <div class="bg-gradient-to-r from-indigo-950/80 to-slate-900/80 border border-indigo-500/60 p-4 rounded-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-3 shadow-lg">
+                <div class="space-y-1">
+                  <div class="flex items-center gap-2">
+                    <span class="text-xl">🛡️</span>
+                    <span class="text-base font-bold text-white tracking-wider">${alliance.name}</span>
+                    <span class="bg-indigo-900 text-indigo-200 px-2 py-0.5 rounded border border-indigo-400 text-xs font-bold">${alliance.tag}</span>
+                    <span class="text-xs text-slate-400">(${alliance.memberCount || 1} Parancsnok)</span>
+                  </div>
+                  <div class="text-[11px] text-slate-300">${alliance.description || 'Nincs leírás megadva.'}</div>
+                  <div class="text-[10px] text-slate-400">Vezető: <b class="text-amber-300">${alliance.leaderName}</b> • Te rangod: <b class="text-cyan-300">${alliance.currentPlayerRole === 'leader' ? '👑 Vezér' : '⚔️ Szövitag'}</b></div>
+                </div>
+                <div class="flex items-center gap-2">
+                  <button onclick="handleLeaveAlliance()" class="bg-red-950/80 hover:bg-red-900 text-red-200 border border-red-700 px-3 py-1.5 rounded text-xs font-bold transition-all">
+                    Kilépés a Szövetségből
+                  </button>
+                </div>
+              </div>
+
+              <div class="space-y-2">
+                <div class="text-xs font-bold text-indigo-300 tracking-wider uppercase border-b border-indigo-900/60 pb-1 flex items-center justify-between">
+                  <span>SZÖVETSÉGI PARANCSNOKOK NÉVSORA</span>
+                  <span class="text-[10px] text-slate-400">Összesen: ${alliance.members ? alliance.members.length : 0} fő</span>
+                </div>
+                <div class="overflow-x-auto">
+                  <table class="w-full text-left border border-slate-800 rounded-lg overflow-hidden text-xs">
+                    <thead class="bg-slate-950 text-slate-400 text-[10px] uppercase">
+                      <tr>
+                        <th class="p-2.5">Parancsnok</th>
+                        <th class="p-2.5">Rang</th>
+                        <th class="p-2.5">Bázisbolygó</th>
+                        <th class="p-2.5">Dicsőség</th>
+                        <th class="p-2.5 text-right">Művelet</th>
+                      </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-800/80 bg-slate-900/60">
+                      ${(alliance.members || []).map(m => `
+                        <tr class="hover:bg-slate-800/50">
+                          <td class="p-2.5 font-bold flex items-center gap-1.5" style="color: ${m.color_hex || '#38bdf8'}">
+                            <span>${m.player_id === 'player' ? '🔵' : '🔴'}</span>
+                            <span>${m.username} ${m.player_id === (STATE.currentPlayerId||'player') ? '(Te)' : ''}</span>
+                          </td>
+                          <td class="p-2.5">
+                            <span class="px-1.5 py-0.5 rounded text-[10px] border ${m.role === 'leader' ? 'bg-amber-950 text-amber-300 border-amber-700 font-bold' : 'bg-slate-800 text-slate-300 border-slate-700'}">
+                              ${m.role === 'leader' ? '👑 Vezér' : 'Tag'}
+                            </span>
+                          </td>
+                          <td class="p-2.5 text-slate-300">${m.base_planet_name || 'Bázis'}</td>
+                          <td class="p-2.5 text-amber-300 font-bold">🏆 ${Math.round(m.glory_points || 0)} GP</td>
+                          <td class="p-2.5 text-right">
+                            ${m.player_id !== (STATE.currentPlayerId||'player') ? `
+                              <button onclick="promptSendDefense('${m.player_id}')" class="bg-sky-950 hover:bg-sky-900 text-sky-200 border border-sky-700 px-2 py-1 rounded text-[10px] font-bold">
+                                🛡️ Védelem Küldése
+                              </button>
+                            ` : '<span class="text-slate-500 text-[10px]">Saját</span>'}
+                          </td>
+                        </tr>
+                      `).join('')}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          `;
+        } else {
+          // Nincs szövetségben: Alapítás és Csatlakozás űrlap
+          container.innerHTML = `
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 font-mono">
+              <!-- Bal oldal: Új Szövetség Alapítása -->
+              <div class="bg-slate-900/90 border border-indigo-700/60 rounded-xl p-4 space-y-3">
+                <div class="font-bold text-indigo-300 text-sm flex items-center gap-2 border-b border-indigo-900 pb-2">
+                  <span>🏛️</span>
+                  <span>ÚJ SZÖVETSÉG ALAPÍTÁSA</span>
+                </div>
+                <div class="text-[11px] text-slate-300">
+                  Hozz létre egy új szövetséget, hívj meg társakat és szervezzetek közös hadműveleteket a galaxisban!
+                </div>
+                <div class="space-y-2">
+                  <div>
+                    <label class="block text-[10px] text-slate-400 mb-1">SZÖVETSÉG NEVE (min. 3 betű):</label>
+                    <input id="input-ally-name" type="text" placeholder="pl. Orion Föderáció" class="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs focus:border-indigo-500 outline-none">
+                  </div>
+                  <div>
+                    <label class="block text-[10px] text-slate-400 mb-1">SZÖVETSÉGI TAG (2-5 karakter):</label>
+                    <input id="input-ally-tag" type="text" placeholder="pl. ORI" maxlength="5" class="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs uppercase focus:border-indigo-500 outline-none">
+                  </div>
+                  <div>
+                    <label class="block text-[10px] text-slate-400 mb-1">RÖVID LEÍRÁS:</label>
+                    <textarea id="input-ally-desc" placeholder="A szövetség célja és filozófiája..." class="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs h-16 focus:border-indigo-500 outline-none"></textarea>
+                  </div>
+                  <button onclick="handleCreateAlliance()" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2 rounded border border-indigo-400 shadow-lg shadow-indigo-950 transition-all flex items-center justify-center gap-2">
+                    <span>👑</span>
+                    <span>SZÖVETSÉG MEGALAPÍTÁSA</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Jobb oldal: Nyilvános Szövetségek -->
+              <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-4 space-y-3">
+                <div class="font-bold text-cyan-300 text-sm flex items-center gap-2 border-b border-slate-800 pb-2">
+                  <span>🌐</span>
+                  <span>NYILVÁNOS SZÖVETSÉGEK LISTÁJA</span>
+                </div>
+                <div class="space-y-2 max-h-72 overflow-y-auto">
+                  ${(ad.publicAlliances || []).length > 0 ? ad.publicAlliances.map(pa => `
+                    <div class="bg-slate-950/90 border border-slate-800 hover:border-indigo-500/60 p-3 rounded-lg flex items-center justify-between gap-3 transition-all">
+                      <div>
+                        <div class="font-bold text-white flex items-center gap-1.5">
+                          <span>${pa.name}</span>
+                          <span class="text-[10px] bg-indigo-950 text-indigo-300 border border-indigo-700 px-1.5 rounded">${pa.tag}</span>
+                        </div>
+                        <div class="text-[10px] text-slate-400 mt-0.5">Vezető: ${pa.leaderName} • ${pa.memberCount || 1} tag</div>
+                        <div class="text-[10px] text-slate-400 italic mt-0.5">${pa.description || ''}</div>
+                      </div>
+                      <button onclick="handleJoinAlliance('${pa.id}')" class="bg-emerald-950 hover:bg-emerald-900 text-emerald-200 border border-emerald-700 px-3 py-1.5 rounded text-xs font-bold transition-all">
+                        Belépés
+                      </button>
+                    </div>
+                  `).join('') : '<div class="text-center py-8 text-slate-500">Még nincs nyilvános szövetség a szektorban. Alapíts egyet bal oldalon!</div>'}
+                </div>
+              </div>
+            </div>
+          `;
+        }
+      } else if (tab === 'ops') {
+        // HADMŰVELETI KÖZPONT (WAR ROOM / KÖZÖS TÁMADÁS)
+        if (!alliance) {
+          container.innerHTML = `
+            <div class="text-center py-12 text-slate-400 font-mono space-y-3">
+              <span class="text-4xl">🔒</span>
+              <div class="text-sm font-bold text-indigo-300">A Hadműveleti Központ használatához szövetségi tagság szükséges!</div>
+              <div class="text-xs">Lépj be egy szövetségbe vagy alapíts sajátot az 1. fülön.</div>
+            </div>
+          `;
+          return;
+        }
+
+        const ops = ad.operations || [];
+        container.innerHTML = `
+          <div class="space-y-4 font-mono">
+            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-gradient-to-r from-red-950/40 via-indigo-950/40 to-slate-900/60 border border-indigo-700/60 p-3.5 rounded-xl">
+              <div>
+                <div class="text-xs font-bold text-white flex items-center gap-2">
+                  <span>⚔️</span>
+                  <span>KOORDINÁLT SZÖVETSÉGI HADMŰVELETEK (WAR ROOM)</span>
+                </div>
+                <div class="text-[10px] text-slate-300 mt-0.5">
+                  Jelölj ki célpontot és indulási körablakot! <b>Bossra max 5 fő</b>, <b>más játékosra max 3 fő</b> támadhat.
+                </div>
+              </div>
+              <button onclick="openCreateOperationModal()" class="bg-red-700 hover:bg-red-600 active:scale-95 text-white font-bold px-3 py-1.5 rounded border border-red-500 text-xs shadow-lg shadow-red-950 transition-all flex items-center gap-1.5">
+                <span>➕</span>
+                <span>ÚJ TÁMADÁS KIÍRÁSA</span>
+              </button>
+            </div>
+
+            <!-- Hadműveleti lista -->
+            <div class="space-y-3">
+              ${ops.length > 0 ? ops.map(op => {
+                const isCreator = op.creator_id === (STATE.currentPlayerId || 'player');
+                const isJoined = (op.participants || []).some(p => p.player_id === (STATE.currentPlayerId || 'player'));
+                const curTick = STATE.tick || 1;
+                const remainingTicks = Math.max(0, op.target_tick - curTick);
+
+                return `
+                  <div class="bg-slate-900/90 border ${op.status === 'recruiting' ? 'border-amber-600/70 shadow-lg shadow-amber-950/30' : 'border-slate-800 opacity-80'} rounded-xl p-4 space-y-3">
+                    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 border-b border-slate-800 pb-2">
+                      <div class="flex items-center gap-2.5">
+                        <span class="text-xl">${op.target_type === 'boss' ? '☠️' : (op.target_type === 'player' ? '⚔️' : '🪐')}</span>
+                        <div>
+                          <div class="text-xs font-bold text-white flex items-center gap-2">
+                            <span>${op.target_name}</span>
+                            <span class="text-[9px] px-1.5 py-0.2 rounded ${op.target_type === 'boss' ? 'bg-red-950 text-red-300 border border-red-700' : 'bg-purple-950 text-purple-300 border border-purple-700'}">
+                              ${op.target_type === 'boss' ? 'BOSS TITÁN (MAX 5 FŐ)' : 'RIVÁLIS BOLYGÓ (MAX 3 FŐ)'}
+                            </span>
+                          </div>
+                          <div class="text-[10px] text-slate-400">
+                            Szervező: <b class="text-indigo-300">${op.creatorName}</b> • Indulás: <b>#${op.target_tick}. Kör</b> (${remainingTicks > 0 ? `⏱️ ${remainingTicks} kör múlva` : '🔥 MOST'})
+                          </div>
+                        </div>
+                      </div>
+
+                      <div class="flex items-center gap-2">
+                        <span class="text-xs font-bold px-2.5 py-1 rounded border ${op.status === 'recruiting' ? 'bg-amber-950 text-amber-300 border-amber-700 animate-pulse' : 'bg-slate-950 text-slate-500 border-slate-800'}">
+                          ${op.status === 'recruiting' ? `${op.currentParticipants}/${op.max_participants} FŐ CSATLAKOZOTT` : 'LEZÁRULT'}
+                        </span>
+                        ${op.status === 'recruiting' && isCreator ? `
+                          <button onclick="handleLaunchOperation('${op.id}')" class="bg-red-600 hover:bg-red-500 text-white font-bold px-3 py-1 rounded border border-red-400 text-xs shadow transition-all">
+                            🚀 INDÍTÁS MOST
+                          </button>
+                          <button onclick="handleCancelOperation('${op.id}')" class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-1 rounded text-xs">
+                            ✕ Törlés
+                          </button>
+                        ` : ''}
+                      </div>
+                    </div>
+
+                    <!-- Résztvevők listája és felajánlott flotta -->
+                    <div class="space-y-1.5 bg-slate-950/80 p-3 rounded-lg border border-slate-800/80 text-[11px]">
+                      <div class="text-slate-400 font-bold flex justify-between border-b border-slate-800/60 pb-1 text-[10px]">
+                        <span>RÉSZTVEVŐ HADTESTEK:</span>
+                        <span class="text-amber-300">Összesen: ${op.totalShipsCount || 0} hadihajó felajánlva</span>
+                      </div>
+                      <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 pt-1">
+                        ${(op.participants || []).map(p => {
+                          const shipEntries = Object.entries(p.shipsParsed || {}).filter(([_, c]) => c > 0);
+                          const shipSummary = shipEntries.map(([st, c]) => `${c} ${st}`).join(', ') || 'Nincs hajó';
+                          return `
+                            <div class="p-2 bg-slate-900 rounded border border-slate-800 flex items-start justify-between gap-1">
+                              <div>
+                                <div class="font-bold" style="color: ${p.color_hex || '#38bdf8'}">${p.username}</div>
+                                <div class="text-[10px] text-slate-300">${shipSummary}</div>
+                              </div>
+                              <span class="text-[9px] bg-indigo-950 text-indigo-300 px-1 rounded border border-indigo-800 font-bold">${p.totalShips} hajó</span>
+                            </div>
+                          `;
+                        }).join('')}
+                      </div>
+                    </div>
+
+                    <!-- Csatlakozás gomb ha még nem csatlakozott és van hely -->
+                    ${op.status === 'recruiting' && !isJoined && !op.isFull ? `
+                      <div class="flex justify-end pt-1">
+                        <button onclick="promptJoinOperation('${op.id}')" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-4 py-1.5 rounded border border-indigo-400 text-xs shadow transition-all flex items-center gap-1.5">
+                          <span>➕</span>
+                          <span>CSATLAKOZÁS SAJÁT FLOTTÁVAL</span>
+                        </button>
+                      </div>
+                    ` : (isJoined ? `<div class="text-right text-[10px] text-emerald-400 font-bold">✓ Te már csatlakoztál ehhez a hadművelethez.</div>` : '')}
+                  </div>
+                `;
+              }).join('') : `
+                <div class="text-center py-10 bg-slate-950/60 rounded-xl border border-slate-800 text-slate-400 space-y-2">
+                  <span class="text-3xl">🕊️</span>
+                  <div class="text-xs">Jelenleg nincs aktív hadművelet kitűzve.</div>
+                  <button onclick="openCreateOperationModal()" class="text-xs text-indigo-300 hover:underline font-bold">
+                    Kattints ide egy új támadás megszervezéséhez!
+                  </button>
+                </div>
+              `}
+            </div>
+          </div>
+        `;
+      } else if (tab === 'defense') {
+        // SZÖVETSÉGI VÉDELEM (GARRISON)
+        if (!alliance) {
+          container.innerHTML = `<div class="text-center py-12 text-slate-400 text-xs">A védelmi erősítésekhez szövetségi tagság szükséges!</div>`;
+          return;
+        }
+
+        const allies = (alliance.members || []).filter(m => m.player_id !== (STATE.currentPlayerId||'player'));
+        const stationedOnMine = ad.stationedOnMyPlanets || [];
+
+        container.innerHTML = `
+          <div class="space-y-4 font-mono">
+            <div class="bg-sky-950/30 border border-sky-800/60 p-3.5 rounded-xl space-y-1">
+              <div class="text-xs font-bold text-sky-300 flex items-center gap-2">
+                <span>🛡️</span>
+                <span>SZÖVETSÉGES VÉDELMI FLOTTA ÁLLOMÁSOZTATÁS (GARRISON SUPPORT)</span>
+              </div>
+              <div class="text-[11px] text-slate-300">
+                Segíts megvédeni a szövetségesed bolygóit! A szövetséges bolygóra küldött védelmi flotta békésen állomásozik, és egy ellenséges támadás esetén a helyi bolygópajzzsal és a helyőrséggel <b>vállvetve együtt harcol</b>!
+              </div>
+            </div>
+
+            <!-- Saját bolygókon állomásozó szövetséges védelem -->
+            <div class="space-y-2">
+              <div class="text-xs font-bold text-indigo-300 tracking-wider uppercase border-b border-indigo-900 pb-1">
+                SAJÁT BOLYGÓIDON ÁLLOMÁSOZÓ SZÖVETSÉGI VÉDELMI ERŐK
+              </div>
+              <div class="space-y-2">
+                ${stationedOnMine.length > 0 ? stationedOnMine.map(sp => `
+                  <div class="bg-slate-950 p-3 rounded-lg border border-slate-800 space-y-2">
+                    <div class="font-bold text-white text-xs flex items-center justify-between">
+                      <span>🪐 ${sp.planetName}</span>
+                      <span class="text-[10px] text-sky-300">${sp.defenses.length} szövetséges egység vigyázza</span>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
+                      ${sp.defenses.map(d => {
+                        const sList = Object.entries(d.ships || {}).map(([st, c]) => `${c} ${st}`).join(', ') || 'Nincs hajó';
+                        return `
+                          <div class="p-2 bg-slate-900 rounded border border-slate-800 flex items-center justify-between">
+                            <div>
+                              <div class="font-bold" style="color: ${d.owner_color || '#38bdf8'}">${d.owner_name}</div>
+                              <div class="text-[10px] text-slate-300">${sList}</div>
+                            </div>
+                            <span class="text-[9px] bg-sky-950 text-sky-300 border border-sky-800 px-1.5 py-0.5 rounded font-bold">VÉDELEM</span>
+                          </div>
+                        `;
+                      }).join('')}
+                    </div>
+                  </div>
+                `).join('') : '<div class="text-center py-6 text-slate-500 text-xs">Jelenleg egyetlen szövetséges flotta sem állomásozik a bolygóidon.</div>'}
+              </div>
+            </div>
+
+            <!-- Szövetségesek listája védelmi flotta indításához -->
+            <div class="space-y-2 pt-2">
+              <div class="text-xs font-bold text-sky-300 tracking-wider uppercase border-b border-sky-900 pb-1">
+                VÉDELEM KÜLDÉSE SZÖVETSÉGES PARANCSNOK BOLYGÓJÁRA
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                ${allies.length > 0 ? allies.map(al => `
+                  <div class="bg-slate-900/90 border border-slate-800 p-3 rounded-xl flex items-center justify-between gap-3">
+                    <div>
+                      <div class="font-bold text-white text-xs" style="color: ${al.color_hex || '#38bdf8'}">${al.username}</div>
+                      <div class="text-[10px] text-slate-300">Fő bázis: ${al.base_planet_name || 'Bázis'}</div>
+                    </div>
+                    <button onclick="promptSendDefense('${al.player_id}')" class="bg-sky-700 hover:bg-sky-600 active:scale-95 text-white font-bold px-3 py-1.5 rounded text-xs border border-sky-500 shadow transition-all flex items-center gap-1.5">
+                      <span>🛡️</span>
+                      <span>Flotta Küldése</span>
+                    </button>
+                  </div>
+                `).join('') : '<div class="col-span-2 text-center py-6 text-slate-500 text-xs">Nincs másik tag a szövetségben. Hívj meg társakat az 1. fülön!</div>'}
+              </div>
+            </div>
+          </div>
+        `;
+      }
+    }
+    window.renderAllianceModal = renderAllianceModal;
+
+    // Műveletkezelők (Action Handlers)
+    async function handleCreateAlliance() {
+      const name = document.getElementById('input-ally-name')?.value;
+      const tag = document.getElementById('input-ally-tag')?.value;
+      const desc = document.getElementById('input-ally-desc')?.value;
+      if (!name || !tag) return alert("Add meg a szövetség nevét és tagjét!");
+
+      try {
+        const pId = STATE.currentPlayerId || 'player';
+        const res = await fetch(`${API_BASE}/api/create-alliance`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, tag, description: desc, playerId: pId })
+        });
+        const data = await res.json();
+        if (data.error) return alert("Hiba: " + data.error);
+        alert("🎉 Szövetség sikeresen megalapítva!");
+        await fetchAllianceData();
+        renderAllianceModal();
+      } catch (e) {
+        alert("Hiba történt a szövetség alapításakor: " + e.message);
+      }
+    }
+    window.handleCreateAlliance = handleCreateAlliance;
+
+    async function handleJoinAlliance(allianceId) {
+      try {
+        const pId = STATE.currentPlayerId || 'player';
+        const res = await fetch(`${API_BASE}/api/join-alliance`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ allianceId, playerId: pId })
+        });
+        const data = await res.json();
+        if (data.error) return alert("Hiba: " + data.error);
+        alert("🎉 Sikeresen csatlakoztál a szövetséghez!");
+        await fetchAllianceData();
+        renderAllianceModal();
+      } catch (e) {
+        alert("Hiba: " + e.message);
+      }
+    }
+    window.handleJoinAlliance = handleJoinAlliance;
+
+    async function handleLeaveAlliance() {
+      if (!confirm("Biztosan ki akarsz lépni a szövetségből?")) return;
+      try {
+        const pId = STATE.currentPlayerId || 'player';
+        const res = await fetch(`${API_BASE}/api/leave-alliance`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ playerId: pId })
+        });
+        const data = await res.json();
+        if (data.error) return alert("Hiba: " + data.error);
+        alert("Kiléptél a szövetségből.");
+        await fetchAllianceData();
+        renderAllianceModal();
+      } catch (e) {
+        alert("Hiba: " + e.message);
+      }
+    }
+    window.handleLeaveAlliance = handleLeaveAlliance;
+
+    function openCreateOperationModal() {
+      const targetType = prompt("Válassz célpont típust:\n1 - Fő Boss Citadella (MAX 5 FŐ)\n2 - Rivális Játékos / Bot Bolygó (MAX 3 FŐ)", "1");
+      if (!targetType) return;
+
+      let targetId = '';
+      let typeStr = 'boss';
+      if (targetType === '1') {
+        typeStr = 'boss';
+        targetId = prompt("Válassz Boss-t (boss_1 = Cygnus, boss_2 = Void, boss_3 = Omega):", "boss_1");
+      } else {
+        typeStr = 'player';
+        targetId = prompt("Add meg a célpont parancsnok azonosítóját (pl. enemy) vagy bolygó ID-t (pl. p3, bot_p1):", "enemy");
+      }
+      if (!targetId) return;
+
+      const curTick = STATE.tick || 1;
+      const targetTickStr = prompt(`Hányadik körben induljon a támadás? (Aktuális kör: #${curTick})`, (curTick + 2).toString());
+      const targetTick = parseInt(targetTickStr) || (curTick + 2);
+
+      const corvettesStr = prompt("Hány Korvettet ajánlasz fel a bázisodról a hadművelethez?", "5");
+      const destroyersStr = prompt("Hány Rombolót ajánlasz fel a bázisodról a hadművelethez?", "2");
+      const initialShips = {};
+      if (parseInt(corvettesStr) > 0) initialShips.corvette = parseInt(corvettesStr);
+      if (parseInt(destroyersStr) > 0) initialShips.destroyer = parseInt(destroyersStr);
+
+      const pId = STATE.currentPlayerId || 'player';
+      fetch(`${API_BASE}/api/create-alliance-operation`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ targetType: typeStr, targetId, targetTick, initialShips, playerId: pId })
+      }).then(r => r.json()).then(data => {
+        if (data.error) return alert("Hiba: " + data.error);
+        alert("⚔️ Közös hadművelet sikeresen kitűzve! A szövetségesek most már csatlakozhatnak flottáikkal.");
+        fetchAllianceData().then(() => renderAllianceModal());
+      }).catch(e => alert("Hiba: " + e.message));
+    }
+    window.openCreateOperationModal = openCreateOperationModal;
+
+    function promptJoinOperation(opId) {
+      const corvettesStr = prompt("Hány Korvettet ajánlasz fel a hadművelethez a flottádból?", "4");
+      const destroyersStr = prompt("Hány Rombolót ajánlasz fel a hadművelethez a flottádból?", "2");
+      const ships = {};
+      if (parseInt(corvettesStr) > 0) ships.corvette = parseInt(corvettesStr);
+      if (parseInt(destroyersStr) > 0) ships.destroyer = parseInt(destroyersStr);
+
+      const pId = STATE.currentPlayerId || 'player';
+      fetch(`${API_BASE}/api/join-alliance-operation`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ operationId: opId, ships, playerId: pId })
+      }).then(r => r.json()).then(data => {
+        if (data.error) return alert("Hiba: " + data.error);
+        alert("✓ Sikeresen felajánlottad a flottádat a közös hadművelethez!");
+        fetchAllianceData().then(() => renderAllianceModal());
+      }).catch(e => alert("Hiba: " + e.message));
+    }
+    window.promptJoinOperation = promptJoinOperation;
+
+    function handleLaunchOperation(opId) {
+      if (!confirm("Biztosan elindítod a szövetségi hadtestet a célpont ellen MOST?")) return;
+      const pId = STATE.currentPlayerId || 'player';
+      fetch(`${API_BASE}/api/launch-alliance-operation`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ operationId: opId, playerId: pId })
+      }).then(r => r.json()).then(data => {
+        if (data.error) return alert("Hiba: " + data.error);
+        alert(data.bossDefeated || data.victory ? "🎉 GYŐZELEM! A hadtest sikeresen megtörte a célpont védelmét!" : "A hadtest összecsapott a célponttal, csatariport rögzítve.");
+        fetchAllianceData().then(() => renderAllianceModal());
+        if (window.fetchState) window.fetchState();
+      }).catch(e => alert("Hiba: " + e.message));
+    }
+    window.handleLaunchOperation = handleLaunchOperation;
+
+    function handleCancelOperation(opId) {
+      if (!confirm("Biztosan törlöd a hadműveletet? A felajánlott hajók visszakerülnek a tagokhoz.")) return;
+      const pId = STATE.currentPlayerId || 'player';
+      fetch(`${API_BASE}/api/cancel-alliance-operation`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ operationId: opId, playerId: pId })
+      }).then(r => r.json()).then(data => {
+        if (data.error) return alert("Hiba: " + data.error);
+        alert("Hadművelet törölve, hajók visszaszolgáltatva.");
+        fetchAllianceData().then(() => renderAllianceModal());
+      }).catch(e => alert("Hiba: " + e.message));
+    }
+    window.handleCancelOperation = handleCancelOperation;
+
+    function promptSendDefense(targetPlayerId) {
+      const planets = STATE.planets || [];
+      const targetPlanet = planets.find(p => p.owner_id === targetPlayerId);
+      if (!targetPlanet) return alert("A célpont játékosnak nincs elérhető bolygója!");
+
+      const myPlanets = planets.filter(p => p.owner_id === (STATE.currentPlayerId || 'player'));
+      if (myPlanets.length === 0) return alert("Nincs birtokolt bolygód az indításhoz!");
+      const originPlanet = myPlanets[0];
+
+      const corvettesStr = prompt(`Hány Korvettet küldesz védelemként a(z) ${targetPlanet.name} világra? (Elérhető a bázison: ${originPlanet.stationedFleet.corvette||0})`, "5");
+      const destroyersStr = prompt(`Hány Rombolót küldesz védelemként a(z) ${targetPlanet.name} világra? (Elérhető a bázison: ${originPlanet.stationedFleet.destroyer||0})`, "2");
+      const ships = {};
+      if (parseInt(corvettesStr) > 0) ships.corvette = parseInt(corvettesStr);
+      if (parseInt(destroyersStr) > 0) ships.destroyer = parseInt(destroyersStr);
+
+      const pId = STATE.currentPlayerId || 'player';
+      fetch(`${API_BASE}/api/dispatch-fleet`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ originPlanetId: originPlanet.id, targetPlanetId: targetPlanet.id, ships, playerId: pId })
+      }).then(r => r.json()).then(data => {
+        if (data.error) return alert("Hiba: " + data.error);
+        alert("🛡️ Védelmi flotta sikeresen útnak indítva a szövetséges bolygóra! Megérkezéskor beáll a helyőrségbe.");
+        if (window.fetchState) window.fetchState();
+      }).catch(e => alert("Hiba: " + e.message));
+    }
+    window.promptSendDefense = promptSendDefense;
 
     // =========================================================================
     // 4/H. HANGNÉMÍTÁS ÉS KERESKEDELMI TŐZSDE VEZÉRLÉS

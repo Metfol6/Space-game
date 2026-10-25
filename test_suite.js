@@ -900,7 +900,126 @@ function runTests() {
     db.db.prepare("DELETE FROM fleets WHERE id = 'fleet_threat_test'").run();
     console.log("✓ Korai Előrejelző Radar (Incoming Threats) sikeresen igazolva!");
 
-    console.log("\n>>> MINDEN ÚJ HAJÓOSZTÁLY, KÉPESSÉG, 3 BOSS, REJTETT ZSÁKMÁNY, TÉRKÉP-PVP ÉS KERESKEDELEM/KÉMKEDÉS SIKERESEN IGAZOLVA! <<<");
+    console.log("\n=== [TEST 14] Szövetségi Rendszer, Közös Támadások (5 vs 3 Limit), Boss Underdog Boost és Védelem Tesztje ===");
+    
+    // Előzetes takarítás korábbi tesztekből
+    db.db.prepare("DELETE FROM allied_defense_fleets").run();
+    db.db.prepare("DELETE FROM alliance_operation_participants").run();
+    db.db.prepare("DELETE FROM alliance_operations").run();
+    db.db.prepare("DELETE FROM alliance_members").run();
+    db.db.prepare("DELETE FROM alliances").run();
+
+    // 1. Szövetség Alapítása (Kék Játékos)
+    const createAllyRes = db.createAlliance("Solaris Unió", "SOL", "player", "A galaxis békéjének és csillagközi védelmének szövetsége");
+    console.log("Szövetség alapítása:", createAllyRes.success, "Név:", createAllyRes.alliance ? createAllyRes.alliance.name : 'Hiba', "Tag:", createAllyRes.alliance ? createAllyRes.alliance.tag : '');
+    if (!createAllyRes.success || createAllyRes.alliance.tag !== "[SOL]") {
+        throw new Error("Nem sikerült megalapítani a Solaris Unió [SOL] szövetséget!");
+    }
+    const allianceId = createAllyRes.alliance.id;
+
+    // Duplikált alapítás blokkolása
+    const dupRes = db.createAlliance("Solaris Unió Másolat", "SOL2", "player");
+    if (!dupRes.error) {
+        throw new Error("A rendszernek tiltania kellett volna az új szövetség alapítását, ha a játékos már tag!");
+    }
+    console.log("✓ Szövetség alapítása és duplikált tagság blokkolása sikeresen igazolva!");
+
+    // 2. Szövetséges Csatlakozása (Piros / Vektor-9 Játékos)
+    const joinAllyRes = db.joinAlliance(allianceId, "enemy");
+    console.log("Piros belépése a szövetségbe:", joinAllyRes.success, "Tagok száma:", joinAllyRes.alliance ? joinAllyRes.alliance.memberCount : 0);
+    if (!joinAllyRes.success || joinAllyRes.alliance.memberCount !== 2) {
+        throw new Error("Nem sikerült csatlakoztatni a Piros játékost a szövetséghez!");
+    }
+    const areAllied = db.isAllied("player", "enemy");
+    console.log("Kék és Piros szövetségi státusza (isAllied várt: true):", areAllied);
+    if (!areAllied) throw new Error("A játékosok közötti isAllied vizsgálat hibás eredményt adott!");
+    console.log("✓ Szövetségi csatlakozás és szövetséges státusz ellenőrzés sikeresen igazolva!");
+
+    // 3. Közös Támadás Kiírása Bossra (Max 5 Fő Korlát)
+    // Biztosítunk hajókat a Kék játékos bázisán (p1)
+    db.db.prepare("UPDATE fleet_ships SET count = 20 WHERE fleet_id = 'f_p1' AND ship_type = 'corvette'").run();
+    const opBossRes = db.createAllianceOperation(allianceId, "player", "boss", "boss_1", 12, { corvette: 6 });
+    console.log("Közös Boss Hadművelet létrehozva:", opBossRes.success, "Célpont:", opBossRes.operation ? opBossRes.operation.target_name : '', "Max Fő:", opBossRes.operation ? opBossRes.operation.max_participants : 0);
+    if (!opBossRes.success || opBossRes.operation.max_participants !== 5) {
+        throw new Error("A Boss hadművelet létszámkorlátjának pontosan 5 főnek kell lennie!");
+    }
+    console.log("✓ Boss Hadművelet kiírása és MAX 5 FŐ korlát sikeresen igazolva!");
+
+    // 4. Szövetséges Flotta Csatlakozása a Boss Hadművelethez
+    // Biztosítunk hajókat a Piros játékos bázisán (p4)
+    db.db.prepare("UPDATE fleet_ships SET count = 10 WHERE fleet_id = 'f_p4' AND ship_type = 'destroyer'").run();
+    const joinOpBossRes = db.joinAllianceOperation(opBossRes.operation.id, "enemy", { destroyer: 3 });
+    console.log("Piros csatlakozása a Boss hadművelethez:", joinOpBossRes.success, "Résztvevők száma:", joinOpBossRes.operation ? joinOpBossRes.operation.currentParticipants : 0, "Összes felajánlott hajó:", joinOpBossRes.operation ? joinOpBossRes.operation.totalShipsCount : 0);
+    if (!joinOpBossRes.success || joinOpBossRes.operation.currentParticipants !== 2 || joinOpBossRes.operation.totalShipsCount !== 9) {
+        throw new Error("A hadműveleti csatlakozás vagy hajóösszegzés nem működik megfelelően!");
+    }
+    console.log("✓ Szövetséges armada-hozzájárulás és flottaösszevonás sikeresen igazolva!");
+
+    // 5. Közös Játékos / Bolygó Hadművelet Kiírása (Max 3 Fő Korlát)
+    // Szövetséges elleni támadás megkísérlése -> blokkolva kell lennie!
+    const hostileAllyRes = db.createAllianceOperation(allianceId, "player", "player", "enemy", 15);
+    console.log("Szövetséges elleni támadás blokkolása (várt hiba):", hostileAllyRes.error);
+    if (!hostileAllyRes.error) {
+        throw new Error("A rendszernek meg kellett volna akadályoznia a szövetséges elleni közös hadműveletet!");
+    }
+
+    // Bot bolygó elleni támadás kiírása
+    const opBotRes = db.createAllianceOperation(allianceId, "player", "planet", "bot_p1", 15, { corvette: 4 });
+    console.log("Közös Bot Bolygó Hadművelet létrehozva:", opBotRes.success, "Max Fő (várt: 3):", opBotRes.operation ? opBotRes.operation.max_participants : 0);
+    if (!opBotRes.success || opBotRes.operation.max_participants !== 3) {
+        throw new Error("A nem-boss (játékos/bot) hadművelet létszámkorlátjának pontosan 3 főnek kell lennie!");
+    }
+    console.log("✓ Más játékos/bolygó hadművelet kiírása és MAX 3 FŐ korlát sikeresen igazolva!");
+
+    // 6. Boss Underdog Harci Bónuszok Tesztje ("minél kevesebb, annál több")
+    // A) 1 Fő (Solo): +45% Sebzés & +25% Védelmi Ellenállás
+    const fleetSolo = new Fleet('player', 'Solo Ostrom', 0, 0);
+    fleetSolo.ships.push(new ShipInstance('destroyer'));
+    const resSolo = CombatEngine.resolveBossCombat(fleetSolo, { id: 'boss_1', name: 'Cygnus Bastion', hull: 2000, max_hull: 2000, shield: 1000, max_shield: 1000 }, [], 1, 1);
+    const soloHasUnderdog = resSolo.log.includes('SOLO HŐS BOOST');
+    console.log("1 Fős (Solo) Harc Underdog log detektálva:", soloHasUnderdog);
+    if (!soloHasUnderdog) throw new Error("Az 1 fős Boss harc nem tartalmazta a Solo Hős Boostot!");
+
+    // B) 2 Fő (Duo): +25% Sebzés & +15% Védelmi Ellenállás
+    const fleetDuo = new Fleet('player', 'Duo Ostrom', 0, 0);
+    fleetDuo.ships.push(new ShipInstance('destroyer'));
+    const resDuo = CombatEngine.resolveBossCombat(fleetDuo, { id: 'boss_1', name: 'Cygnus Bastion', hull: 2000, max_hull: 2000, shield: 1000, max_shield: 1000 }, [], 1, 2);
+    const duoHasUnderdog = resDuo.log.includes('DUO KÖTELÉK BOOST');
+    console.log("2 Fős (Duo) Harc Underdog log detektálva:", duoHasUnderdog);
+    if (!duoHasUnderdog) throw new Error("A 2 fős Boss harc nem tartalmazta a Duo Kötelék Boostot!");
+
+    // C) 3 Fő (Trio): +10% Sebzés
+    const fleetTrio = new Fleet('player', 'Trio Ostrom', 0, 0);
+    fleetTrio.ships.push(new ShipInstance('destroyer'));
+    const resTrio = CombatEngine.resolveBossCombat(fleetTrio, { id: 'boss_1', name: 'Cygnus Bastion', hull: 2000, max_hull: 2000, shield: 1000, max_shield: 1000 }, [], 1, 3);
+    const trioHasUnderdog = resTrio.log.includes('TRIO SZINDIKÁTUS BOOST');
+    console.log("3 Fős (Trio) Harc Underdog log detektálva:", trioHasUnderdog);
+    if (!trioHasUnderdog) throw new Error("A 3 fős Boss harc nem tartalmazta a Trio Szindikátus Boostot!");
+    console.log("✓ Boss Underdog Harci Bónuszok (Solo +45%, Duo +25%, Trio +10%) sikeresen igazolva!");
+
+    // 7. Szövetséges Védelmi Erősítés (Defense Garrison) és Visszahívás Tesztje
+    const defFleetId = 'f_test_defense_unit';
+    db.db.prepare("INSERT INTO fleets (id, owner_id, name, current_x, current_y, origin_planet_id, target_planet_id, state) VALUES (?, 'enemy', 'Vektor Védelmi Helyőrség', 140, 120, 'p1', 'p1', 'stationed')").run(defFleetId);
+    db.db.prepare("INSERT INTO fleet_ships (id, fleet_id, ship_type, count, current_hull_total, current_shield_total) VALUES (?, ?, 'frigate', 5, 1400, 600)").run(defFleetId + '_frig', defFleetId);
+    
+    const alliedDefId = db.stationDefenseFleet('p1', 'enemy', defFleetId, 1);
+    const stationedDefs = db.getStationedDefenseFleets('p1');
+    console.log("Állomásozó szövetséges védelmi erők a Kronos-IV (p1) bolygón:", stationedDefs.length, "db", "Hajók:", stationedDefs[0] ? stationedDefs[0].ships : {});
+    if (stationedDefs.length === 0 || !stationedDefs[0].ships.frigate || stationedDefs[0].ships.frigate !== 5) {
+        throw new Error("A szövetséges védelmi flotta állomásoztatása nem működik megfelelően!");
+    }
+
+    // Visszahívás a bázisra
+    const recallDefRes = db.recallDefenseFleet(alliedDefId, 'enemy');
+    console.log("Védelmi flotta visszahívása:", recallDefRes.success, recallDefRes.message);
+    const remainingDefs = db.getStationedDefenseFleets('p1');
+    if (remainingDefs.length !== 0) {
+        throw new Error("A védelmi flottának távoznia kellett volna a szövetséges bolygóról!");
+    }
+    console.log("✓ Szövetséges Védelmi Erősítés (Garrison Support) és visszahívás sikeresen igazolva!");
+
+    console.log("\n>>> MINDEN ÚJ SZÖVETSÉGI FUNKCIÓ, HADMŰVELET, 5 VS 3 LIMIT, UNDERDOG BOOST ÉS VÉDELEM SIKERESEN IGAZOLVA! <<<");
+
 }
 
 try {

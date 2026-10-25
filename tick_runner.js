@@ -623,7 +623,7 @@ class CombatEngine {
         return total;
     }
 
-    static resolveBossCombat(playerFleet, initialBossState, techs = playerFleet.researchedTechs || [], maxRounds = 8) {
+    static resolveBossCombat(playerFleet, initialBossState, techs = playerFleet.researchedTechs || [], maxRounds = 8, participantCount = 1) {
         const logLines = [];
         const bossName = initialBossState.name || 'PREKURZOR CITADELLA';
         logLines.push("==================================================");
@@ -631,6 +631,29 @@ class CombatEngine {
         logLines.push("==================================================");
         logLines.push(`Támadó Armada: ${playerFleet.name}`);
         logLines.push(`  Összetétel: ${ALL_SHIP_TYPES.filter(st => playerFleet.countByType(st) > 0).map(st => `${playerFleet.countByType(st)} ${SHIP_SPECS[st].name}`).join(', ') || 'Nincs hajó'}`);
+
+        // Boss Underdog / Kis Csoportos Harci Bónusz ("minél kevesebb, annál több")
+        let underdogDmgMult = 1.0;
+        let underdogDefMult = 1.0;
+        let underdogLabel = '';
+
+        if (participantCount === 1) {
+            underdogDmgMult = 1.45;
+            underdogDefMult = 0.75;
+            underdogLabel = '🥇 [SOLO HŐS BOOST] +45% Sebzés & +25% Védelmi Ellenállás';
+        } else if (participantCount === 2) {
+            underdogDmgMult = 1.25;
+            underdogDefMult = 0.85;
+            underdogLabel = '🥈 [DUO KÖTELÉK BOOST] +25% Sebzés & +15% Védelmi Ellenállás';
+        } else if (participantCount === 3) {
+            underdogDmgMult = 1.10;
+            underdogDefMult = 0.92;
+            underdogLabel = '🥉 [TRIO SZINDIKÁTUS BOOST] +10% Sebzés & +8% Védelmi Ellenállás';
+        } else {
+            underdogLabel = `🛡️ [SZÖVETSÉGI MASSZÍV ARMADA] ${participantCount} Parancsnok egyesített flottája`;
+        }
+
+        logLines.push(`Taktikai Erőviszony: ${underdogLabel}`);
         logLines.push(`Célpont: ${bossName}`);
         logLines.push(`  Kezdeti állapot: Test=${Math.round(initialBossState.hull)}/${initialBossState.max_hull} HP, Pajzs=${Math.round(initialBossState.shield)}/${initialBossState.max_shield} HP`);
         logLines.push("-".repeat(50));
@@ -638,8 +661,8 @@ class CombatEngine {
         let bossHull = initialBossState.hull;
         let bossShield = initialBossState.shield;
         const bossMaxShield = initialBossState.max_shield || 3000;
-        const beamDmg = initialBossState.damage || (initialBossState.id === 'boss_1' ? 900 : (initialBossState.id === 'boss_2' ? 1450 : 2200));
-        const pulseDmg = initialBossState.id === 'boss_1' ? 80 : (initialBossState.id === 'boss_2' ? 120 : 160);
+        const beamDmg = (initialBossState.damage || (initialBossState.id === 'boss_1' ? 900 : (initialBossState.id === 'boss_2' ? 1450 : 2200))) * underdogDefMult;
+        const pulseDmg = (initialBossState.id === 'boss_1' ? 80 : (initialBossState.id === 'boss_2' ? 120 : 160)) * underdogDefMult;
         const maxRegen = initialBossState.id === 'boss_1' ? 550 : (initialBossState.id === 'boss_2' ? 950 : 1400);
 
         let roundNum = 1;
@@ -671,6 +694,11 @@ class CombatEngine {
                     }
                     totalPlayerDamage += dmg;
                 }
+            }
+
+            // Boss Underdog szorzó alkalmazása
+            if (underdogDmgMult !== 1.0) {
+                totalPlayerDamage = Math.round(totalPlayerDamage * underdogDmgMult);
             }
 
             // Sebzés kiosztása a bossra
