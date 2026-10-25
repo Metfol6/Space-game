@@ -1020,6 +1020,109 @@ function runTests() {
 
     console.log("\n>>> MINDEN ÚJ SZÖVETSÉGI FUNKCIÓ, HADMŰVELET, 5 VS 3 LIMIT, UNDERDOG BOOST ÉS VÉDELEM SIKERESEN IGAZOLVA! <<<");
 
+    console.log("\n=== [TEST 15] Kereskedelmi Flotta Expedíciók (Nexus Piac), 50% Menetidő, 3 Körös Dokkolás és Automata Hazatérés ===");
+
+    // 1. Előkészület: Adunk a játékosnak elég izotópot és 3 db Nehéz Teherszállítót a Kronos-IV (p1) bázisán
+    const p1TradeFleetId = db.getAllPlanets().find(p => p.id === 'p1').stationedFleet.fleetId;
+    const updFreighter = db.db.prepare("UPDATE fleet_ships SET count = count + 3 WHERE fleet_id = ? AND ship_type = 'freighter'").run(p1TradeFleetId);
+    if (updFreighter.changes === 0) {
+        db.db.prepare("INSERT INTO fleet_ships (id, fleet_id, ship_type, count, current_hull_total, current_shield_total) VALUES (?, ?, 'freighter', 3, 1050, 180)").run(p1TradeFleetId + '_freighter', p1TradeFleetId);
+    }
+    db.db.prepare("UPDATE players SET isotope = isotope + 500 WHERE id = 'player'").run();
+
+    const initialFreighters = db.getAllPlanets().find(p => p.id === 'p1').stationedFleet.freighter;
+    console.log("Kezdeti Teherszállítók száma a Kronos-IV bázison:", initialFreighters);
+
+    // 2. Kereskedelmi Expedíció indítása (2 Teherszállító)
+    const launchRes = db.launchTradeExpedition('player', 'p1', { freighter: 2 });
+    console.log("Kereskedelmi Expedíció indítás eredménye:", launchRes.success, "Menetidő (50% gyorsfolyosó):", launchRes.travelTicks, "kör (normál: 5 kör)");
+    if (!launchRes.success) throw new Error("A kereskedelmi expedíció indítása meghiúsult: " + launchRes.error);
+    if (launchRes.travelTicks > 3) throw new Error("A kereskedelmi menetidő nem 50%-os (várt: <= 3 kör, kapott: " + launchRes.travelTicks + ")");
+
+    let activeExpeditions = db.getActiveTradeExpeditions('player');
+    console.log("Aktív expedíciók száma:", activeExpeditions.length, "Állapot:", activeExpeditions[0].state);
+    if (activeExpeditions.length === 0 || activeExpeditions[0].state !== 'inbound') {
+        throw new Error("Az expedíciónak 'inbound' állapotban kell lennie indítás után!");
+    }
+    console.log("✓ Kereskedelmi expedíció indítása 50%-os menetidővel sikeresen igazolva!");
+
+    // 3. Megérkezés a Piacra és Dokkolás (3 körös piacolási időablak)
+    const arrivalTick = launchRes.arrivalTick;
+    const dockEvents = db.updateTradeExpeditionsTick(arrivalTick);
+    console.log("Megérkezési tick esemény:", dockEvents[0] ? dockEvents[0].message : "nincs esemény");
+
+    activeExpeditions = db.getActiveTradeExpeditions('player');
+    const dockedExp = activeExpeditions.find(e => e.id === launchRes.expeditionId);
+    console.log("Dokkolt státusz:", dockedExp ? dockedExp.state : "nem található", "Hátralévő piacolási idő:", dockedExp ? dockedExp.remainingDockTicks : 0, "kör");
+    if (!dockedExp || dockedExp.state !== 'docked') {
+        throw new Error("A flottának 'docked' állapotba kellett volna kerülnie a piacra érkezéskor!");
+    }
+
+    const dockedCargo = db.getDockedTradeFleetCargo('player');
+    console.log("Dokkolt raktérkapacitás a piacon:", dockedCargo.totalCargoCapacity, "egység (Dokkolt teherszállítók:", dockedCargo.freighterCount, "db)");
+    if (dockedCargo.freighterCount !== 2 || dockedCargo.totalCargoCapacity < 1000) {
+        throw new Error("A dokkolt raktérkapacitás nem tükrözi a piacon lévő 2 teherszállítót!");
+    }
+
+    // Tőzsdei művelet dokkolt flottával
+    const tradeRes = db.tradeResources('player', 'metal_to_energy', 100);
+    console.log("Tőzsdei váltás dokkolt flottával:", tradeRes.success, "Levonva:", tradeRes.spent, "Jóváírva:", tradeRes.received);
+    if (!tradeRes.success) throw new Error("A tőzsdei váltás meghiúsult a dokkolt flottával!");
+    console.log("✓ Megérkezés, 3 körös piacolási időablak és dokkolt tőzsdei csere sikeresen igazolva!");
+
+    // 4. Manuális Azonnali Visszaindítás (Early Return) tesztje
+    const manualReturnRes = db.returnTradeExpedition(launchRes.expeditionId, 'player');
+    console.log("Manuális visszaindítás:", manualReturnRes.success, manualReturnRes.message, "Hazaérkezés köre:", manualReturnRes.returnArrivalTick);
+    if (!manualReturnRes.success) throw new Error("A manuális visszaindítás nem sikerült: " + manualReturnRes.error);
+
+    activeExpeditions = db.getActiveTradeExpeditions('player');
+    const returningExp = activeExpeditions.find(e => e.id === launchRes.expeditionId);
+    if (!returningExp || returningExp.state !== 'returning') {
+        throw new Error("Az expedíciónak 'returning' állapotba kellett volna lépnie a visszaindítás után!");
+    }
+
+    // Megérkezés haza a bázisra
+    const homeArrivalTick = manualReturnRes.returnArrivalTick;
+    const homeEvents = db.updateTradeExpeditionsTick(homeArrivalTick);
+    console.log("Hazaérkezési esemény:", homeEvents[0] ? homeEvents[0].message : "nincs esemény");
+
+    const freightersAfterReturn = db.getAllPlanets().find(p => p.id === 'p1').stationedFleet.freighter;
+    console.log("Teherszállítók száma a bázison hazatérés után:", freightersAfterReturn);
+    if (freightersAfterReturn !== initialFreighters) {
+        throw new Error("A hazatért teherszállítók nem kerültek vissza hiánytalanul a helyőrségbe! (Várt: " + initialFreighters + ", kapott: " + freightersAfterReturn + ")");
+    }
+    console.log("✓ Manuális visszaindítás és bázisra való hiánytalan hazatérés sikeresen igazolva!");
+
+    // 5. Automatikus Hazaindulás 3 kör után (Auto Return after 3 Ticks) tesztje
+    console.log("--- Automatikus Hazaindulás Tesztje 3 kör után ---");
+    const launch2 = db.launchTradeExpedition('player', 'p1', { freighter: 1 });
+    const curTickNow = db.getGameState();
+    
+    // Léptetés a megérkezéshez
+    db.updateTradeExpeditionsTick(curTickNow + launch2.travelTicks);
+    let exp2 = db.getActiveTradeExpeditions('player').find(e => e.id === launch2.expeditionId);
+    console.log("Expedíció 2 dokkolva a körben:", exp2.dockStartTick);
+
+    // Léptetés 3 körrel a dokkolás után (letelik a 3 kör)
+    const autoReturnTick = exp2.dockStartTick + 3;
+    const autoReturnEvents = db.updateTradeExpeditionsTick(autoReturnTick);
+    console.log("Automatikus hazaindulás esemény:", autoReturnEvents[0] ? autoReturnEvents[0].message : "nincs");
+
+    exp2 = db.getActiveTradeExpeditions('player').find(e => e.id === launch2.expeditionId);
+    console.log("Expedíció 2 állapota 3 kör után (várt: returning):", exp2 ? exp2.state : "hiányzik");
+    if (!exp2 || exp2.state !== 'returning') {
+        throw new Error("A flottának 3 kör után automatikusan 'returning' állapotba kellett volna váltania!");
+    }
+
+    // Léptetés a hazaérkezésig
+    db.updateTradeExpeditionsTick(exp2.returnArrivalTick);
+    const finalFreighters = db.getAllPlanets().find(p => p.id === 'p1').stationedFleet.freighter;
+    console.log("Teherszállítók száma a végső automatikus hazatérés után:", finalFreighters);
+    if (finalFreighters !== initialFreighters) {
+        throw new Error("A végső teherszállító nem tért vissza a bázisra!");
+    }
+    console.log("✓ 3 kör letelte utáni automatikus hazaindulás és biztonságos hazatérés sikeresen igazolva!");
+
 }
 
 try {

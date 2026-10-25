@@ -566,6 +566,23 @@ class DatabaseService {
                 UNIQUE(operation_id, player_id)
             );
 
+            CREATE TABLE IF NOT EXISTS trade_expeditions (
+                id TEXT PRIMARY KEY,
+                player_id TEXT NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+                fleet_id TEXT NOT NULL,
+                origin_planet_id TEXT NOT NULL REFERENCES planets(id) ON DELETE CASCADE,
+                state TEXT NOT NULL DEFAULT 'inbound',
+                departure_tick INTEGER NOT NULL,
+                arrival_tick INTEGER NOT NULL,
+                dock_start_tick INTEGER NULL,
+                dock_duration_ticks INTEGER NOT NULL DEFAULT 3,
+                return_departure_tick INTEGER NULL,
+                return_arrival_tick INTEGER NULL,
+                travel_ticks INTEGER NOT NULL DEFAULT 2,
+                ships_json TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+
             CREATE TABLE IF NOT EXISTS allied_defense_fleets (
                 id TEXT PRIMARY KEY,
                 planet_id TEXT NOT NULL REFERENCES planets(id) ON DELETE CASCADE,
@@ -1972,7 +1989,8 @@ class DatabaseService {
         const player = this.getPlayer(playerId);
         if (!player) return { error: "Ismeretlen parancsnokság!" };
 
-        const cargoInfo = this.getFreighterCargoCapacity(playerId);
+        const dockedCargo = this.getDockedTradeFleetCargo(playerId);
+        const cargoInfo = dockedCargo.hasDockedExpedition ? dockedCargo : this.getFreighterCargoCapacity(playerId);
         if (amount > cargoInfo.totalCargoCapacity) {
             return { 
                 error: `A művelet meghaladja a flottád raktérkapacitását! Max raktér: ${cargoInfo.totalCargoCapacity} egység (Teherszállítók száma: ${cargoInfo.freighterCount} db).`,
@@ -2419,6 +2437,351 @@ class DatabaseService {
         this.db.prepare("DELETE FROM allied_defense_fleets WHERE id = ?").run(alliedDefenseId);
 
         return { success: true, message: "A védelmi flotta sikeresen visszatért a bázisodra!" };
+    }
+
+    
+    // =========================================================================
+    // KERESKEDELMI EXPEDÍCIÓK (NEXUS PIAC: 50% IDŐ, 3 KÖR DOKKOLÁS, HAZAÚT)
+    // =========================================================================
+
+    launchTradeExpedition(playerId, originPlanetId, ships) {
+        const player = this.getPlayer(playerId);
+        if (!player) return { error: "Ismeretlen parancsnok!" };
+
+        const planet = this.getAllPlanets().find(p => p.id === originPlanetId);
+        if (!planet) return { error: "Ismeretlen kiindulási bolygó!" };
+        if (planet.owner_id !== playerId) return { error: "Ez a bolygó nem a te birtokodban van!" };
+
+        const totalShips = Object.values(ships || {}).reduce((sum, n) => sum + (Number(n) || 0), 0);
+        if (totalShips <= 0) return { error: "Legalább 1 hajót ki kell jelölnöd a kereskedelmi expedícióhoz!" };
+
+        const sf = planet.stationedFleet;
+        if (!sf) return { error: "Nincs elérhető helyőrség a bolygón!" };
+
+        for (const st of ALL_SHIP_TYPES) {
+            const count = Number(ships[st]) || 0;
+            if (count > 0) {
+                const available = (sf[st] || 0);
+                if (count > available) {
+                    return { error: `Nincs elég hajó ebből a típusból (${st}) a(z) ${planet.name} bolygón! Elérhető: ${available}, igényelt: ${count}` };
+                }
+            }
+        }
+
+        const playerTechs = this.getPlayerResearch(playerId);
+        const playerBuffs = this.getPlayerBuffs(playerId);
+        const playerUpgrades = this.getShipUpgrades(playerId);
+
+        const baseTravelTicks = 5;
+        let speedDiscount = 0;
+        if (playerTechs.includes('ion_thrusters')) speedDiscount += 1;
+        if (playerTechs.includes('hyperspace_gate')) speedDiscount += 1;
+        if (playerBuffs.some(b => b.buff_type === 'speed_boost')) speedDiscount += 1;
+
+        let hasEngineUpg = false;
+        for (const st of ALL_SHIP_TYPES) {
+            if ((ships[st] || 0) > 0) {
+                const upg = playerUpgrades[st] || {};
+                if ((upg.engine || 0) >= 2) hasEngineUpg = true;
+            }
+        }
+        if (hasEngineUpg) speedDiscount += 1;
+
+        const normalTravelTicks = Math.max(1, baseTravelTicks - speedDiscount);
+        // 50%-os menetidő oda és vissza
+        const tradeTravelTicks = Math.max(1, Math.round(normalTravelTicks * 0.5));
+
+        const SHIP_FUEL_WEIGHTS = { scout: 0.5, interceptor: 0.8, corvette: 1.0, freighter: 2.0, colony_ship: 2.0, frigate: 1.8, destroyer: 3.0, heavy_destroyer: 4.0, cruiser: 4.5, battleship: 6.0 };
+        const SHIP_HULL_SPECS = { scout: 40, interceptor: 70, corvette: 120, freighter: 350, colony_ship: 200, frigate: 280, destroyer: 450, heavy_destroyer: 950, cruiser: 800, battleship: 1600 };
+        const SHIP_SHIELD_SPECS = { scout: 0, interceptor: 25, corvette: 40, freighter: 60, colony_ship: 50, frigate: 120, destroyer: 200, heavy_destroyer: 70, cruiser: 400, battleship: 800 };
+
+        let totalFuelWeight = 0;
+        for (const st of ALL_SHIP_TYPES) {
+            const count = ships[st] || 0;
+            if (count > 0) {
+                totalFuelWeight += count * (SHIP_FUEL_WEIGHTS[st] || 1.0);
+            }
+        }
+        const fuelMultiplier = playerTechs.includes('isotope_compression') ? 0.70 : 1.0;
+        const fuelCost = Math.max(2, Math.ceil(totalFuelWeight * 2 * fuelMultiplier * 0.5));
+
+        if (player.isotope < fuelCost) {
+            return { error: `Nincs elég Izotóp üzemanyag az expedícióhoz! Szükséges: ${fuelCost} Izotóp (rendelkezésre áll: ${Math.floor(player.isotope)})` };
+        }
+
+        player.isotope -= fuelCost;
+        this.updatePlayerResources(playerId, player.metal, player.energy, player.isotope, player.data_points);
+
+        const updFleet = this.db.prepare(`UPDATE fleet_ships SET count = count - ? WHERE fleet_id = ? AND ship_type = ?`);
+        for (const st of ALL_SHIP_TYPES) {
+            const count = Number(ships[st]) || 0;
+            if (count > 0) {
+                updFleet.run(count, sf.fleetId, st);
+            }
+        }
+
+        const curTick = this.getGameState();
+        const fleetId = `f_trade_${playerId}_${Date.now()}`;
+        const fleetName = `${player.username || 'Kereskedelmi'} Teherraj`;
+
+        this.db.prepare(`
+            INSERT INTO fleets (id, owner_id, name, current_x, current_y, dest_x, dest_y, origin_planet_id, target_planet_id, departure_tick, arrival_tick, state)
+            VALUES (?, ?, ?, ?, ?, 410, 290, ?, 'station_trade', ?, ?, 'in_transit')
+        `).run(fleetId, playerId, fleetName, planet.pos_x, planet.pos_y, planet.id, curTick, curTick + tradeTravelTicks);
+
+        const insShip = this.db.prepare(`INSERT INTO fleet_ships (id, fleet_id, ship_type, count, current_hull_total, current_shield_total) VALUES (?, ?, ?, ?, ?, ?)`);
+        for (const st of ALL_SHIP_TYPES) {
+            const count = Number(ships[st]) || 0;
+            if (count > 0) {
+                const hull = SHIP_HULL_SPECS[st] || 100;
+                const shield = SHIP_SHIELD_SPECS[st] || 0;
+                insShip.run(`${fleetId}_${st}`, fleetId, st, count, count * hull, count * shield);
+            }
+        }
+
+        const expeditionId = `tr_exp_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+        this.db.prepare(`
+            INSERT INTO trade_expeditions (
+                id, player_id, fleet_id, origin_planet_id, state,
+                departure_tick, arrival_tick, dock_start_tick, dock_duration_ticks,
+                return_departure_tick, return_arrival_tick, travel_ticks, ships_json
+            ) VALUES (?, ?, ?, ?, 'inbound', ?, ?, NULL, 3, NULL, NULL, ?, ?)
+        `).run(expeditionId, playerId, fleetId, planet.id, curTick, curTick + tradeTravelTicks, tradeTravelTicks, JSON.stringify(ships));
+
+        return {
+            success: true,
+            expeditionId,
+            fleetId,
+            originPlanetName: planet.name,
+            departureTick: curTick,
+            arrivalTick: curTick + tradeTravelTicks,
+            travelTicks: tradeTravelTicks,
+            fuelCost,
+            ships
+        };
+    }
+
+    getActiveTradeExpeditions(playerId = 'player') {
+        const rows = this.db.prepare(`
+            SELECT * FROM trade_expeditions 
+            WHERE player_id = ? AND state != 'completed'
+            ORDER BY created_at DESC
+        `).all(playerId);
+
+        const curTick = this.getGameState();
+        const planets = this.getAllPlanets();
+        const upg = this.getShipUpgrades(playerId);
+        const cargoLvl = (upg.freighter && upg.freighter.cargo_hold) || 0;
+        const bonusCargo = (SUBSYSTEM_BONUS_TABLES.freighter && SUBSYSTEM_BONUS_TABLES.freighter.cargo_hold && SUBSYSTEM_BONUS_TABLES.freighter.cargo_hold[cargoLvl]) || 0;
+        const perShipCapacity = 500 + bonusCargo;
+
+        return rows.map(r => {
+            let ships = {};
+            try { ships = JSON.parse(r.ships_json); } catch(e){}
+            const originPlanet = planets.find(p => p.id === r.origin_planet_id);
+            const freighterCount = Number(ships.freighter) || 0;
+            const cargoCapacity = freighterCount * perShipCapacity;
+
+            let remainingTicks = 0;
+            let remainingDockTicks = 0;
+
+            if (r.state === 'inbound') {
+                remainingTicks = Math.max(0, r.arrival_tick - curTick);
+            } else if (r.state === 'docked') {
+                const elapsedDock = curTick - (r.dock_start_tick || curTick);
+                remainingDockTicks = Math.max(0, r.dock_duration_ticks - elapsedDock);
+            } else if (r.state === 'returning') {
+                remainingTicks = Math.max(0, r.return_arrival_tick - curTick);
+            }
+
+            return {
+                id: r.id,
+                fleetId: r.fleet_id,
+                playerId: r.player_id,
+                originPlanetId: r.origin_planet_id,
+                originPlanetName: originPlanet ? originPlanet.name : r.origin_planet_id,
+                state: r.state,
+                departureTick: r.departure_tick,
+                arrivalTick: r.arrival_tick,
+                dockStartTick: r.dock_start_tick,
+                dockDurationTicks: r.dock_duration_ticks,
+                returnDepartureTick: r.return_departure_tick,
+                returnArrivalTick: r.return_arrival_tick,
+                travelTicks: r.travel_ticks,
+                remainingTicks,
+                remainingDockTicks,
+                ships,
+                freighterCount,
+                perShipCapacity,
+                cargoCapacity,
+                createdAt: r.created_at
+            };
+        });
+    }
+
+    getDockedTradeFleetCargo(playerId = 'player') {
+        const active = this.getActiveTradeExpeditions(playerId);
+        const docked = active.filter(e => e.state === 'docked');
+        const upg = this.getShipUpgrades(playerId);
+        const cargoLvl = (upg.freighter && upg.freighter.cargo_hold) || 0;
+        const bonusCargo = (SUBSYSTEM_BONUS_TABLES.freighter && SUBSYSTEM_BONUS_TABLES.freighter.cargo_hold && SUBSYSTEM_BONUS_TABLES.freighter.cargo_hold[cargoLvl]) || 0;
+        const perShipCapacity = 500 + bonusCargo;
+
+        let totalDockedFreighters = 0;
+        for (const exp of docked) {
+            totalDockedFreighters += exp.freighterCount;
+        }
+
+        const totalDockedCargo = totalDockedFreighters * perShipCapacity;
+        return {
+            hasDockedExpedition: docked.length > 0,
+            dockedCount: docked.length,
+            freighterCount: totalDockedFreighters,
+            perShipCapacity,
+            totalCargoCapacity: totalDockedCargo > 0 ? totalDockedCargo : 500,
+            dockedExpeditions: docked
+        };
+    }
+
+    returnTradeExpedition(expeditionId, playerId = 'player') {
+        const exp = this.db.prepare("SELECT * FROM trade_expeditions WHERE id = ? AND player_id = ?").get(expeditionId, playerId);
+        if (!exp) return { error: "Ismeretlen kereskedelmi expedíció!" };
+        if (exp.state !== 'docked') {
+            return { error: `Csak a piacon dokkolt flotta indítható vissza (jelenlegi állapot: ${exp.state})!` };
+        }
+
+        const curTick = this.getGameState();
+        const originPlanet = this.getAllPlanets().find(p => p.id === exp.origin_planet_id) || { pos_x: 200, pos_y: 200 };
+        const returnArrivalTick = curTick + exp.travel_ticks;
+
+        this.db.prepare(`
+            UPDATE trade_expeditions
+            SET state = 'returning',
+                return_departure_tick = ?,
+                return_arrival_tick = ?
+            WHERE id = ?
+        `).run(curTick, returnArrivalTick, exp.id);
+
+        this.db.prepare(`
+            UPDATE fleets
+            SET state = 'in_transit',
+                current_x = 410,
+                current_y = 290,
+                dest_x = ?,
+                dest_y = ?,
+                origin_planet_id = 'station_trade',
+                target_planet_id = ?,
+                departure_tick = ?,
+                arrival_tick = ?
+            WHERE id = ?
+        `).run(originPlanet.pos_x, originPlanet.pos_y, exp.origin_planet_id, curTick, returnArrivalTick, exp.fleet_id);
+
+        return {
+            success: true,
+            message: "A kereskedőflotta azonnal elindult haza a bázisra!",
+            expeditionId: exp.id,
+            departureTick: curTick,
+            returnArrivalTick
+        };
+    }
+
+    updateTradeExpeditionsTick(curTick) {
+        const events = [];
+        const allPlanets = this.getAllPlanets();
+
+        // 1. Inbound flották megérkezése a Piacra
+        const arriving = this.db.prepare("SELECT * FROM trade_expeditions WHERE state = 'inbound' AND ? >= arrival_tick").all(curTick);
+        for (const exp of arriving) {
+            this.db.prepare(`
+                UPDATE trade_expeditions
+                SET state = 'docked', dock_start_tick = ?
+                WHERE id = ?
+            `).run(curTick, exp.id);
+
+            this.db.prepare(`
+                UPDATE fleets
+                SET state = 'stationed', current_x = 410, current_y = 290
+                WHERE id = ?
+            `).run(exp.fleet_id);
+
+            events.push({
+                type: 'trade_docked',
+                expeditionId: exp.id,
+                playerId: exp.player_id,
+                message: `[KERESKEDELMI EXPEDÍCIÓ DOKKOLT] A flotta sikeresen megérkezett a Nexus Kereskedelmi Központba! 3 körös piacolási időablak aktív.`
+            });
+        }
+
+        // 2. 3 körös piacolás letelte -> Automatikus hazaindulás
+        const expiring = this.db.prepare("SELECT * FROM trade_expeditions WHERE state = 'docked' AND ? >= (dock_start_tick + dock_duration_ticks)").all(curTick);
+        for (const exp of expiring) {
+            const originPlanet = allPlanets.find(p => p.id === exp.origin_planet_id) || { pos_x: 200, pos_y: 200 };
+            const returnArrivalTick = curTick + exp.travel_ticks;
+
+            this.db.prepare(`
+                UPDATE trade_expeditions
+                SET state = 'returning',
+                    return_departure_tick = ?,
+                    return_arrival_tick = ?
+                WHERE id = ?
+            `).run(curTick, returnArrivalTick, exp.id);
+
+            this.db.prepare(`
+                UPDATE fleets
+                SET state = 'in_transit',
+                    current_x = 410,
+                    current_y = 290,
+                    dest_x = ?,
+                    dest_y = ?,
+                    origin_planet_id = 'station_trade',
+                    target_planet_id = ?,
+                    departure_tick = ?,
+                    arrival_tick = ?
+                WHERE id = ?
+            `).run(originPlanet.pos_x, originPlanet.pos_y, exp.origin_planet_id, curTick, returnArrivalTick, exp.fleet_id);
+
+            events.push({
+                type: 'trade_auto_return',
+                expeditionId: exp.id,
+                playerId: exp.player_id,
+                message: `[KERESKEDELMI EXPEDÍCIÓ AUTOMATIKUS HAZAINDULÁS] A 3 körös piacolási idő letelt! A flotta automatikusan útnak indult haza.`
+            });
+        }
+
+        // 3. Returning flották hazaérkezése
+        const returning = this.db.prepare("SELECT * FROM trade_expeditions WHERE state = 'returning' AND ? >= return_arrival_tick").all(curTick);
+        for (const exp of returning) {
+            let ships = {};
+            try { ships = JSON.parse(exp.ships_json); } catch(e){}
+
+            const originPlanet = allPlanets.find(p => p.id === exp.origin_planet_id);
+            if (originPlanet && originPlanet.stationedFleet) {
+                const sfId = originPlanet.stationedFleet.fleetId;
+                const upd = this.db.prepare(`UPDATE fleet_ships SET count = count + ? WHERE fleet_id = ? AND ship_type = ?`);
+                for (const st of ALL_SHIP_TYPES) {
+                    const count = Number(ships[st]) || 0;
+                    if (count > 0) {
+                        const res = upd.run(count, sfId, st);
+                        if (res.changes === 0) {
+                            this.db.prepare(`INSERT INTO fleet_ships (id, fleet_id, ship_type, count, current_hull_total, current_shield_total) VALUES (?, ?, ?, ?, ?, ?)`).run(`${sfId}_${st}`, sfId, st, count, count * 350, count * 60);
+                        }
+                    }
+                }
+            }
+
+            this.db.prepare("DELETE FROM fleet_ships WHERE fleet_id = ?").run(exp.fleet_id);
+            this.db.prepare("DELETE FROM fleets WHERE id = ?").run(exp.fleet_id);
+            this.db.prepare("UPDATE trade_expeditions SET state = 'completed' WHERE id = ?").run(exp.id);
+
+            events.push({
+                type: 'trade_completed',
+                expeditionId: exp.id,
+                playerId: exp.player_id,
+                message: `[KERESKEDELMI FLOTTA HAZATÉRT] A kereskedőflotta épségben visszaérkezett a(z) ${originPlanet ? originPlanet.name : 'bázis'} helyőrségébe!`
+            });
+        }
+
+        return events;
     }
 
     scoutPlanet(planetId, playerId = 'player') {

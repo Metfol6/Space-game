@@ -278,6 +278,20 @@ CREATE TABLE IF NOT EXISTS allied_defense_fleets (
     state TEXT NOT NULL DEFAULT 'stationed'
 );
 
-
-
-
+-- 22. Kereskedelmi Expedíciók (Nexus Piac Flották)
+CREATE TABLE IF NOT EXISTS trade_expeditions (
+    id TEXT PRIMARY KEY,
+    player_id TEXT NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+    fleet_id TEXT NOT NULL,
+    origin_planet_id TEXT NOT NULL REFERENCES planets(id) ON DELETE CASCADE,
+    state TEXT NOT NULL DEFAULT 'inbound', -- 'inbound', 'docked', 'returning', 'completed'
+    departure_tick INTEGER NOT NULL,
+    arrival_tick INTEGER NOT NULL,
+    dock_start_tick INTEGER NULL,
+    dock_duration_ticks INTEGER NOT NULL DEFAULT 3,
+    return_departure_tick INTEGER NULL,
+    return_arrival_tick INTEGER NULL,
+    travel_ticks INTEGER NOT NULL DEFAULT 2,
+    ships_json TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);

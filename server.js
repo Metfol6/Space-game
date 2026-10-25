@@ -303,6 +303,13 @@ function processTick() {
     }
 
     // 2. Mozgó flották léptetése és Érkezések ellenőrzése
+    // 2/A. Kereskedelmi Expedíciók állapotfrissítése (Megérkezés, 3 körös dokkolás, automatikus hazaindulás, hazaérkezés)
+    const tradeEvents = db.updateTradeExpeditionsTick(nextTick);
+    for (const ev of tradeEvents) {
+        console.log(ev.message);
+    }
+
+    // 2. Mozgó flották léptetése és Érkezések ellenőrzése
     for (const fleet of movingFleets) {
         if (nextTick >= fleet.arrival_tick) {
             // Flotta megérkezett a célállomásra!
@@ -321,9 +328,12 @@ function processTick() {
                     (fleet.ships.battleship || 0) === 0;
 
                 if (targetPlanet.is_trade_station || targetPlanet.id === 'station_trade') {
-                    // Kereskedelmi állomás dokkolás
+                    // Kereskedelmi állomás dokkolás: A flotta dokkol a piacon, nem töröljük!
                     console.log(`[KERESKEDELMI DOKKOLÁS] ${fleet.name} sikeresen megérkezett a(z) ${targetPlanet.name} állomásra.`);
-                    _mergeFleetIntoPlanet(fleet, targetPlanet);
+                    fleet.current_x = targetPlanet.pos_x || 410;
+                    fleet.current_y = targetPlanet.pos_y || 290;
+                    db.db.prepare("UPDATE fleets SET state = 'stationed', current_x = ?, current_y = ? WHERE id = ?").run(fleet.current_x, fleet.current_y, fleet.id);
+                    continue;
                 } else if (isPureScout && (targetPlanet.is_bot || targetPlanet.owner_id !== fleet.owner_id)) {
                     // Tachion Felderítési Akció (Harc nélküli kémkedés)
                     _resolveScoutMission(fleet, targetPlanet, nextTick);
@@ -968,10 +978,55 @@ const server = http.createServer((req, res) => {
             pvpTargets: db.getHumanPlayers(playerObj.id),
             playerAlliance: db.getAllianceByPlayer(playerObj.id),
             allianceOperations: db.getAllianceByPlayer(playerObj.id) ? db.getAllianceOperations(db.getAllianceByPlayer(playerObj.id).id) : [],
+            tradeExpeditions: db.getActiveTradeExpeditions(playerObj.id),
+            tradeCargo: db.getDockedTradeFleetCargo(playerObj.id),
             recentAIActions
         };
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify(state));
+        return;
+    }
+
+    if (pathname === '/api/trade-expeditions' && req.method === 'GET') {
+        const playerId = _getReqPlayerId(req, parsedUrl);
+        const expeditions = db.getActiveTradeExpeditions(playerId);
+        const cargo = db.getDockedTradeFleetCargo(playerId);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: true, expeditions, cargo }));
+        return;
+    }
+
+    if (pathname === '/api/launch-trade-fleet' && req.method === 'POST') {
+        _parseJsonBody(req, res, body => {
+            const playerId = _getReqPlayerId(req, parsedUrl, body);
+            const { originPlanetId, ships } = body;
+            if (!originPlanetId || !ships) {
+                return _errorResponse(res, 400, "Hiányzó kiindulási bolygó vagy hajóválasztás!");
+            }
+            const result = db.launchTradeExpedition(playerId, originPlanetId, ships);
+            if (result.error) {
+                return _errorResponse(res, 400, result.error);
+            }
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify(result));
+        });
+        return;
+    }
+
+    if (pathname === '/api/return-trade-fleet' && req.method === 'POST') {
+        _parseJsonBody(req, res, body => {
+            const playerId = _getReqPlayerId(req, parsedUrl, body);
+            const { expeditionId } = body;
+            if (!expeditionId) {
+                return _errorResponse(res, 400, "Hiányzó expedíció azonosító!");
+            }
+            const result = db.returnTradeExpedition(expeditionId, playerId);
+            if (result.error) {
+                return _errorResponse(res, 400, result.error);
+            }
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify(result));
+        });
         return;
     }
 
@@ -1494,7 +1549,10 @@ const server = http.createServer((req, res) => {
             }
             if (hasEngineUpg) speedDiscount += 1;
 
-            const travelHours = Math.max(1, baseTravelTicks - speedDiscount);
+            let travelHours = Math.max(1, baseTravelTicks - speedDiscount);
+            if (target.id === 'station_trade' || target.is_trade_station) {
+                travelHours = Math.max(1, Math.round(travelHours * 0.5));
+            }
             const fuelMultiplier = playerTechs.includes('isotope_compression') ? 0.70 : 1.0;
             const fuelCost = Math.max(5, Math.ceil(totalFuelWeight * 2 * fuelMultiplier));
 
