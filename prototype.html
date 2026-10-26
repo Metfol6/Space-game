@@ -2,7 +2,7 @@
 <html lang="hu" class="dark">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>SPACE 4X TACTICS - Taktikai Parancsnoki Terminál</title>
   <link rel="manifest" href="/manifest.json">
   <meta name="theme-color" content="#090e1c">
@@ -104,6 +104,39 @@
     .glow-red {
       text-shadow: 0 0 8px rgba(239, 68, 68, 0.6);
     }
+    /* Mobil és érintésoptimalizáció (Mobile UX & Safe Areas) */
+    :root {
+      --sat: env(safe-area-inset-top, 0px);
+      --sab: env(safe-area-inset-bottom, 0px);
+      --sal: env(safe-area-inset-left, 0px);
+      --sar: env(safe-area-inset-right, 0px);
+    }
+    body {
+      min-height: 100vh;
+      min-height: 100dvh;
+      height: 100dvh;
+      padding-top: var(--sat);
+      padding-bottom: var(--sab);
+      padding-left: var(--sal);
+      padding-right: var(--sar);
+      -webkit-tap-highlight-color: transparent;
+    }
+    .scrollbar-none::-webkit-scrollbar {
+      display: none;
+    }
+    .scrollbar-none {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    /* Touch target kényelem és tapintási visszajelzés */
+    button, [role="button"], a {
+      touch-action: manipulation;
+    }
+    /* Modal görgetés simítás mobilon */
+    .overflow-y-auto, .overflow-x-auto {
+      -webkit-overflow-scrolling: touch;
+    }
+
     /* Custom Scrollbars */
     ::-webkit-scrollbar {
       width: 4px;
@@ -121,14 +154,14 @@
     }
   </style>
 </head>
-<body class="bg-[#050811] text-slate-100 flex flex-col h-screen w-screen overflow-hidden text-sm">
+<body class="bg-[#050811] text-slate-100 flex flex-col h-screen min-h-[100dvh] h-[100dvh] w-screen overflow-hidden text-sm select-none">
 
   <!-- ========================================================================= -->
   <!-- 1. FELSŐ SÁV (HUD) - NYERSANYAGOK ÉS TICK VEZÉRLÉS -->
   <!-- ========================================================================= -->
   <header class="bg-[#090e1c] border-b border-cyan-950/70 px-3 py-2 flex flex-wrap items-center justify-between gap-2 z-20 shrink-0">
     <!-- Nyersanyag számlálók -->
-    <div class="flex items-center gap-3 md:gap-5 overflow-x-auto text-xs md:text-sm font-mono py-1">
+    <div class="flex items-center gap-2 md:gap-5 overflow-x-auto whitespace-nowrap scrollbar-none flex-nowrap text-xs md:text-sm font-mono py-1 w-full md:w-auto -mx-1 px-1">
       <div class="flex items-center gap-1.5 bg-slate-900/80 px-2.5 py-1 rounded border border-slate-800">
         <span class="text-slate-400 font-bold">FÉM:</span>
         <span id="res-metal" class="text-cyan-400 font-bold">1,420</span>
@@ -160,7 +193,7 @@
     </div>
 
     <!-- Tick és Időzítő vezérlők -->
-    <div class="flex items-center gap-2">
+    <div class="flex items-center justify-between w-full md:w-auto gap-2">
       <!-- Aktív Parancsnok / Frakcióváltó gomb (PvP) -->
       <button id="btn-commander-badge" onclick="openCommanderSelectModal()" class="px-2.5 py-1.5 rounded text-xs font-mono font-bold bg-sky-950 text-sky-300 border border-sky-600 flex items-center gap-1.5 shadow-md shadow-sky-950/80 hover:bg-sky-900 active:scale-95 transition-all" title="Kattints a frakcióváltáshoz (PvP)">
         <span id="header-commander-icon" class="text-sm">🔵</span>
@@ -178,49 +211,50 @@
         <div class="text-[10px] text-slate-400 uppercase tracking-wider">Kör / Tick</div>
         <div class="text-cyan-400 font-bold text-sm">#<span id="current-tick">1</span> (<span id="tick-timer">59:45</span>)</div>
       </div>
-            <!-- Útmutató -->
-      <button id="btn-guide" onclick="openGuideModal()" class="bg-indigo-950/90 hover:bg-indigo-900 active:scale-95 text-indigo-200 border border-indigo-500 font-tactical text-sm font-bold px-3 py-1.5 rounded flex items-center gap-1.5 shadow-lg shadow-indigo-950 transition-all" title="Teljes Technológiai és Fejlődési Útmutató">
+            <!-- Útmutató (Desktop) -->
+      <button id="btn-guide" onclick="openGuideModal()" class="hidden md:flex bg-indigo-950/90 hover:bg-indigo-900 active:scale-95 text-indigo-200 border border-indigo-500 font-tactical text-sm font-bold px-3 py-1.5 rounded items-center gap-1.5 shadow-lg shadow-indigo-950 transition-all" title="Teljes Technológiai és Fejlődési Útmutató">
         <span class="text-base">📖</span>
-        <span class="hidden md:inline">ÚTMUTATÓ</span>
+        <span class="hidden lg:inline">ÚTMUTATÓ</span>
         <span class="text-[10px] bg-indigo-900 px-1.5 py-0.5 rounded border border-indigo-700 font-mono">GUIDE</span>
       </button>
 
-      <!-- Flották Központ (Saját Flották, Riválisok, 3 Boss) -->
-      <button id="btn-fleets-header" onclick="openFleetsModal('fleets')" class="bg-cyan-950/90 hover:bg-cyan-900 active:scale-95 text-cyan-200 border border-cyan-500 font-tactical text-sm font-bold px-3 py-1.5 rounded flex items-center gap-1.5 shadow-lg shadow-cyan-950 transition-all" title="Flotta Parancsnokság, Riválisok és 3 Boss Citadella">
+      <!-- Flották Központ (Desktop) -->
+      <button id="btn-fleets-header" onclick="openFleetsModal('fleets')" class="hidden md:flex bg-cyan-950/90 hover:bg-cyan-900 active:scale-95 text-cyan-200 border border-cyan-500 font-tactical text-sm font-bold px-3 py-1.5 rounded items-center gap-1.5 shadow-lg shadow-cyan-950 transition-all" title="Flotta Parancsnokság, Riválisok és 3 Boss Citadella">
         <span class="text-base">🛸</span>
-        <span class="hidden md:inline">FLOTTÁK</span>
+        <span class="hidden lg:inline">FLOTTÁK</span>
         <span id="header-fleets-badge" class="bg-cyan-900 px-1.5 py-0.5 rounded text-[10px] text-cyan-300 font-mono border border-cyan-700">HADIKÖZPONT</span>
       </button>
 
-      <!-- Kutatások & Tech Fa Központ -->
-      <button id="btn-tech-header" onclick="openTechModal('research')" class="bg-indigo-950/90 hover:bg-indigo-900 active:scale-95 text-indigo-200 border border-indigo-500 font-tactical text-sm font-bold px-3 py-1.5 rounded flex items-center gap-1.5 shadow-lg shadow-indigo-950 transition-all" title="Kutatási Központ és Interaktív Tech Fa">
+      <!-- Kutatások & Tech Fa Központ (Desktop) -->
+      <button id="btn-tech-header" onclick="openTechModal('research')" class="hidden md:flex bg-indigo-950/90 hover:bg-indigo-900 active:scale-95 text-indigo-200 border border-indigo-500 font-tactical text-sm font-bold px-3 py-1.5 rounded items-center gap-1.5 shadow-lg shadow-indigo-950 transition-all" title="Kutatási Központ és Interaktív Tech Fa">
         <span class="text-base">🔬</span>
-        <span class="hidden md:inline">KUTATÁSOK</span>
+        <span class="hidden lg:inline">KUTATÁSOK</span>
         <span id="header-data-badge" class="bg-indigo-900 px-1.5 py-0.5 rounded text-[10px] text-cyan-300 font-mono border border-indigo-700">0 DAT</span>
       </button>
 
-      <!-- Hajódokk & Refit -->
-      <button id="btn-shipyard-refit" onclick="openShipyardRefitModal()" class="bg-cyan-950/90 hover:bg-cyan-900 active:scale-95 text-cyan-200 border border-cyan-500 font-tactical text-sm font-bold px-3 py-1.5 rounded flex items-center gap-1.5 shadow-lg shadow-cyan-950 transition-all">
+      <!-- Hajódokk & Refit (Desktop) -->
+      <button id="btn-shipyard-refit" onclick="openShipyardRefitModal()" class="hidden md:flex bg-cyan-950/90 hover:bg-cyan-900 active:scale-95 text-cyan-200 border border-cyan-500 font-tactical text-sm font-bold px-3 py-1.5 rounded items-center gap-1.5 shadow-lg shadow-cyan-950 transition-all">
         <span class="text-base">🛠️</span>
-        <span class="hidden md:inline">HAJÓDOKK</span>
+        <span class="hidden lg:inline">HAJÓDOKK</span>
         <span id="header-refit-badge" class="bg-cyan-900 px-1.5 py-0.5 rounded text-[10px] text-cyan-300 font-mono border border-cyan-700">10/30 Szint</span>
       </button>
-      <!-- Szövetség -->
-      <button id="btn-alliance" onclick="openAllianceModal()" class="bg-indigo-950/90 hover:bg-indigo-900 active:scale-95 text-indigo-200 border border-indigo-500 font-tactical text-sm font-bold px-3 py-1.5 rounded flex items-center gap-1.5 shadow-lg shadow-indigo-950 transition-all" title="Szövetségi Rendszer & Közös Hadműveletek">
+
+      <!-- Szövetség (Desktop) -->
+      <button id="btn-alliance" onclick="openAllianceModal()" class="hidden md:flex bg-indigo-950/90 hover:bg-indigo-900 active:scale-95 text-indigo-200 border border-indigo-500 font-tactical text-sm font-bold px-3 py-1.5 rounded items-center gap-1.5 shadow-lg shadow-indigo-950 transition-all" title="Szövetségi Rendszer & Közös Hadműveletek">
         <span class="text-base">🤝</span>
-        <span class="hidden md:inline">SZÖVETSÉG</span>
+        <span class="hidden lg:inline">SZÖVETSÉG</span>
         <span class="text-[10px] bg-indigo-900 px-1.5 py-0.5 rounded border border-indigo-700 font-mono text-cyan-300" id="header-alliance-badge">NINCS</span>
       </button>
 
-      <!-- Piac -->
-      <button id="btn-trade" onclick="openTradeModal()" class="bg-amber-950/90 hover:bg-amber-900 active:scale-95 text-amber-200 border border-amber-500 font-tactical text-sm font-bold px-3 py-1.5 rounded flex items-center gap-1.5 shadow-lg shadow-amber-950 transition-all" title="Nexus Kereskedelmi Állomás & Tőzsde">
+      <!-- Piac (Desktop) -->
+      <button id="btn-trade" onclick="openTradeModal()" class="hidden md:flex bg-amber-950/90 hover:bg-amber-900 active:scale-95 text-amber-200 border border-amber-500 font-tactical text-sm font-bold px-3 py-1.5 rounded items-center gap-1.5 shadow-lg shadow-amber-950 transition-all" title="Nexus Kereskedelmi Állomás & Tőzsde">
         <span class="text-base">🏪</span>
-        <span class="hidden md:inline">PIAC</span>
+        <span class="hidden lg:inline">PIAC</span>
         <span class="text-[10px] bg-amber-900 px-1.5 py-0.5 rounded border border-amber-700 font-mono" id="header-trade-badge">TŐZSDE</span>
       </button>
 
-      <!-- Hang -->
-      <button id="btn-sound-toggle" onclick="toggleMute()" class="bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 font-tactical text-sm font-bold px-2.5 py-1.5 rounded flex items-center gap-1 shadow transition-all" title="Hangeffektek némítása / bekapcsolása">
+      <!-- Hang (Desktop) -->
+      <button id="btn-sound-toggle" onclick="toggleMute()" class="hidden md:flex bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 font-tactical text-sm font-bold px-2.5 py-1.5 rounded items-center gap-1 shadow transition-all" title="Hangeffektek némítása / bekapcsolása">
         <span id="sound-toggle-icon" class="text-base">🔊</span>
         <span id="sound-toggle-text" class="hidden lg:inline">HANG: BE</span>
       </button>
@@ -277,17 +311,19 @@
 
       <!-- Aktuális Küldetés Kártya (Mission Tracker) -->
       <div id="mission-hud-card" class="bg-slate-900/95 backdrop-blur border border-amber-500/60 rounded p-2.5 max-w-[260px] font-mono text-[11px] shadow-xl text-slate-200 space-y-1.5 mt-1">
-        <div class="flex items-center justify-between">
+        <div class="flex items-center justify-between cursor-pointer select-none" onclick="toggleMissionCardCollapse(event)">
           <span class="text-amber-400 font-bold uppercase tracking-wider text-[10px] flex items-center gap-1">
-            <span>🎯</span> KÜLDETÉS
+            <span>🎯</span> KÜLDETÉS <span id="mission-collapse-icon" class="text-[9px] text-amber-300">▾</span>
           </span>
           <span id="mission-status-badge" class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-950 text-amber-300 border border-amber-800">AKTÍV</span>
         </div>
-        <div id="mission-title" class="font-bold text-white text-xs">Bázisfejlesztés</div>
-        <div id="mission-desc" class="text-slate-400 text-[10px] leading-tight">Fejleszd a Kronos-IV bolygó Ipari Központját Lv.2-re!</div>
-        <div class="text-[10px] text-emerald-400 flex items-center justify-between pt-1 border-t border-slate-800">
-          <span>Jutalom:</span>
-          <span id="mission-reward" class="font-bold">+150 Fém, +50 Energia</span>
+        <div id="mission-hud-body" class="space-y-1 sm:space-y-1.5">
+          <div id="mission-title" class="font-bold text-white text-xs">Bázisfejlesztés</div>
+          <div id="mission-desc" class="text-slate-400 text-[10px] leading-tight">Fejleszd a Kronos-IV bolygó Ipari Központját Lv.2-re!</div>
+          <div class="text-[10px] text-emerald-400 flex items-center justify-between pt-1 border-t border-slate-800">
+            <span>Jutalom:</span>
+            <span id="mission-reward" class="font-bold">+150 Fém, +50 Energia</span>
+          </div>
         </div>
         <button id="btn-claim-mission" onclick="claimActiveMission()" class="hidden w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-1 rounded text-center text-[10px] animate-pulse">
           ✓ JUTALOM BEVÁLTÁSA!
@@ -330,27 +366,27 @@
   <!-- ========================================================================= -->
   <!-- 3. ALSÓ GYORSMENÜSOR -->
   <!-- ========================================================================= -->
-  <footer class="bg-[#090e1c] border-t border-cyan-950/80 px-2 py-1.5 flex items-center justify-around z-20 shrink-0 font-mono text-xs">
-    <button onclick="setActiveTab('map')" id="tab-map" class="px-3 py-1.5 rounded text-cyan-400 bg-cyan-950/50 border border-cyan-800 flex items-center gap-1.5">
-      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path></svg>
-      <span>TÉRKÉP</span>
+  <footer class="bg-[#090e1c] border-t border-cyan-950/80 px-1 sm:px-2 py-1 sm:py-1.5 pb-[calc(0.4rem+env(safe-area-inset-bottom,0px))] flex items-center justify-around z-20 shrink-0 font-mono text-xs">
+    <button onclick="setActiveTab('map')" id="tab-map" class="flex-1 py-1.5 px-1 rounded text-cyan-400 bg-cyan-950/60 border border-cyan-700/80 flex flex-col md:flex-row items-center justify-center gap-1 active:scale-95 transition-transform" title="Csillagtérkép">
+      <svg class="w-5 h-5 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path></svg>
+      <span class="text-[10px] md:text-xs font-bold">TÉRKÉP</span>
     </button>
-    <button onclick="openPlanetsModal()" class="px-3 py-1.5 rounded text-slate-300 hover:text-cyan-300 hover:bg-slate-800/60 flex items-center gap-1.5 transition-colors">
-      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-      <span>BOLYGÓK</span>
+    <button onclick="openPlanetsModal()" id="tab-planets" class="flex-1 py-1.5 px-1 rounded text-slate-300 hover:text-cyan-300 hover:bg-slate-800/60 flex flex-col md:flex-row items-center justify-center gap-1 active:scale-95 transition-transform" title="Bolygórendszerek">
+      <svg class="w-5 h-5 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+      <span class="text-[10px] md:text-xs font-bold">BOLYGÓK</span>
     </button>
-    <button onclick="openFleetsModal()" class="px-3 py-1.5 rounded text-slate-300 hover:text-cyan-300 hover:bg-slate-800/60 flex items-center gap-1.5 transition-colors">
-      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
-      <span>FLOTTÁK</span>
+    <button onclick="openFleetsModal()" id="tab-fleets" class="flex-1 py-1.5 px-1 rounded text-slate-300 hover:text-cyan-300 hover:bg-slate-800/60 flex flex-col md:flex-row items-center justify-center gap-1 active:scale-95 transition-transform" title="Flották & Boss Hadiközpont">
+      <svg class="w-5 h-5 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
+      <span class="text-[10px] md:text-xs font-bold">FLOTTÁK</span>
     </button>
-    <button onclick="openTechModal()" class="px-3 py-1.5 rounded text-slate-300 hover:text-cyan-300 hover:bg-slate-800/60 flex items-center gap-1.5 transition-colors">
-      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
-      <span>KUTATÁS</span>
+    <button onclick="openTechModal()" id="tab-tech" class="flex-1 py-1.5 px-1 rounded text-slate-300 hover:text-cyan-300 hover:bg-slate-800/60 flex flex-col md:flex-row items-center justify-center gap-1 active:scale-95 transition-transform" title="Kutatási Központ és Tech Fa">
+      <svg class="w-5 h-5 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
+      <span class="text-[10px] md:text-xs font-bold">KUTATÁS</span>
     </button>
-    <button onclick="openLogsModal()" class="px-3 py-1.5 rounded text-slate-300 hover:text-cyan-300 hover:bg-slate-800/60 flex items-center gap-1.5 transition-colors relative">
-      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-      <span>NAPLÓK</span>
-      <span id="log-badge" class="hidden absolute top-0.5 right-0.5 w-2 h-2 rounded-full bg-cyan-400"></span>
+    <button onclick="openMobileMenuModal()" id="tab-mobile-more" class="flex-1 py-1.5 px-1 rounded text-amber-300 hover:text-amber-200 hover:bg-amber-950/40 flex flex-col md:flex-row items-center justify-center gap-1 active:scale-95 transition-transform relative" title="További rendszerek: Hajódokk, Szövetség, Piac, Naplók, Útmutató">
+      <svg class="w-5 h-5 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+      <span class="text-[10px] md:text-xs font-bold">TÖBB ▾</span>
+      <span id="mobile-more-badge" class="hidden absolute top-1 right-2 w-2 h-2 rounded-full bg-cyan-400"></span>
     </button>
   </footer>
 
@@ -421,6 +457,99 @@
             <span>TÁMADÓ / EXPEDÍCIÓS FLOTTA INDÍTÁSA ERRE A BOLYGÓRA</span>
           </button>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- MOBIL RENDSZERMENÜ & AKCIÓPANEL (BOTTOM SHEET) -->
+  <!-- ========================================================================= -->
+  <div id="modal-mobile-menu" class="hidden fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 font-mono text-xs">
+    <div class="bg-[#080d1b] border-t-2 sm:border border-cyan-500 rounded-t-3xl sm:rounded-2xl max-w-lg w-full p-4 sm:p-5 space-y-4 shadow-2xl max-h-[85vh] overflow-y-auto pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))]">
+      <div class="flex justify-between items-center border-b border-cyan-950 pb-2.5">
+        <div class="flex items-center gap-2">
+          <span class="text-xl">⚙️</span>
+          <div>
+            <div class="font-tactical text-base font-bold text-white tracking-wider">BIRODALMI KÖZPONT</div>
+            <div class="text-[10px] text-slate-400">Válassz ki egy hadműveleti alrendszert:</div>
+          </div>
+        </div>
+        <button onclick="closeModal('modal-mobile-menu')" class="w-8 h-8 rounded-full bg-slate-900 border border-slate-700 hover:border-cyan-500 text-slate-300 hover:text-white flex items-center justify-center text-sm font-bold active:scale-90 transition-transform">✕</button>
+      </div>
+
+      <!-- Gyors Taktikai Kártyák (2 oszlopos ujjbarát grid) -->
+      <div class="grid grid-cols-2 gap-2.5">
+        <!-- 1. Hajódokk (Refit) -->
+        <button onclick="closeModal('modal-mobile-menu'); openShipyardRefitModal();" class="p-3 rounded-xl bg-gradient-to-br from-cyan-950/70 to-slate-900 border border-cyan-800/80 hover:border-cyan-400 active:scale-95 text-left flex flex-col gap-1 transition-all shadow-md">
+          <div class="flex items-center justify-between">
+            <span class="text-xl">🛠️</span>
+            <span id="mobile-refit-badge" class="text-[9px] bg-cyan-900/90 text-cyan-200 px-1.5 py-0.2 rounded font-bold font-mono">10/30</span>
+          </div>
+          <div class="font-tactical text-sm font-bold text-cyan-200">HAJÓDOKK</div>
+          <div class="text-[10px] text-slate-400 leading-tight">Alrendszerek & modul refit</div>
+        </button>
+
+        <!-- 2. Szövetség -->
+        <button onclick="closeModal('modal-mobile-menu'); openAllianceModal();" class="p-3 rounded-xl bg-gradient-to-br from-indigo-950/70 to-slate-900 border border-indigo-800/80 hover:border-indigo-400 active:scale-95 text-left flex flex-col gap-1 transition-all shadow-md">
+          <div class="flex items-center justify-between">
+            <span class="text-xl">🤝</span>
+            <span id="mobile-alliance-badge" class="text-[9px] bg-indigo-900/90 text-indigo-200 px-1.5 py-0.2 rounded font-bold font-mono">SZÖVI</span>
+          </div>
+          <div class="font-tactical text-sm font-bold text-indigo-200">SZÖVETSÉG</div>
+          <div class="text-[10px] text-slate-400 leading-tight">Közös hadművelet & védelem</div>
+        </button>
+
+        <!-- 3. Nexus Piac & Tőzsde -->
+        <button onclick="closeModal('modal-mobile-menu'); openTradeModal();" class="p-3 rounded-xl bg-gradient-to-br from-amber-950/70 to-slate-900 border border-amber-800/80 hover:border-amber-400 active:scale-95 text-left flex flex-col gap-1 transition-all shadow-md">
+          <div class="flex items-center justify-between">
+            <span class="text-xl">🏪</span>
+            <span class="text-[9px] bg-amber-900/90 text-amber-200 px-1.5 py-0.2 rounded font-bold font-mono">PIAC</span>
+          </div>
+          <div class="font-tactical text-sm font-bold text-amber-200">NEXUS TŐZSDE</div>
+          <div class="text-[10px] text-slate-400 leading-tight">Kereskedelmi flotta & váltás</div>
+        </button>
+
+        <!-- 4. Csatanaplók -->
+        <button onclick="closeModal('modal-mobile-menu'); openLogsModal();" class="p-3 rounded-xl bg-gradient-to-br from-slate-900 to-slate-950 border border-slate-700 hover:border-cyan-500 active:scale-95 text-left flex flex-col gap-1 transition-all shadow-md relative">
+          <div class="flex items-center justify-between">
+            <span class="text-xl">📜</span>
+            <span class="text-[9px] bg-slate-800 text-slate-300 px-1.5 py-0.2 rounded font-bold font-mono">NAPLÓ</span>
+          </div>
+          <div class="font-tactical text-sm font-bold text-slate-200">CSATANAPLÓK</div>
+          <div class="text-[10px] text-slate-400 leading-tight">Ütközetek, veszteségek, loot</div>
+          <span id="mobile-log-badge" class="hidden absolute top-2 right-2 w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping"></span>
+        </button>
+
+        <!-- 5. Útmutató (Guide) -->
+        <button onclick="closeModal('modal-mobile-menu'); openGuideModal();" class="p-3 rounded-xl bg-gradient-to-br from-indigo-950/60 to-slate-900 border border-indigo-700/70 hover:border-indigo-400 active:scale-95 text-left flex flex-col gap-1 transition-all shadow-md">
+          <div class="flex items-center justify-between">
+            <span class="text-xl">📖</span>
+            <span class="text-[9px] bg-indigo-900/90 text-indigo-200 px-1.5 py-0.2 rounded font-bold font-mono">GUIDE</span>
+          </div>
+          <div class="font-tactical text-sm font-bold text-indigo-200">ÚTMUTATÓ</div>
+          <div class="text-[10px] text-slate-400 leading-tight">Fejlődési & taktikai kalauz</div>
+        </button>
+
+        <!-- 6. Parancsnok / Frakcióváltás (PvP) -->
+        <button onclick="closeModal('modal-mobile-menu'); openCommanderSelectModal();" class="p-3 rounded-xl bg-gradient-to-br from-sky-950/70 to-slate-900 border border-sky-700/70 hover:border-sky-400 active:scale-95 text-left flex flex-col gap-1 transition-all shadow-md">
+          <div class="flex items-center justify-between">
+            <span class="text-xl" id="mobile-commander-icon">🔵</span>
+            <span class="text-[9px] bg-sky-900/90 text-sky-200 px-1.5 py-0.2 rounded font-bold font-mono">PVP</span>
+          </div>
+          <div class="font-tactical text-sm font-bold text-sky-200">FRAKCIÓVÁLTÁS</div>
+          <div class="text-[10px] text-slate-400 leading-tight">Játékos/Birodalom váltás</div>
+        </button>
+      </div>
+
+      <!-- Alsó segédsor (Hang és Bezárás) -->
+      <div class="pt-2 border-t border-slate-800 flex items-center justify-between gap-2">
+        <button onclick="toggleMute()" class="flex-1 py-2.5 px-3 rounded-xl bg-slate-900 border border-slate-700 hover:border-cyan-500 flex items-center justify-center gap-2 font-tactical text-xs text-slate-200 active:scale-95 transition-all">
+          <span id="mobile-sound-icon" class="text-base">🔊</span>
+          <span id="mobile-sound-text">HANG: BE</span>
+        </button>
+        <button onclick="closeModal('modal-mobile-menu')" class="flex-1 py-2.5 px-3 rounded-xl bg-cyan-950 border border-cyan-700 hover:bg-cyan-900 text-cyan-200 font-tactical text-xs font-bold text-center active:scale-95 transition-all">
+          BEZÁRÁS
+        </button>
       </div>
     </div>
   </div>
@@ -1412,24 +1541,26 @@
     window.addEventListener('resize', resizeCanvas);
 
     function resetMapView() {
-      // Fixált stabil nézet - pontosan a 820x600-as galaktikus szektorra illesztve
+      // Dinamikus illesztés - mobilon (360-430px) is teljes szélességében elfér a szektor
       const contentW = 820;
       const contentH = 580;
       const scaleX = canvas.width / contentW;
       const scaleY = canvas.height / contentH;
-      const fitZoom = Math.min(1.05, Math.max(0.65, Math.min(scaleX, scaleY)));
+      // Engedélyezzük a 0.35-ig terjedő zoomot, így álló mobilon sem vágódik le semmi
+      const fitZoom = Math.min(1.05, Math.max(0.35, Math.min(scaleX, scaleY)));
       STATE.camera.zoom = fitZoom;
-      STATE.camera.x = (canvas.width - contentW * fitZoom) / 2 + 10;
-      STATE.camera.y = (canvas.height - contentH * fitZoom) / 2 + 10;
+      STATE.camera.x = (canvas.width - contentW * fitZoom) / 2;
+      STATE.camera.y = (canvas.height - contentH * fitZoom) / 2;
       drawGalaxy();
     }
 
     function zoomMap(factor) {
-      // Zoom fixálva a stabil átláthatóság érdekében
+      const newZoom = Math.min(1.5, Math.max(0.35, STATE.camera.zoom * factor));
+      STATE.camera.zoom = newZoom;
       drawGalaxy();
     }
 
-    // Egér és érintés vezérlés - FIXÁLT TÉRKÉP (Micro-pan korlátozással: max +/- 30px)
+    // Egér és érintés vezérlés
     canvas.addEventListener('mousedown', e => {
       STATE.isDragging = true;
       STATE.lastMouse = { x: e.clientX, y: e.clientY };
@@ -1437,14 +1568,10 @@
     window.addEventListener('mouseup', () => STATE.isDragging = false);
     canvas.addEventListener('mousemove', e => {
       if (STATE.isDragging) {
-        const contentW = 820;
-        const contentH = 580;
-        const baseCamX = (canvas.width - contentW * STATE.camera.zoom) / 2 + 10;
-        const baseCamY = (canvas.height - contentH * STATE.camera.zoom) / 2 + 10;
-        const deltaX = (e.clientX - STATE.lastMouse.x) * 0.25;
-        const deltaY = (e.clientY - STATE.lastMouse.y) * 0.25;
-        STATE.camera.x = Math.max(baseCamX - 30, Math.min(baseCamX + 30, STATE.camera.x + deltaX));
-        STATE.camera.y = Math.max(baseCamY - 30, Math.min(baseCamY + 30, STATE.camera.y + deltaY));
+        const deltaX = (e.clientX - STATE.lastMouse.x) * 0.4;
+        const deltaY = (e.clientY - STATE.lastMouse.y) * 0.4;
+        STATE.camera.x += deltaX;
+        STATE.camera.y += deltaY;
         STATE.lastMouse = { x: e.clientX, y: e.clientY };
         drawGalaxy();
       }
@@ -1453,42 +1580,96 @@
       const rect = canvas.getBoundingClientRect();
       const worldX = Math.round((e.clientX - rect.left - STATE.camera.x) / STATE.camera.zoom);
       const worldY = Math.round((e.clientY - rect.top - STATE.camera.y) / STATE.camera.zoom);
-      document.getElementById('hover-coords').innerText = `X: ${worldX}, Y: ${worldY}`;
+      const hc = document.getElementById('hover-coords');
+      if (hc) hc.innerText = `X: ${worldX}, Y: ${worldY}`;
     });
 
     canvas.addEventListener('wheel', e => {
-      e.preventDefault(); // Zoom zárolva, a térkép stabilan marad
+      e.preventDefault();
     }, { passive: false });
 
-    // Bolygóra vagy Boss anomáliára kattintás detektálás
-    canvas.addEventListener('click', e => {
-      if (STATE.isDragging) return;
-      const rect = canvas.getBoundingClientRect();
-      const clickX = (e.clientX - rect.left - STATE.camera.x) / STATE.camera.zoom;
-      const clickY = (e.clientY - rect.top - STATE.camera.y) / STATE.camera.zoom;
+    // Mobil Érintésvezérlés (Touch Gestures: 1 ujjas pan + precíz tap)
+    let touchStartX = 0, touchStartY = 0, touchStartTime = 0;
+    let isTouchDragging = false;
 
-      // Bossok le vannak véve a térképről, csak a Boss gombból érhetők el
+    canvas.addEventListener('touchstart', e => {
+      if (e.touches.length === 1) {
+        isTouchDragging = true;
+        const t = e.touches[0];
+        touchStartX = t.clientX;
+        touchStartY = t.clientY;
+        touchStartTime = Date.now();
+        STATE.lastMouse = { x: t.clientX, y: t.clientY };
+      }
+    }, { passive: true });
+
+    canvas.addEventListener('touchmove', e => {
+      if (isTouchDragging && e.touches.length === 1) {
+        const t = e.touches[0];
+        const deltaX = (t.clientX - STATE.lastMouse.x) * 0.5;
+        const deltaY = (t.clientY - STATE.lastMouse.y) * 0.5;
+        STATE.camera.x += deltaX;
+        STATE.camera.y += deltaY;
+        STATE.lastMouse = { x: t.clientX, y: t.clientY };
+        drawGalaxy();
+      }
+    }, { passive: true });
+
+    canvas.addEventListener('touchend', e => {
+      isTouchDragging = false;
+      if (e.changedTouches.length === 1) {
+        const t = e.changedTouches[0];
+        const dist = Math.hypot(t.clientX - touchStartX, t.clientY - touchStartY);
+        const duration = Date.now() - touchStartTime;
+        // Koppintás detektálás (tap): ha kevés az elmozdulás (<18px) és rövid az érintés (<400ms)
+        if (dist < 18 && duration < 400) {
+          handleGalaxyClick(t.clientX, t.clientY, true);
+        }
+      }
+    }, { passive: true });
+
+    // Bolygóra kattintás és érintés közös kezelője
+    function handleGalaxyClick(clientX, clientY, isTouch = false) {
+      const rect = canvas.getBoundingClientRect();
+      const clickX = (clientX - rect.left - STATE.camera.x) / STATE.camera.zoom;
+      const clickY = (clientY - rect.top - STATE.camera.y) / STATE.camera.zoom;
+
       const myId = STATE.currentPlayerId || 'player';
       const visiblePlanets = STATE.planets.filter(p => {
-        if (p.bot_type === 'boss') return false; // BOSSOK NEM KATTINTHATÓK A TÉRKÉPEN
+        if (p.bot_type === 'boss') return false;
         if (p.is_bot) return true;
         if (p.owner === myId || p.owner_id === myId) return true;
         if (p.owner === 'neutral' || p.owner_id === 'neutral' || !p.owner_id) return true;
         return false;
       });
 
+      // Érintésnél megnövelt tolerancia (legalább 26 world egység vagy 24 képernyő pixel)
+      const hitRadius = isTouch ? Math.max(26, 24 / (STATE.camera.zoom || 1.0)) : 18;
+
+      let closestPlanet = null;
+      let minDistance = hitRadius;
+
       for (const p of visiblePlanets) {
         const dist = Math.hypot(p.x - clickX, p.y - clickY);
-        if (dist <= 18) {
-          audio.playBeep(600, 0.05);
-          if (p.is_trade_station || p.id === 'station_trade') {
-            openTradeModal();
-          } else {
-            openPlanetDrawer(p.id);
-          }
-          return;
+        if (dist <= minDistance) {
+          minDistance = dist;
+          closestPlanet = p;
         }
       }
+
+      if (closestPlanet) {
+        audio.playBeep(600, 0.05);
+        if (closestPlanet.is_trade_station || closestPlanet.id === 'station_trade') {
+          openTradeModal();
+        } else {
+          openPlanetDrawer(closestPlanet.id);
+        }
+      }
+    }
+
+    canvas.addEventListener('click', e => {
+      if (STATE.isDragging) return;
+      handleGalaxyClick(e.clientX, e.clientY, false);
     });
 
     // Térkép Render ciklus
@@ -4050,6 +4231,49 @@
         `;
       }).join('');
     }
+
+
+    function openMobileMenuModal() {
+      audio.playSelect();
+      openModal('modal-mobile-menu');
+      const refitBadge = document.getElementById('header-refit-badge');
+      if (refitBadge) {
+        const mRef = document.getElementById('mobile-refit-badge');
+        if (mRef) mRef.innerText = refitBadge.innerText;
+      }
+      const allBadge = document.getElementById('header-alliance-badge');
+      if (allBadge) {
+        const mAll = document.getElementById('mobile-alliance-badge');
+        if (mAll) mAll.innerText = allBadge.innerText;
+      }
+      const cmdIcon = document.getElementById('header-commander-icon');
+      if (cmdIcon) {
+        const mCmd = document.getElementById('mobile-commander-icon');
+        if (mCmd) mCmd.innerText = cmdIcon.innerText;
+      }
+      const sndIcon = document.getElementById('sound-toggle-icon');
+      if (sndIcon) {
+        const mSnd = document.getElementById('mobile-sound-icon');
+        if (mSnd) mSnd.innerText = sndIcon.innerText;
+      }
+      const sndText = document.getElementById('sound-toggle-text');
+      if (sndText) {
+        const mSndT = document.getElementById('mobile-sound-text');
+        if (mSndT) mSndT.innerText = sndText.innerText;
+      }
+    }
+    window.openMobileMenuModal = openMobileMenuModal;
+
+    function toggleMissionCardCollapse(e) {
+      if (e) e.stopPropagation();
+      const body = document.getElementById('mission-hud-body');
+      const icon = document.getElementById('mission-collapse-icon');
+      if (body) {
+        body.classList.toggle('hidden');
+        if (icon) icon.innerText = body.classList.contains('hidden') ? '▸' : '▾';
+      }
+    }
+    window.toggleMissionCardCollapse = toggleMissionCardCollapse;
 
     function openCommanderSelectModal() {
       audio.playSelect();
