@@ -134,23 +134,41 @@ const SHIP_SPECS = {
         ability_name: "Pajzs-Szinkronizáció",
         ability_desc: ">=3 Romboló esetén körönként 15% pajzsot regenerál a flottának."
     },
+    repair_ship: {
+        name: "Taktikai Szerelőhajó",
+        symbol: "🔧",
+        hull: 500.0,
+        shield: 250.0,
+        damage: 15.0,
+        accuracy: 0.75,
+        evasion: 0.15,
+        speed: 3.5,
+        upkeep_energy: 3.0,
+        cost_metal: 260.0,
+        cost_energy: 100.0,
+        cost_isotope: 25.0,
+        fuel_weight: 2.2,
+        cargo_capacity: 200,
+        ability_name: "Harctéri Nano-Javítás & Védőháló Aura",
+        ability_desc: "Körök végén javítja a sérült baráti hajók életerejét és pajzsát (max 4 hajó/szerelőhajó). Kvantum védőhálója csökkenti a flotta által kapott sebzést."
+    },
     heavy_destroyer: {
-        name: "Ostrom-Romboló",
-        symbol: "💥",
-        hull: 950.0,
-        shield: 70.0,
-        damage: 260.0,
-        accuracy: 0.70,
-        evasion: 0.02,
-        speed: 2.4,
-        upkeep_energy: 7.0,
-        cost_metal: 480.0,
-        cost_energy: 140.0,
-        cost_isotope: 40.0,
-        fuel_weight: 4.0,
-        cargo_capacity: 350,
-        ability_name: "Ostromágyú & Sérülékeny Pajzs",
-        ability_desc: "3x sebzés bolygópajzsok és védelmi rendszerek ellen. Vékony pajzsa +50% sérülést kap."
+        name: "Taktikai Szerelőhajó (Legacy)",
+        symbol: "🔧",
+        hull: 500.0,
+        shield: 250.0,
+        damage: 15.0,
+        accuracy: 0.75,
+        evasion: 0.15,
+        speed: 3.5,
+        upkeep_energy: 3.0,
+        cost_metal: 260.0,
+        cost_energy: 100.0,
+        cost_isotope: 25.0,
+        fuel_weight: 2.2,
+        cargo_capacity: 200,
+        ability_name: "Harctéri Nano-Javítás & Védőháló Aura",
+        ability_desc: "Körök végén javítja a sérült baráti hajók életerejét és pajzsát (max 4 hajó/szerelőhajó). Kvantum védőhálója csökkenti a flotta által kapott sebzést."
     },
     cruiser: {
         name: "Drón-Hordozó Cirkáló",
@@ -417,6 +435,13 @@ class CombatEngine {
             const regenB = this._applyShieldSync(fleetB);
             if (regenB > 0) logLines.push(` • [B OLDAL] Rombolók Pajzs-szinkronizációja visszatöltött ${Math.round(regenB)} pajzsot.`);
 
+            // Szerelőhajó kör végi nano-javítási fázis
+            const repairA = this._applyFleetRepairs(fleetA, roundNum);
+            if (repairA) logLines.push(` • [A OLDAL] ${repairA}`);
+
+            const repairB = this._applyFleetRepairs(fleetB, roundNum);
+            if (repairB) logLines.push(` • [B OLDAL] ${repairB}`);
+
             roundNum++;
         }
 
@@ -533,8 +558,8 @@ class CombatEngine {
 
             // Célpont kiválasztás
             let target;
-            if (att.shipType === "battleship" || att.shipType === "heavy_destroyer") {
-                const heavyTargets = aliveDefenders.filter(s => s.shipType === "battleship" || s.shipType === "heavy_destroyer" || s.shipType === "destroyer" || s.shipType === "cruiser");
+            if (att.shipType === "battleship") {
+                const heavyTargets = aliveDefenders.filter(s => s.shipType === "battleship" || s.shipType === "cruiser" || s.shipType === "destroyer" || s.shipType === "repair_ship");
                 target = heavyTargets.length > 0 ? heavyTargets[Math.floor(Math.random() * heavyTargets.length)] : aliveDefenders[Math.floor(Math.random() * aliveDefenders.length)];
             } else if (att.shipType === "frigate") {
                 // A Torpedó Fregatt a legnagyobb pajzzsal rendelkező célpontokat támadja a pajzs-átütés maximalizálásához
@@ -554,6 +579,21 @@ class CombatEngine {
         let destroyed = 0;
         let damage = 0;
 
+        // Taktikai Szerelőhajó: Kvantum Védőháló & Elhárító Sugárzó flotta-szintű sebzéscsökkentés
+        let dmgReduction = 0;
+        const repShips = defenderFleet ? defenderFleet.aliveShips().filter(s => s.shipType === 'repair_ship') : [];
+        if (repShips.length > 0) {
+            let maxShLvl = 0;
+            for (const rs of repShips) {
+                const shLvl = rs.getSubsystemLevel('shield');
+                if (shLvl > maxShLvl) maxShLvl = shLvl;
+            }
+            const bonusRed = (SUBSYSTEM_BONUS_TABLES.repair_ship && SUBSYSTEM_BONUS_TABLES.repair_ship.fleet_dmg_reduction)
+                ? (SUBSYSTEM_BONUS_TABLES.repair_ship.fleet_dmg_reduction[maxShLvl] || 0)
+                : (maxShLvl * 0.015);
+            dmgReduction = Math.min(0.25, 0.05 + bonusRed); // Alap 5% + alrendszer bónusz, max 25%
+        }
+
         for (const { attType, attShip, target, dmg } of attacks) {
             if (!target.isAlive) continue;
 
@@ -563,36 +603,27 @@ class CombatEngine {
                 continue;
             }
 
-            damage += dmg;
+            let effectiveDmg = dmg;
+            if (dmgReduction > 0) {
+                effectiveDmg *= (1.0 - dmgReduction);
+            }
+            damage += effectiveDmg;
 
             // Különleges Képesség: Fregatt Pajzs-Átütő Torpedók (30% közvetlen Hull sebzés)
             let directHullDmg = 0;
-            let standardDmg = dmg;
+            let standardDmg = effectiveDmg;
             if (attType === 'frigate') {
                 directHullDmg = dmg * 0.30;
                 standardDmg = dmg * 0.70;
                 target.hull -= directHullDmg;
             }
 
-            // Különleges Képesség: Ostrom-Romboló Sérülékeny Pajzs (+50% pajzssérülés)
-            if (target.shipType === 'heavy_destroyer' && target.shield > 0) {
-                const shieldDmg = standardDmg * 1.5;
-                if (target.shield >= shieldDmg) {
-                    target.shield -= shieldDmg;
-                    standardDmg = 0;
-                } else {
-                    const absorbedStandard = target.shield / 1.5;
-                    target.shield = 0;
-                    standardDmg -= absorbedStandard;
-                }
+            if (target.shield >= standardDmg) {
+                target.shield -= standardDmg;
+                standardDmg = 0;
             } else {
-                if (target.shield >= standardDmg) {
-                    target.shield -= standardDmg;
-                    standardDmg = 0;
-                } else {
-                    standardDmg -= target.shield;
-                    target.shield = 0;
-                }
+                standardDmg -= target.shield;
+                target.shield = 0;
             }
 
             target.hull -= standardDmg;
@@ -604,6 +635,126 @@ class CombatEngine {
             }
         }
         return { dodges, destroyed, damage };
+    }
+
+    static _applyFleetRepairs(fleet, roundNum) {
+        if (!fleet || typeof fleet.aliveShips !== 'function') return null;
+        const repairShips = fleet.aliveShips().filter(s => s.shipType === 'repair_ship');
+        if (repairShips.length === 0) return null;
+
+        // 1. Kapacitáskorlát kiszámítása (1 szerelőhajó nem tudja a teljes flottát ellátni!)
+        let totalCapacity = 0;
+        let maxWeaponLvl = 0;
+        for (const rs of repairShips) {
+            const aviLvl = rs.getSubsystemLevel('avionics');
+            const extraTargets = (SUBSYSTEM_BONUS_TABLES.repair_ship && SUBSYSTEM_BONUS_TABLES.repair_ship.extra_targets)
+                ? (SUBSYSTEM_BONUS_TABLES.repair_ship.extra_targets[aviLvl] || 0)
+                : 0;
+            totalCapacity += (4 + extraTargets);
+
+            const wpnLvl = rs.getSubsystemLevel('weapon');
+            if (wpnLvl > maxWeaponLvl) maxWeaponLvl = wpnLvl;
+        }
+
+        // 2. Százalékos javítási mérték (Nem a teljes HP-t tölti vissza, hanem %-ot)
+        let hullPct = 0.12; // Alap 12%
+        let shieldPct = 0.18; // Alap 18%
+        if (maxWeaponLvl > 0 && SUBSYSTEM_BONUS_TABLES.repair_ship) {
+            hullPct += (SUBSYSTEM_BONUS_TABLES.repair_ship.repair_boost_hull?.[maxWeaponLvl] || (maxWeaponLvl * 0.012));
+            shieldPct += (SUBSYSTEM_BONUS_TABLES.repair_ship.repair_boost_shield?.[maxWeaponLvl] || (maxWeaponLvl * 0.015));
+        }
+
+        // 3. Élő, sérült baráti hajók kiválasztása
+        const damagedShips = fleet.aliveShips().filter(s => s.hull < s.maxHull || s.shield < s.maxShield);
+        if (damagedShips.length === 0) return null;
+
+        // Triage: legsúlyosabban sérült hajók előre (aktuális HP% alapján növekvő sorrendben)
+        damagedShips.sort((a, b) => (a.hull / a.maxHull) - (b.hull / b.maxHull));
+
+        // Legfeljebb a kapacitásnak megfelelő számú hajó kerül ellátásra
+        const targets = damagedShips.slice(0, totalCapacity);
+
+        let totalHullRepaired = 0;
+        let totalShieldRepaired = 0;
+
+        for (const ship of targets) {
+            if (ship.hull < ship.maxHull) {
+                const healAmount = Math.max(1, Math.round(ship.maxHull * hullPct));
+                const added = Math.min(ship.maxHull - ship.hull, healAmount);
+                ship.hull += added;
+                totalHullRepaired += added;
+            }
+            if (ship.shield < ship.maxShield) {
+                const shieldAmount = Math.max(1, Math.round(ship.maxShield * shieldPct));
+                const addedS = Math.min(ship.maxShield - ship.shield, shieldAmount);
+                ship.shield += addedS;
+                totalShieldRepaired += addedS;
+            }
+        }
+
+        if (totalHullRepaired === 0 && totalShieldRepaired === 0) return null;
+
+        return `🔧 Szerelőhajók nano-javítása: ${targets.length} sérült hajó javítva (+${Math.round(totalHullRepaired)} HP, +${Math.round(totalShieldRepaired)} Pajzs)! [Kapacitás: ${targets.length}/${totalCapacity}]`;
+    }
+
+    static _applyFleetRepairs(fleet, roundNum) {
+        if (!fleet || typeof fleet.aliveShips !== 'function') return null;
+        const repairShips = fleet.aliveShips().filter(s => s.shipType === 'repair_ship');
+        if (repairShips.length === 0) return null;
+
+        // 1. Kapacitáskorlát kiszámítása (1 szerelőhajó nem tudja a teljes flottát ellátni!)
+        let totalCapacity = 0;
+        let maxWeaponLvl = 0;
+        for (const rs of repairShips) {
+            const aviLvl = rs.getSubsystemLevel('avionics');
+            const extraTargets = (SUBSYSTEM_BONUS_TABLES.repair_ship && SUBSYSTEM_BONUS_TABLES.repair_ship.extra_targets)
+                ? (SUBSYSTEM_BONUS_TABLES.repair_ship.extra_targets[aviLvl] || 0)
+                : 0;
+            totalCapacity += (4 + extraTargets);
+
+            const wpnLvl = rs.getSubsystemLevel('weapon');
+            if (wpnLvl > maxWeaponLvl) maxWeaponLvl = wpnLvl;
+        }
+
+        // 2. Százalékos javítási mérték (Nem a teljes HP-t tölti vissza, hanem %-ot)
+        let hullPct = 0.12; // Alap 12%
+        let shieldPct = 0.18; // Alap 18%
+        if (maxWeaponLvl > 0 && SUBSYSTEM_BONUS_TABLES.repair_ship) {
+            hullPct += (SUBSYSTEM_BONUS_TABLES.repair_ship.repair_boost_hull?.[maxWeaponLvl] || (maxWeaponLvl * 0.012));
+            shieldPct += (SUBSYSTEM_BONUS_TABLES.repair_ship.repair_boost_shield?.[maxWeaponLvl] || (maxWeaponLvl * 0.015));
+        }
+
+        // 3. Élő, sérült baráti hajók kiválasztása
+        const damagedShips = fleet.aliveShips().filter(s => s.hull < s.maxHull || s.shield < s.maxShield);
+        if (damagedShips.length === 0) return null;
+
+        // Triage: legsúlyosabban sérült hajók előre (aktuális HP% alapján növekvő sorrendben)
+        damagedShips.sort((a, b) => (a.hull / a.maxHull) - (b.hull / b.maxHull));
+
+        // Legfeljebb a kapacitásnak megfelelő számú hajó kerül ellátásra
+        const targets = damagedShips.slice(0, totalCapacity);
+
+        let totalHullRepaired = 0;
+        let totalShieldRepaired = 0;
+
+        for (const ship of targets) {
+            if (ship.hull < ship.maxHull) {
+                const healAmount = Math.max(1, Math.round(ship.maxHull * hullPct));
+                const added = Math.min(ship.maxHull - ship.hull, healAmount);
+                ship.hull += added;
+                totalHullRepaired += added;
+            }
+            if (ship.shield < ship.maxShield) {
+                const shieldAmount = Math.max(1, Math.round(ship.maxShield * shieldPct));
+                const addedS = Math.min(ship.maxShield - ship.shield, shieldAmount);
+                ship.shield += addedS;
+                totalShieldRepaired += addedS;
+            }
+        }
+
+        if (totalHullRepaired === 0 && totalShieldRepaired === 0) return null;
+
+        return `🔧 Szerelőhajók nano-javítása: ${targets.length} sérült hajó javítva (+${Math.round(totalHullRepaired)} HP, +${Math.round(totalShieldRepaired)} Pajzs)! [Kapacitás: ${targets.length}/${totalCapacity}]`;
     }
 
     static _applyShieldSync(fleet) {
@@ -796,6 +947,7 @@ class CombatEngine {
                 colony_ship: playerFleet.countByType('colony_ship'),
                 frigate: playerFleet.countByType('frigate'),
                 destroyer: playerFleet.countByType('destroyer'),
+                repair_ship: playerFleet.countByType('repair_ship'),
                 heavy_destroyer: playerFleet.countByType('heavy_destroyer'),
                 cruiser: playerFleet.countByType('cruiser'),
                 battleship: playerFleet.countByType('battleship')

@@ -1269,7 +1269,7 @@
       colony_ship: 'automated_dock',
       frigate: 'extended_shielding',
       destroyer: 'heavy_metallurgy',
-      heavy_destroyer: 'siege_warheads',
+      repair_ship: 'automated_dock', heavy_destroyer: 'automated_dock',
       cruiser: 'antimatter_containment',
       battleship: 'hyperspace_gate'
     };
@@ -1383,7 +1383,7 @@
     // --- HAJÓ SPECIFIKÁCIÓK ÉS HARCI FORMULÁK ---
     const ALL_SHIPS = [
       'scout', 'interceptor', 'corvette', 'freighter', 'colony_ship',
-      'frigate', 'destroyer', 'heavy_destroyer', 'cruiser', 'battleship'
+      'frigate', 'destroyer', 'repair_ship', 'cruiser', 'battleship'
     ];
 
     const SHIP_SPECS = {
@@ -1394,7 +1394,8 @@
       colony_ship: { name: 'Kolóniahajó', sym: '⚲', hull: 200, shield: 50, dmg: 0, acc: 0.50, eva: 0.05, speed: 3.0, upkeep: 3.0, metal: 300, energy: 150, iso: 60, ability: 'Bioszféra Kolonizáció' },
       frigate: { name: 'Lopakodó Torpedó Fregatt', sym: '🗡️', hull: 280, shield: 120, dmg: 85, acc: 0.80, eva: 0.18, speed: 4.5, upkeep: 2.5, metal: 140, energy: 50, iso: 18, ability: 'Pajzs-Átütő Torpedók (30% Hull dmg)' },
       destroyer: { name: 'Romboló Cirkáló', sym: '◆', hull: 450, shield: 200, dmg: 110, acc: 0.75, eva: 0.10, speed: 3.5, upkeep: 4.0, metal: 220, energy: 80, iso: 20, ability: 'Pajzs-Szinkronizáció (>=3 db: +15%)' },
-      heavy_destroyer: { name: 'Ostrom-Romboló', sym: '💥', hull: 950, shield: 70, dmg: 260, acc: 0.70, eva: 0.02, speed: 2.4, upkeep: 7.0, metal: 480, energy: 140, iso: 40, ability: 'Ostromágyú & Sérülékeny Pajzs' },
+      repair_ship: { name: 'Taktikai Szerelőhajó', sym: '🔧', hull: 500, shield: 250, dmg: 15, acc: 0.75, eva: 0.15, speed: 3.5, upkeep: 3.0, metal: 260, energy: 100, iso: 25, ability: 'Harctéri Nano-Javítás & Védőháló Aura' },
+      heavy_destroyer: { name: 'Taktikai Szerelőhajó (Legacy)', sym: '🔧', hull: 500, shield: 250, dmg: 15, acc: 0.75, eva: 0.15, speed: 3.5, upkeep: 3.0, metal: 260, energy: 100, iso: 25, ability: 'Harctéri Nano-Javítás & Védőháló Aura' },
       cruiser: { name: 'Drón-Hordozó Cirkáló', sym: '🛸', hull: 800, shield: 400, dmg: 75, acc: 0.75, eva: 0.08, speed: 3.0, upkeep: 8.0, metal: 450, energy: 180, iso: 50, ability: 'Drónraj Kíséret & ECM Mátrix' },
       battleship: { name: 'Csatahajó', sym: '⬟', hull: 1600, shield: 800, dmg: 380, acc: 0.65, eva: 0.00, speed: 2.0, upkeep: 15.0, metal: 800, energy: 300, iso: 80, ability: 'Spinalis Railgun & Termelés Blokád' }
     };
@@ -2392,6 +2393,26 @@
           log.push(` • Rombolóid Pajzs-szinkronizációja visszatöltött ${Math.round(regen)} pajzsot.`);
         }
 
+        // Taktikai Szerelőhajó: Kör végi százalékos nano-javítás kapacitáskorláttal
+        const attRepairCount = attShips.filter(s => s.alive && s.type === 'repair_ship').length;
+        if (attRepairCount > 0) {
+          const cap = attRepairCount * 4;
+          const damaged = attShips.filter(s => s.alive && (s.hp < (SHIP_SPECS[s.type]?.hull || 100) || s.sh < s.maxSh));
+          damaged.sort((a, b) => (a.hp / (SHIP_SPECS[a.type]?.hull || 100)) - (b.hp / (SHIP_SPECS[b.type]?.hull || 100)));
+          const targets = damaged.slice(0, cap);
+          let totHp = 0, totSh = 0;
+          targets.forEach(s => {
+            const maxHp = SHIP_SPECS[s.type]?.hull || 100;
+            const addH = Math.min(maxHp - s.hp, Math.max(1, Math.round(maxHp * 0.12)));
+            const addS = Math.min(s.maxSh - s.sh, Math.max(1, Math.round(s.maxSh * 0.18)));
+            s.hp += addH; s.sh += addS;
+            totHp += addH; totSh += addS;
+          });
+          if (targets.length > 0) {
+            log.push(` • 🔧 Szerelőhajóid nano-javítása: ${targets.length} sérült baráti egység javítva (+${totHp} HP, +${totSh} Pajzs)! [Kapacitás: ${targets.length}/${cap}]`);
+          }
+        }
+
         round++;
       }
 
@@ -3133,11 +3154,17 @@
         image: '/assets/destroyer_cruiser.jpg',
         role: 'Ék alakú nehézfegyverzetű vonalcirkáló Gauss-ágyúkkal és rakétasilókkal. Taktikai pajzs-szinkronizációja (>=3 db esetén) folyamatosan regenerálja a flotta védőmezőit.'
       },
+      repair_ship: {
+        name: 'TAKTIKAI SZERELŐHAJÓ',
+        symbol: '🔧',
+        image: '/assets/repair_ship.svg',
+        role: 'Mobil harctéri szerelő- és segélyhajó. Minden harci forduló végén visszatölti a sérült baráti hajók életerejét és pajzsát (max 4 hajó/egység). Kvantum védőhálója csökkenti az egész flotta által elszenvedett sebzést!'
+      },
       heavy_destroyer: {
-        name: 'OSTROM-ROMBOLÓ',
-        symbol: '💥',
-        image: '/assets/heavy_destroyer.svg',
-        role: 'Brutális nehéz romboló: gigantikus tűzerő (260 DMG) és páncélzat (950 HP), de lassú és rendkívül sérülékeny vékony pajzzsal rendelkezik (+50% pajzssérülés). Tripla ostromsebzés!'
+        name: 'TAKTIKAI SZERELŐHAJÓ',
+        symbol: '🔧',
+        image: '/assets/repair_ship.svg',
+        role: 'Mobil harctéri szerelő- és segélyhajó. Minden harci forduló végén visszatölti a sérült baráti hajók életerejét és pajzsát (max 4 hajó/egység). Kvantum védőhálója csökkenti az egész flotta által elszenvedett sebzést!'
       },
       cruiser: {
         name: 'DRÓN-HORDOZÓ CIRKÁLÓ',
@@ -3752,7 +3779,7 @@
       if (badge) badge.innerText = playerMoving.length + tradeExps.length;
 
       // 1. Összesített Hajóállomány Számítása a Birodalomban
-      const totalShips = { scout: 0, interceptor: 0, corvette: 0, freighter: 0, colony_ship: 0, frigate: 0, destroyer: 0, heavy_destroyer: 0, cruiser: 0, battleship: 0 };
+      const totalShips = { scout: 0, interceptor: 0, corvette: 0, freighter: 0, colony_ship: 0, frigate: 0, destroyer: 0, repair_ship: 0, cruiser: 0, battleship: 0 };
       
       // Helyőrségekből
       (STATE.planets || []).filter(p => p.owner === 'player').forEach(p => {
@@ -5797,7 +5824,7 @@
     async function launchTradeFleetFromModal() {
       const originPlanetId = STATE.tradeOriginPlanetId || 'p1';
       const ships = {};
-      const shipTypes = ['freighter', 'corvette', 'destroyer', 'frigate', 'scout', 'interceptor', 'colony_ship', 'heavy_destroyer', 'cruiser', 'battleship'];
+      const shipTypes = ['freighter', 'corvette', 'destroyer', 'frigate', 'scout', 'interceptor', 'colony_ship', 'repair_ship', 'cruiser', 'battleship'];
       let totalCount = 0;
 
       shipTypes.forEach(st => {

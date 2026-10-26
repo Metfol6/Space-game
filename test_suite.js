@@ -228,7 +228,7 @@ function runTests() {
 
     console.log("\n=== [TEST 8] 50 Szintből 60% (Max 30 Szint) Keretrendszer és Mind az 5 Alrendszer Tesztje ===");
     // 1. Modulkatalógus és 10 szint ellenőrzése
-    const fiveSlotClasses = ['corvette', 'frigate', 'destroyer', 'heavy_destroyer', 'cruiser', 'battleship'];
+    const fiveSlotClasses = ['corvette', 'frigate', 'destroyer', 'repair_ship', 'cruiser', 'battleship'];
     fiveSlotClasses.forEach(sc => {
         const slots = SHIP_SUBSYSTEMS[sc];
         if (!slots || Object.keys(slots).length !== 5) {
@@ -565,23 +565,14 @@ function runTests() {
     }
     console.log("✓ Torpedó Fregatt pajzs-átütő képessége (30% közvetlen hajótest sérülés) sikeresen igazolva!");
 
-    // 6. Ostrom-Romboló (Heavy Siege Destroyer): Brutális sebzés (260 DMG), de +50% pajzssérülés
-    console.log("\n--- Ostrom-Romboló (Sérülékeny Pajzs) Teszt ---");
-    const heavyDest = new ShipInstance('heavy_destroyer'); // 950 HP, 70 Shield
-    console.log(`Ostrom-Romboló alap: HP=${heavyDest.hull}, Shield=${heavyDest.shield}`);
-    // 40 sebzés bevitele az Ostrom-Rombolóba -> pajzsa +50% sebzést szenved (40 * 1.5 = 60 shield damage) -> shield: 70 - 60 = 10
-    const dmgToHD = [{ attType: 'corvette', attShip: new ShipInstance('corvette'), target: heavyDest, dmg: 40 }];
-    Math.random = () => 0.01;
-    try {
-        CombatEngine._applyAttacks(dmgToHD, { aliveShips: () => [heavyDest] });
-    } finally {
-        Math.random = origRand;
+    // 6. Taktikai Szerelőhajó (Repair Ship): Harctéri javítóegység és flotta sebzéscsökkentő aura
+    console.log("\n--- Taktikai Szerelőhajó Alapmechanika Teszt ---");
+    const repShipInst = new ShipInstance('repair_ship'); // 500 HP, 250 Shield
+    console.log(`Szerelőhajó alap: HP=${repShipInst.hull}, Shield=${repShipInst.shield}, Sebzés=${repShipInst.dmg}`);
+    if (repShipInst.hull !== 500 || repShipInst.shield !== 250) {
+        throw new Error(`A Szerelőhajó alapértékei hibásak! Hull: ${repShipInst.hull}, Shield: ${repShipInst.shield}`);
     }
-    console.log(`40 beérkező sebzés után az Ostrom-Romboló pajzsa: ${heavyDest.shield} (várt: 10, mert 40 * 1.5 = 60 levonva)`);
-    if (heavyDest.shield !== 10) {
-        throw new Error(`A sérülékeny pajzsnak 1.5x sérülést kellett elszenvednie! Kapott shield: ${heavyDest.shield}`);
-    }
-    console.log("✓ Ostrom-Romboló sérülékeny pajzs mechanikája (+50% pajzssérülés) sikeresen igazolva!");
+    console.log("✓ Taktikai Szerelőhajó alapstatisztikái sikeresen igazolva!");
 
     // 7. Drón-Hordozó Cirkáló (Cruiser): Drónraj ECM védelem
     console.log("\n--- Drón-Hordozó Cirkáló (Flotta Védelem) Teszt ---");
@@ -1123,6 +1114,152 @@ function runTests() {
     }
     console.log("✓ 3 kör letelte utáni automatikus hazaindulás és biztonságos hazatérés sikeresen igazolva!");
 
+    console.log("\n=== [TEST 16] Taktikai Szerelőhajó (repair_ship), Harctéri Nano-Javítás, Kapacitáskorlát és Védőháló Tesztje ===");
+
+    // 1. Hajógyári Építés és Technológiai Követelmény ellenőrzése
+    console.log("--- 1. Szerelőhajó Hajógyári Gyártás Tesztje ---");
+    if (SHIP_TECH_REQUIREMENTS.repair_ship !== 'automated_dock') {
+        throw new Error("A Szerelőhajó technológiai követelménye az automated_dock kell legyen!");
+    }
+    const spec = SHIP_SPECS.repair_ship;
+    if (!spec || spec.hull !== 500 || spec.shield !== 250) {
+        throw new Error("A Szerelőhajó specifikációja hiányos vagy pontatlan!");
+    }
+
+    // Szimuláljuk a gyártást a p1 bázisán
+    const p1RepairFleetId = db.getAllPlanets().find(p => p.id === 'p1').stationedFleet.fleetId;
+    const dummyRep = new ShipInstance('repair_ship');
+    const existingRep = db.db.prepare('SELECT count FROM fleet_ships WHERE fleet_id = ? AND ship_type = ?').get(p1RepairFleetId, 'repair_ship');
+    if (existingRep) {
+        db.db.prepare('UPDATE fleet_ships SET count = count + 1, current_hull_total = current_hull_total + ?, current_shield_total = current_shield_total + ? WHERE fleet_id = ? AND ship_type = ?')
+            .run(dummyRep.maxHull, dummyRep.maxShield, p1RepairFleetId, 'repair_ship');
+    } else {
+        db.db.prepare('INSERT INTO fleet_ships (id, fleet_id, ship_type, count, current_hull_total, current_shield_total) VALUES (?, ?, ?, 1, ?, ?)')
+            .run('f_p1_rep_' + Date.now(), p1RepairFleetId, 'repair_ship', dummyRep.maxHull, dummyRep.maxShield);
+    }
+    const p1FleetsAfterBuild = db.getAllPlanets().find(p => p.id === 'p1').stationedFleet;
+    console.log("Kronos-IV helyőrségben lévő Szerelőhajók:", p1FleetsAfterBuild.repair_ship || 0, "db");
+    if ((p1FleetsAfterBuild.repair_ship || 0) < 1) {
+        throw new Error("A legyártott Szerelőhajó nem jelent meg a helyőrségben!");
+    }
+    console.log("✓ Szerelőhajó tech követelmény (automated_dock) és helyőrségi nyilvántartás sikeresen igazolva!");
+
+    // 2. Harctéri Kör-végi Nano-Javítás, Kapacitáskorlát (1 hajó nem tudja a teljes flottát ellátni) és Triage Teszt
+    console.log("\n--- 2. Nano-Javítás, Kapacitáskorlát (Max 4 célpont) és Triage Tesztje ---");
+    const repFleet = new Fleet('player', 'Javító Különítmény');
+    const singleRepairShip = new ShipInstance('repair_ship');
+    repFleet.ships.push(singleRepairShip);
+
+    // Létrehozunk 6 db különböző mértékben sérült fregattot (maxHull: 280, maxShield: 120)
+    const frigates = [];
+    const damagedHpValues = [50, 70, 90, 110, 200, 250]; // HP% növekvő: ~18%, 25%, 32%, 39%, 71%, 89%
+    for (let i = 0; i < 6; i++) {
+        const fr = new ShipInstance('frigate');
+        fr.hull = damagedHpValues[i];
+        fr.shield = 0; // 0 pajzs
+        frigates.push(fr);
+        repFleet.ships.push(fr);
+    }
+
+    console.log("Kezdeti állapot a 6 sérült fregattnál:");
+    frigates.forEach((f, idx) => console.log(` - Fregatt #${idx + 1}: HP=${f.hull}/${f.maxHull} (${Math.round((f.hull/f.maxHull)*100)}%), Shield=${f.shield}/${f.maxShield}`));
+
+    // Végrehajtjuk a kör végi nano-javítást (1 db szerelőhajó -> alap kapacitás = 4 célpont)
+    const repairLog = CombatEngine._applyFleetRepairs(repFleet, 1);
+    console.log("Nano-Javítás log:", repairLog);
+    if (!repairLog || !repairLog.includes("4 sérült hajó javítva")) {
+        throw new Error("A nano-javításnak pontosan 4 sérült hajót kellett volna ellátnia a kapacitáskorlát miatt!");
+    }
+
+    console.log("Javítás utáni állapot a 6 fregattnál:");
+    frigates.forEach((f, idx) => console.log(` - Fregatt #${idx + 1}: HP=${f.hull}/${f.maxHull}, Shield=${f.shield}/${f.maxShield}`));
+
+    // A 4 legsúlyosabban sérült hajó kapott javítást (12% maxHull = ~34 HP, 18% maxShield = ~22 Shield)
+    const expectedHullRepair = Math.round(280 * 0.12); // 34
+    const expectedShieldRepair = Math.round(120 * 0.18); // 22
+    for (let i = 0; i < 4; i++) {
+        const expectedHp = damagedHpValues[i] + expectedHullRepair;
+        if (frigates[i].hull !== expectedHp || frigates[i].shield !== expectedShieldRepair) {
+            throw new Error(`A(z) ${i + 1}. fregatt nem kapta meg a pontos százalékos javítást! Várt HP: ${expectedHp}, kapott: ${frigates[i].hull}, Várt Pajzs: ${expectedShieldRepair}, kapott: ${frigates[i].shield}`);
+        }
+    }
+
+    // Az 5. és 6. fregatt NEM kaphatott javítást (kapacitáskorlát miatt nem fért bele az 1 szerelőhajóba!)
+    if (frigates[4].hull !== 200 || frigates[4].shield !== 0) {
+        throw new Error("Az 5. fregatt nem kaphatott volna javítást, mivel 1 szerelőhajó max 4 hajót lát el!");
+    }
+    if (frigates[5].hull !== 250 || frigates[5].shield !== 0) {
+        throw new Error("A 6. fregatt nem kaphatott volna javítást, mivel 1 szerelőhajó max 4 hajót lát el!");
+    }
+    console.log("✓ Szigorú kapacitáskorlát (1 szerelőhajó max 4 hajó) és legkritikusabb HP szerinti triage prioritás igazolva!");
+
+    // 3. Kvantum Védőháló & Elhárító Flotta-szintű Sebzéscsökkentő Aura Tesztje
+    console.log("\n--- 3. Flotta-szintű Sebzéscsökkentő Aura Tesztje ---");
+    const targetShipA = new ShipInstance('destroyer'); // 450 HP, 200 Shield
+    const fleetWithoutRepair = new Fleet('player', 'Hagyományos Flotta');
+    fleetWithoutRepair.ships.push(targetShipA);
+
+    const targetShipB = new ShipInstance('destroyer'); // 450 HP, 200 Shield
+    const fleetWithRepair = new Fleet('player', 'Védőhálóval Megerősített Flotta');
+    fleetWithRepair.ships.push(targetShipB);
+    fleetWithRepair.ships.push(new ShipInstance('repair_ship'));
+
+    const testAttacksA = [{ attType: 'corvette', attShip: new ShipInstance('corvette'), target: targetShipA, dmg: 100 }];
+    const testAttacksB = [{ attType: 'corvette', attShip: new ShipInstance('corvette'), target: targetShipB, dmg: 100 }];
+
+    const savedRand16 = Math.random;
+    Math.random = () => 0.01; // Találat garantálása
+    try {
+        CombatEngine._applyAttacks(testAttacksA, fleetWithoutRepair);
+        CombatEngine._applyAttacks(testAttacksB, fleetWithRepair);
+    } finally {
+        Math.random = savedRand16;
+    }
+
+    const dmgTakenA = 200 - targetShipA.shield;
+    const dmgTakenB = 200 - targetShipB.shield;
+    console.log(`Elszenvedett sebzés Szerelőhajó nélkül: ${dmgTakenA} DMG (Pajzs: ${targetShipA.shield}/200)`);
+    console.log(`Elszenvedett sebzés Szerelőhajó aurájával (-5%): ${dmgTakenB} DMG (Pajzs: ${targetShipB.shield}/200)`);
+
+    if (dmgTakenB >= dmgTakenA || dmgTakenB !== 95) {
+        throw new Error(`A Szerelőhajó védőháló aurájának legalább 5%-kal csökkentenie kellett a beérkező sebzést! Várt: 95 DMG, kapott: ${dmgTakenB}`);
+    }
+    console.log("✓ Kvantum Védőháló flotta-szintű beérkező sebzéscsökkentő aurája sikeresen igazolva!");
+
+    // 4. Hajódokk Alrendszer Fejlesztések (Shipyard Refit) Tesztje a Szerelőhajónál
+    console.log("\n--- 4. Szerelőhajó Hajódokk Alrendszer Fejlesztéseinek Tesztje ---");
+    const refitSlots = db.getMaxShipUpgradeSlots('player', 'repair_ship');
+    console.log("Szerelőhajó alrendszer slotok és keretek:", JSON.stringify(refitSlots));
+    if (refitSlots.maxSlots !== 5 || refitSlots.maxTotalCap !== 30) {
+        throw new Error("A Szerelőhajónak 5 alrendszerrel és 30 szint kerettel kell rendelkeznie!");
+    }
+
+    // Fejlesztjük az Avionikát (Központi Triage) 4. szintre (+2 extra célpontkapacitás -> 4+2 = 6 célpont)
+    for (let l = 1; l <= 4; l++) {
+        db.upgradeShipSubsystem('player', 'repair_ship', 'avionics');
+    }
+    const upgRepairShip = new ShipInstance('repair_ship', [], { avionics: 4 });
+    const upgradedFleet = new Fleet('player', 'Fejlesztett Triage Flotta');
+    upgradedFleet.ships.push(upgRepairShip);
+
+    // Ismét 6 sérült fregattot adunk a flottához
+    const newFrigates = [];
+    for (let i = 0; i < 6; i++) {
+        const fr = new ShipInstance('frigate');
+        fr.hull = 100;
+        fr.shield = 0;
+        newFrigates.push(fr);
+        upgradedFleet.ships.push(fr);
+    }
+
+    const upgRepairLog = CombatEngine._applyFleetRepairs(upgradedFleet, 1);
+    console.log("Fejlesztett Triage Nano-Javítás log:", upgRepairLog);
+    if (!upgRepairLog || !upgRepairLog.includes("6 sérült hajó javítva")) {
+        throw new Error("Az Avionika 4. szintjével (+2 célpont) mind a 6 sérült hajót el kellett volna látnia a flottában!");
+    }
+    console.log("✓ Avionika Triage alrendszer fejlesztés (+célpont kapacitás növelés) sikeresen igazolva!");
+
+    console.log("\n>>> MINDEN SZERELŐHAJÓ FUNKCIÓ, SZÁZALÉKOS NANO-JAVÍTÁS, KAPACITÁSKORLÁT, VÉDŐHÁLÓ ÉS ALRENDSZER TESZT SIKERESEN LEFUTOTT! <<<");
 }
 
 try {

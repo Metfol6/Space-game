@@ -27,7 +27,7 @@ const SCHEMA_FILE = path.join(__dirname, 'schema.sql');
 // Szigorú 60%-os korlát: max 3 alrendszer aktiválható (szint >= 1) egyszerre!
 const ALL_SHIP_TYPES = [
     'scout', 'interceptor', 'corvette', 'freighter', 'colony_ship',
-    'frigate', 'destroyer', 'heavy_destroyer', 'cruiser', 'battleship'
+    'frigate', 'destroyer', 'repair_ship', 'cruiser', 'battleship'
 ];
 
 const SHIP_TECH_REQUIREMENTS = {
@@ -38,7 +38,7 @@ const SHIP_TECH_REQUIREMENTS = {
     colony_ship: 'automated_dock',
     frigate: 'extended_shielding',
     destroyer: 'heavy_metallurgy',
-    heavy_destroyer: 'siege_warheads',
+    repair_ship: 'automated_dock',
     cruiser: 'antimatter_containment',
     battleship: 'hyperspace_gate'
 };
@@ -88,12 +88,12 @@ const SUBSYSTEM_HOTSPOTS = {
         engine: { x: 84, y: 50, label: 'Fényalatti Turbina Array', icon: '☄️' },
         avionics: { x: 68, y: 26, label: 'Torpedó-Elhárító & Célzórendszer', icon: '🚀' }
     },
-    heavy_destroyer: {
-        weapon: { x: 75, y: 28, label: 'Iker Ostrom-Mauler Ágyúk', icon: '💥' },
-        hull: { x: 45, y: 50, label: 'Vastagított Titán Páncélzat', icon: '🛡️' },
-        shield: { x: 65, y: 50, label: 'Rezonáns Védőpajzs', icon: '🌐' },
-        engine: { x: 16, y: 50, label: 'Nehéz Tolóerő Turbinák', icon: '🚀' },
-        avionics: { x: 52, y: 20, label: 'Ballisztikai Ostrom-Komputer', icon: '🎯' }
+    repair_ship: {
+        weapon: { x: 70, y: 30, label: 'Nano-Rezgődokk & Javítósugár', icon: '🔧' },
+        hull: { x: 45, y: 50, label: 'Vastagított Segélyhajó Páncél', icon: '🛡️' },
+        shield: { x: 65, y: 50, label: 'Kvantum Védőháló & Elhárító', icon: '🌐' },
+        engine: { x: 16, y: 50, label: 'Taktikai Vészhelyzeti Tolóerő', icon: '🚀' },
+        avionics: { x: 52, y: 20, label: 'Központi Triage & Kapacitásvezérlő', icon: '📡' }
     },
     cruiser: {
         weapon: { x: 52, y: 48, label: 'Drónhangár & Indítósínek', icon: '🛸' },
@@ -160,12 +160,14 @@ const SUBSYSTEM_BONUS_TABLES = {
         accuracy: [0, 0.08, 0.15, 0.22, 0.28, 0.34, 0.39, 0.44, 0.48, 0.52, 0.56],
         evasion: [0, 0.02, 0.05, 0.08, 0.12, 0.16, 0.20, 0.24, 0.28, 0.32, 0.36]
     },
-    heavy_destroyer: {
-        damage: [0, 60, 125, 195, 270, 350, 435, 525, 620, 720, 830],
-        hull: [0, 200, 420, 660, 920, 1200, 1500, 1820, 2160, 2520, 2900],
-        shield: [0, 20, 42, 66, 92, 120, 150, 182, 216, 252, 290],
-        speed: [0, 0.4, 0.8, 1.3, 1.9, 2.5, 3.2, 4.0, 4.8, 5.7, 6.7],
-        accuracy: [0, 0.04, 0.08, 0.12, 0.16, 0.20, 0.24, 0.28, 0.32, 0.36, 0.40]
+    repair_ship: {
+        repair_boost_hull: [0, 0.015, 0.03, 0.045, 0.06, 0.075, 0.09, 0.105, 0.12, 0.135, 0.15],
+        repair_boost_shield: [0, 0.02, 0.04, 0.06, 0.08, 0.10, 0.12, 0.14, 0.16, 0.18, 0.20],
+        fleet_dmg_reduction: [0, 0.06, 0.075, 0.09, 0.105, 0.12, 0.135, 0.15, 0.165, 0.18, 0.20],
+        hull: [0, 150, 310, 480, 660, 850, 1050, 1260, 1480, 1710, 1950],
+        shield: [0, 60, 130, 210, 300, 400, 510, 630, 760, 900, 1050],
+        speed: [0, 0.5, 1.0, 1.6, 2.3, 3.0, 3.8, 4.7, 5.7, 6.8, 8.0],
+        extra_targets: [0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5]
     },
     cruiser: {
         damage: [0, 18, 38, 60, 84, 110, 138, 168, 200, 234, 270],
@@ -199,7 +201,7 @@ function calculateSubsystemCost(shipType, level) {
         colony_ship: { m: 40, e: 25, i_t2: 12, i_t3: 22 },
         frigate: { m: 45, e: 25, i_t2: 14, i_t3: 26 },
         destroyer: { m: 60, e: 35, i_t2: 18, i_t3: 32 },
-        heavy_destroyer: { m: 85, e: 45, i_t2: 24, i_t3: 42 },
+        repair_ship: { m: 65, e: 35, i_t2: 18, i_t3: 32 },
         cruiser: { m: 90, e: 55, i_t2: 26, i_t3: 46 },
         battleship: { m: 120, e: 70, i_t2: 32, i_t3: 55 }
     }[shipType] || { m: 25, e: 15, i_t2: 10, i_t3: 20 };
@@ -228,7 +230,7 @@ function generateSubsystemLevels(shipType, slotKey) {
         colony_ship: { hull: 200, shield: 50, damage: 0, speed: 3.0 },
         frigate: { hull: 280, shield: 120, damage: 85, speed: 4.5 },
         destroyer: { hull: 450, shield: 200, damage: 110, speed: 3.5 },
-        heavy_destroyer: { hull: 950, shield: 70, damage: 260, speed: 2.4 },
+        repair_ship: { hull: 500, shield: 250, damage: 15, speed: 3.5 },
         cruiser: { hull: 800, shield: 400, damage: 75, speed: 3.0 },
         battleship: { hull: 1600, shield: 800, damage: 380, speed: 2.0 }
     }[shipType] || { hull: 100, shield: 0, damage: 10, speed: 3.0 };
@@ -290,10 +292,11 @@ function generateSubsystemLevels(shipType, slotKey) {
                 const eva = tables.evasion[lvl] || 0;
                 stats = { accuracy: acc, evasion: eva };
                 desc = `+${Math.round(acc * 100)}% célzási pontosság, +${Math.round(eva * 100)}% kitérés`;
-            } else if (shipType === 'heavy_destroyer') {
-                const acc = tables.accuracy[lvl] || 0;
-                stats = { accuracy: acc, siege_bonus: true };
-                desc = `+${Math.round(acc * 100)}% ostrom pontosság és megnövelt hatóerő`;
+            } else if (shipType === 'repair_ship') {
+                const boost = tables.repair_boost_hull ? (tables.repair_boost_hull[lvl] || 0) : 0;
+                const targets = tables.extra_targets ? (tables.extra_targets[lvl] || 0) : 0;
+                stats = { repair_boost: boost, extra_targets: targets };
+                desc = `+${Math.round(boost * 100)}% extra kör végi javítás, +${targets} célpontkapacitás`;
             } else if (shipType === 'cruiser') {
                 const eva = tables.evasion[lvl] || 0;
                 stats = { evasion: eva, drone_support: true };
@@ -365,12 +368,12 @@ const SHIP_SUBSYSTEMS = {
         engine: { slotKey: 'engine', name: 'Fényalatti Hajtómű-Turbina', icon: '☄️', legacyId: 'dest_sublight_overdrive', levels: generateSubsystemLevels('destroyer', 'engine') },
         avionics: { slotKey: 'avionics', name: 'Torpedó-Elhárító & Célzórendszer', icon: '🚀', legacyId: 'dest_missile_intercept', levels: generateSubsystemLevels('destroyer', 'avionics') }
     },
-    heavy_destroyer: {
-        weapon: { slotKey: 'weapon', name: 'Iker Ostrom-Mauler Ágyúk', icon: '💥', legacyId: 'hdest_siege_mauler', requiredTech: 'siege_warheads', levels: generateSubsystemLevels('heavy_destroyer', 'weapon') },
-        hull: { slotKey: 'hull', name: 'Vastagított Titán Páncélzat', icon: '🛡️', legacyId: 'hdest_heavy_plating', levels: generateSubsystemLevels('heavy_destroyer', 'hull') },
-        shield: { slotKey: 'shield', name: 'Rezonáns Védőpajzs', icon: '🌐', legacyId: 'hdest_fragile_shield', levels: generateSubsystemLevels('heavy_destroyer', 'shield') },
-        engine: { slotKey: 'engine', name: 'Nehéz Tolóerő Turbinák', icon: '🚀', legacyId: 'hdest_thrust_turbines', levels: generateSubsystemLevels('heavy_destroyer', 'engine') },
-        avionics: { slotKey: 'avionics', name: 'Ballisztikai Ostrom-Komputer', icon: '🎯', legacyId: 'hdest_siege_computer', levels: generateSubsystemLevels('heavy_destroyer', 'avionics') }
+    repair_ship: {
+        weapon: { slotKey: 'weapon', name: 'Nano-Rezgődokk & Javítósugár', icon: '🔧', legacyId: 'rep_nano_emitter', levels: generateSubsystemLevels('repair_ship', 'weapon') },
+        hull: { slotKey: 'hull', name: 'Vastagított Segélyhajó Páncélzat', icon: '🛡️', legacyId: 'rep_reinforced_plating', levels: generateSubsystemLevels('repair_ship', 'hull') },
+        shield: { slotKey: 'shield', name: 'Kvantum Védőháló & Elhárító', icon: '🌐', legacyId: 'rep_defense_aura', levels: generateSubsystemLevels('repair_ship', 'shield') },
+        engine: { slotKey: 'engine', name: 'Taktikai Vészhelyzeti Tolóerő', icon: '🚀', legacyId: 'rep_emergency_thrust', levels: generateSubsystemLevels('repair_ship', 'engine') },
+        avionics: { slotKey: 'avionics', name: 'Központi Triage & Kapacitás-Komputer', icon: '📡', legacyId: 'rep_triage_core', levels: generateSubsystemLevels('repair_ship', 'avionics') }
     },
     cruiser: {
         weapon: { slotKey: 'weapon', name: 'Drónhangár & Indítósínek', icon: '🛸', legacyId: 'cruiser_drone_hangar', levels: generateSubsystemLevels('cruiser', 'weapon') },
@@ -681,7 +684,7 @@ class DatabaseService {
                 loot_type: 'resources',
                 loot_data: JSON.stringify({ metal: 7500, energy: 3750, isotope: 2000, data: 2000, glory: 400 }),
                 planetary_shield_hp: 7000.0, max_shield_hp: 7000.0, railgun_count: 5,
-                ships: { frigate: 16, destroyer: 12, heavy_destroyer: 8, cruiser: 4 }
+                ships: { frigate: 16, destroyer: 12, repair_ship: 8, cruiser: 4 }
             },
             {
                 id: 'boss_2',
@@ -691,7 +694,7 @@ class DatabaseService {
                 loot_type: 'resources',
                 loot_data: JSON.stringify({ metal: 14000, energy: 6500, isotope: 4000, data: 4000, glory: 800 }),
                 planetary_shield_hp: 12000.0, max_shield_hp: 12000.0, railgun_count: 8,
-                ships: { destroyer: 16, heavy_destroyer: 12, cruiser: 12, battleship: 6 }
+                ships: { destroyer: 16, repair_ship: 12, cruiser: 12, battleship: 6 }
             },
             {
                 id: 'boss_3',
@@ -701,7 +704,7 @@ class DatabaseService {
                 loot_type: 'resources',
                 loot_data: JSON.stringify({ metal: 28000, energy: 14000, isotope: 8000, data: 8000, glory: 1600 }),
                 planetary_shield_hp: 26000.0, max_shield_hp: 26000.0, railgun_count: 16,
-                ships: { heavy_destroyer: 24, cruiser: 18, battleship: 12 }
+                ships: { repair_ship: 24, cruiser: 18, battleship: 12 }
             }
         ];
 
@@ -828,7 +831,7 @@ class DatabaseService {
                 is_bot: 1, bot_type: 'outpost', difficulty_tier: 2,
                 loot_type: 'glory', loot_data: JSON.stringify({ glory: 30 }),
                 planetary_shield_hp: 633.0, max_shield_hp: 633.0, railgun_count: 3,
-                ships: { heavy_destroyer: 3, destroyer: 4 }
+                ships: { repair_ship: 3, destroyer: 4 }
             },
             {
                 id: 'bot_p16', name: 'PREKURZOR KÓDEX-SZENTÉLY',
@@ -844,7 +847,7 @@ class DatabaseService {
                 is_bot: 1, bot_type: 'outpost', difficulty_tier: 2,
                 loot_type: 'resources', loot_data: JSON.stringify({ metal: 2200, energy: 1000, isotope: 400, data: 300 }),
                 planetary_shield_hp: 552.0, max_shield_hp: 552.0, railgun_count: 2,
-                ships: { corvette: 10, heavy_destroyer: 3 }
+                ships: { corvette: 10, repair_ship: 3 }
             },
             {
                 id: 'bot_p18', name: 'CIKLON-KORSZAK ERŐDÍTÉS',
@@ -878,7 +881,7 @@ class DatabaseService {
                 is_bot: 1, bot_type: 'outpost', difficulty_tier: 3,
                 loot_type: 'resources', loot_data: JSON.stringify({ metal: 3500, energy: 1500, isotope: 600, data: 500 }),
                 planetary_shield_hp: 920.0, max_shield_hp: 920.0, railgun_count: 3,
-                ships: { frigate: 6, heavy_destroyer: 4, cruiser: 3 }
+                ships: { frigate: 6, repair_ship: 4, cruiser: 3 }
             },
             {
                 id: 'bot_p22', name: 'REZONANCIA-MAG ERŐD',
@@ -902,7 +905,7 @@ class DatabaseService {
                 is_bot: 1, bot_type: 'outpost', difficulty_tier: 3,
                 loot_type: 'resources', loot_data: JSON.stringify({ metal: 3800, energy: 1800, isotope: 750, data: 600 }),
                 planetary_shield_hp: 1093.0, max_shield_hp: 1093.0, railgun_count: 3,
-                ships: { heavy_destroyer: 5, cruiser: 4, battleship: 2 }
+                ships: { repair_ship: 5, cruiser: 4, battleship: 2 }
             },
             {
                 id: 'bot_p25', name: 'ANTIMATTER SILÓ-SZIKLA',
@@ -910,7 +913,7 @@ class DatabaseService {
                 is_bot: 1, bot_type: 'outpost', difficulty_tier: 3,
                 loot_type: 'glory', loot_data: JSON.stringify({ glory: 45 }),
                 planetary_shield_hp: 1035.0, max_shield_hp: 1035.0, railgun_count: 3,
-                ships: { destroyer: 7, heavy_destroyer: 4, cruiser: 3 }
+                ships: { destroyer: 7, repair_ship: 4, cruiser: 3 }
             },
             {
                 id: 'bot_p26', name: 'KVANTUM-FOLYOSÓ ŐRSZEM',
@@ -926,7 +929,7 @@ class DatabaseService {
                 is_bot: 1, bot_type: 'outpost', difficulty_tier: 3,
                 loot_type: 'resources', loot_data: JSON.stringify({ metal: 4000, energy: 2000, isotope: 800, data: 650 }),
                 planetary_shield_hp: 1150.0, max_shield_hp: 1150.0, railgun_count: 4,
-                ships: { heavy_destroyer: 6, cruiser: 4, battleship: 2 }
+                ships: { repair_ship: 6, cruiser: 4, battleship: 2 }
             },
             {
                 id: 'bot_p28', name: 'TITÁN-CSAPATOK KRIPTÁJA',
@@ -942,7 +945,7 @@ class DatabaseService {
                 is_bot: 1, bot_type: 'outpost', difficulty_tier: 3,
                 loot_type: 'resources', loot_data: JSON.stringify({ metal: 4200, energy: 2200, isotope: 900, data: 700 }),
                 planetary_shield_hp: 1323.0, max_shield_hp: 1323.0, railgun_count: 4,
-                ships: { heavy_destroyer: 5, cruiser: 5, battleship: 3 }
+                ships: { repair_ship: 5, cruiser: 5, battleship: 3 }
             },
             {
                 id: 'bot_p30', name: 'PREKURZOR OMEGA-BÁSTYA',
@@ -950,7 +953,7 @@ class DatabaseService {
                 is_bot: 1, bot_type: 'outpost', difficulty_tier: 3,
                 loot_type: 'artifact', loot_data: JSON.stringify({ artifact_id: 'artifact_codex', name: 'Prekurzor Hozzáférési Kódex' }),
                 planetary_shield_hp: 1380.0, max_shield_hp: 1380.0, railgun_count: 4,
-                ships: { frigate: 10, heavy_destroyer: 5, cruiser: 5, battleship: 3 }
+                ships: { frigate: 10, repair_ship: 5, cruiser: 5, battleship: 3 }
             }
         ];
 
@@ -1125,11 +1128,11 @@ class DatabaseService {
 
         const baseHulls = {
             scout: 40, interceptor: 70, corvette: 120, freighter: 350, colony_ship: 200,
-            frigate: 280, destroyer: 450, heavy_destroyer: 950, cruiser: 800, battleship: 1600
+            frigate: 280, destroyer: 450, repair_ship: 950, cruiser: 800, battleship: 1600
         };
         const baseShields = {
             scout: 0, interceptor: 25, corvette: 40, freighter: 60, colony_ship: 50,
-            frigate: 120, destroyer: 200, heavy_destroyer: 70, cruiser: 400, battleship: 800
+            frigate: 120, destroyer: 200, repair_ship: 70, cruiser: 400, battleship: 800
         };
 
         for (const st of ALL_SHIP_TYPES) {
@@ -2491,9 +2494,9 @@ class DatabaseService {
         // 50%-os menetidő oda és vissza
         const tradeTravelTicks = Math.max(1, Math.round(normalTravelTicks * 0.5));
 
-        const SHIP_FUEL_WEIGHTS = { scout: 0.5, interceptor: 0.8, corvette: 1.0, freighter: 2.0, colony_ship: 2.0, frigate: 1.8, destroyer: 3.0, heavy_destroyer: 4.0, cruiser: 4.5, battleship: 6.0 };
-        const SHIP_HULL_SPECS = { scout: 40, interceptor: 70, corvette: 120, freighter: 350, colony_ship: 200, frigate: 280, destroyer: 450, heavy_destroyer: 950, cruiser: 800, battleship: 1600 };
-        const SHIP_SHIELD_SPECS = { scout: 0, interceptor: 25, corvette: 40, freighter: 60, colony_ship: 50, frigate: 120, destroyer: 200, heavy_destroyer: 70, cruiser: 400, battleship: 800 };
+        const SHIP_FUEL_WEIGHTS = { scout: 0.5, interceptor: 0.8, corvette: 1.0, freighter: 2.0, colony_ship: 2.0, frigate: 1.8, destroyer: 3.0, repair_ship: 4.0, cruiser: 4.5, battleship: 6.0 };
+        const SHIP_HULL_SPECS = { scout: 40, interceptor: 70, corvette: 120, freighter: 350, colony_ship: 200, frigate: 280, destroyer: 450, repair_ship: 950, cruiser: 800, battleship: 1600 };
+        const SHIP_SHIELD_SPECS = { scout: 0, interceptor: 25, corvette: 40, freighter: 60, colony_ship: 50, frigate: 120, destroyer: 200, repair_ship: 70, cruiser: 400, battleship: 800 };
 
         let totalFuelWeight = 0;
         for (const st of ALL_SHIP_TYPES) {

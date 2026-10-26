@@ -323,6 +323,7 @@ function processTick() {
                     (fleet.ships.corvette || 0) === 0 &&
                     (fleet.ships.frigate || 0) === 0 &&
                     (fleet.ships.destroyer || 0) === 0 &&
+                    (fleet.ships.repair_ship || 0) === 0 &&
                     (fleet.ships.heavy_destroyer || 0) === 0 &&
                     (fleet.ships.cruiser || 0) === 0 &&
                     (fleet.ships.battleship || 0) === 0;
