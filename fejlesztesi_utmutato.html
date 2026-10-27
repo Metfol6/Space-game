@@ -1,0 +1,1308 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8">
+<title>SPACE 4X TACTICS — Teljes Fejlesztési és Technológiai Útmutató</title>
+<style>
+  @page {
+    size: A4 portrait;
+    margin: 12mm 12mm 14mm 12mm;
+  }
+  * {
+    box-sizing: border-box;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  body {
+    font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    color: #0f172a;
+    background: #ffffff;
+    margin: 0;
+    padding: 0;
+    font-size: 9.5pt;
+    line-height: 1.42;
+  }
+  .cover-banner {
+    background: linear-gradient(135deg, #060b16 0%, #0f172a 60%, #1e293b 100%);
+    color: #f8fafc;
+    padding: 18px 22px;
+    border-radius: 8px;
+    border-left: 6px solid #00f0ff;
+    margin-bottom: 14px;
+  }
+  .cover-banner h1 {
+    margin: 0 0 6px 0;
+    font-size: 18pt;
+    letter-spacing: 0.8px;
+    color: #00f0ff;
+    text-transform: uppercase;
+  }
+  .cover-banner .subtitle {
+    font-size: 10.5pt;
+    color: #cbd5e1;
+    margin: 0;
+  }
+  .cover-meta {
+    margin-top: 10px;
+    display: flex;
+    gap: 14px;
+    font-size: 8.5pt;
+    color: #94a3b8;
+  }
+  .cover-meta span {
+    background: rgba(255,255,255,0.08);
+    padding: 3px 8px;
+    border-radius: 4px;
+    border: 1px solid rgba(0,240,255,0.25);
+  }
+  h2 {
+    font-size: 13pt;
+    color: #0f172a;
+    background: #e2e8f0;
+    border-left: 5px solid #0284c7;
+    padding: 6px 12px;
+    margin: 16px 0 8px 0;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  h3 {
+    font-size: 10.5pt;
+    color: #0369a1;
+    margin: 10px 0 5px 0;
+    border-bottom: 1.5px solid #cbd5e1;
+    padding-bottom: 3px;
+  }
+  p {
+    margin: 4px 0 8px 0;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 10px;
+    font-size: 8.5pt;
+  }
+  tr {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+  th, td {
+    border: 1px solid #cbd5e1;
+    padding: 5px 7px;
+    text-align: left;
+    vertical-align: top;
+  }
+  th {
+    background: #0f172a;
+    color: #f8fafc;
+    font-weight: 700;
+    text-transform: uppercase;
+    font-size: 7.8pt;
+    letter-spacing: 0.4px;
+  }
+  tr:nth-child(even) td {
+    background: #f8fafc;
+  }
+  .tier1 { color: #0284c7; font-weight: 700; }
+  .tier2 { color: #7c3aed; font-weight: 700; }
+  .tier3 { color: #d97706; font-weight: 700; }
+  .iso { color: #7c3aed; font-weight: 700; }
+  .unlock-tag {
+    display: inline-block;
+    background: #dcfce7;
+    color: #166534;
+    border: 1px solid #86efac;
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 7.8pt;
+    font-weight: 600;
+    margin: 1px 2px 1px 0;
+  }
+  .req-tag {
+    display: inline-block;
+    background: #fef3c7;
+    color: #92400e;
+    border: 1px solid #fde68a;
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 7.8pt;
+    font-weight: 600;
+  }
+  .card {
+    border: 1px solid #94a3b8;
+    border-radius: 6px;
+    margin-bottom: 10px;
+    overflow: hidden;
+    background: #ffffff;
+  }
+  .card-header {
+    background: #1e293b;
+    color: #f8fafc;
+    padding: 5px 10px;
+    font-size: 9pt;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .badge {
+    background: #0284c7;
+    color: #fff;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-size: 7.8pt;
+    font-weight: 600;
+  }
+  .sub-label {
+    padding: 4px 8px;
+    background: #f1f5f9;
+    font-size: 8pt;
+    color: #334155;
+    border-top: 1px solid #cbd5e1;
+    border-bottom: 1px solid #cbd5e1;
+  }
+  .cost-grid {
+    margin-bottom: 0;
+    font-size: 7.4pt;
+  }
+  .cost-grid th {
+    background: #334155;
+    text-align: center;
+    padding: 3px 2px;
+    font-size: 7pt;
+  }
+  .cost-grid td {
+    text-align: center;
+    padding: 3px 2px;
+    line-height: 1.25;
+  }
+  .compact-table {
+    margin-bottom: 0;
+    font-size: 8pt;
+  }
+  .compact-table th {
+    background: #334155;
+    padding: 4px 6px;
+  }
+  .compact-table td {
+    padding: 4px 6px;
+  }
+  .step-box {
+    border-left: 4px solid #0284c7;
+    background: #f8fafc;
+    padding: 7px 11px;
+    margin-bottom: 7px;
+    border-radius: 0 5px 5px 0;
+    border-top: 1px solid #e2e8f0;
+    border-right: 1px solid #e2e8f0;
+    border-bottom: 1px solid #e2e8f0;
+  }
+  .step-box b.phase {
+    color: #0284c7;
+    font-size: 9.5pt;
+    display: block;
+    margin-bottom: 3px;
+  }
+  .avoid-break {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+  .page-break {
+    page-break-before: always;
+    break-before: page;
+  }
+  .flow-arrow {
+    font-weight: bold;
+    color: #0284c7;
+  }
+</style>
+</head>
+<body>
+
+  <div class="cover-banner">
+    <h1>SPACE 4X TACTICS — TELJES FEJLESZTÉSI ÚTMUTATÓ</h1>
+    <p class="subtitle">Minden épület, technológia, hajóosztály, hajódokk-alrendszer, küldetés, ereklye és Boss előfeltétel pontos sorrendben</p>
+    <div class="cover-meta">
+      <span>📌 4 Technológiai Ág (13 Kutatás)</span>
+      <span>🚀 10 Hajóosztály &amp; 38 Alrendszer (Lv.1–10)</span>
+      <span>🏭 4 Bolygó Építmény (Lv.1–3)</span>
+      <span>🏆 9 Küldetés, 3 Ereklye &amp; 3 Boss Citadella</span>
+    </div>
+  </div>
+
+  <!-- 1. FEJEZET -->
+  <h2>1. Fejezet: Fejlődési Útvonal Lépésről Lépésre (Mi Mi Után Jön?)</h2>
+  <p>Az alábbi sorrend megmutatja a teljes játékmenet egymásra épülő lépcsőfokait a legelső körtől az Omega-Leviatán legyőzéséig:</p>
+
+  <div class="step-box avoid-break">
+    <b class="phase">1. LÉPCSŐ — Alapozás és Korai Gazdaság (Kezdet &rarr; Tier 1)</b>
+    <b>1. Bolygófejlesztés:</b> Főbolygódon (<i>Kronos-IV</i>) fejleszd az <b>Ipari Központot Lv.2-re</b> (120 Fém) &rarr; teljesül a <b>#1 Küldetés</b> (+150 Fém, +50 E, +25% Bányászat buff).<br>
+    <b>2. Felderítés:</b> Építs 1 db <b>Felderítő Szondát</b> (30 Fém, 10 E, 10 Iso — alapból elérhető), küldd el <i>Zephyr-7</i>-re &rarr; teljesül a <b>#2 Küldetés</b> (+40 Iso, +50 Adat).<br>
+    <b>3. Tier 1 Kutatások (Előfeltétel nélkül, egyenként 80 Adat + 25 Izotóp, 3 kör):</b>
+    <ul>
+      <li><b>Mélységi Fúrás (Tier 1 Ipar):</b> +25% Fémtermelés, és megnyitja a Tier 2 ipari ágat.</li>
+      <li><b>Sötét Anyag Reaktor (Tier 1 Energia):</b> +30% Energia, feloldja a Korvett <i>Mélyűr Zavarórendszer</i> modulját, és kell az <i>Automatizált Hajógyár</i> + <i>Kiterjesztett Energiapajzs</i> kutatásokhoz!</li>
+      <li><b>Ionos Impulzus-hajtómű (Tier 1 Hajtómű):</b> +25% flotta sebesség, és azonnal feloldja a <b>Gyors Elfogóvadász</b> gyártását.</li>
+      <li><b>Kinetikus Kalibráció (Tier 1 Haditechnika):</b> +15% sebzés Korvetteknek, Elfogóvadászoknak és Rombolóknak.</li>
+    </ul>
+  </div>
+
+  <div class="step-box avoid-break">
+    <b class="phase">2. LÉPCSŐ — Kolonizáció, Közepes Flotta és Tier 2 Áttörés</b>
+    <b>4. Első Ereklye megszerzése:</b> Építs <b>8 db Könnyű Korvettet</b> (vagy később 3 Rombolót) &rarr; teljesül a <b>#3 Küldetés</b>, jutalmul megkapod az 1. Prekurzor Ereklyét: <b>🏺 Kvantum Chrono-Mag</b> (kötelező a Boss 1–3-hoz!).<br>
+    <b>5. Tier 2 Kutatások (Egymásra épülő feloldások):</b>
+    <ul>
+      <li><b>Automatizált Hajógyár (Tier 2 Ipar)</b> <i>[Kell: Mélységi Fúrás + Sötét Anyag Reaktor | 200 Adat, 70 Iso, 8 kör]</i> &rarr; <b>Feloldja a Kolóniahajót és a Taktikai Szerelőhajót!</b> Emellett -20% hajógyártási Fémköltséget és <b>40%-os (Tier 2) Hajódokk szintkeretet</b> ad.</li>
+      <li><b>Nehézfém Kohászat (Tier 2 Ipar)</b> <i>[Kell: Mélységi Fúrás | 160 Adat, 55 Iso, 6 kör]</i> &rarr; <b>Feloldja a Romboló Cirkálót</b>, +30% Hajótest HP-t ad minden hajónak, és teljesíti a Boss 2 technológiai előfeltételét.</li>
+      <li><b>Kiterjesztett Energiapajzs (Tier 2 Haditechnika)</b> <i>[Kell: Kinetikus Kalibráció + Sötét Anyag Reaktor | 180 Adat, 65 Iso, 7 kör]</i> &rarr; <b>Feloldja a Lopakodó Torpedó Fregattot</b>, +25% pajzsot ad minden hajónak, és feloldja a Fregatt/Romboló speciális moduljait.</li>
+      <li><b>Szupervezető Hálózat (Tier 2 Energia)</b> <i>[Kell: Sötét Anyag Reaktor | 160 Adat, 55 Iso, 6 kör]</i> &amp; <b>Izotóp-tömörítés (Tier 2 Hajtómű)</b> <i>[Kell: Ionos Impulzus-hajtómű | 160 Adat, 55 Iso, 6 kör]</i> &rarr; Előkészítik a Tier 3 csúcstechnológiákat.</li>
+    </ul>
+    <b>6. Expanzió és 2. Ereklye:</b> Gyárts <b>Kolóniahajót</b>, foglald el <i>Zephyr-7</i>-et (#4 Küldetés), majd szerezz meg összesen <b>3 bolygót</b> &rarr; teljesül az <b>#5 Küldetés</b>, jutalmul megkapod a 2. Ereklyét: <b>💎 Sötét Anyag Rezonátor</b>.
+  </div>
+
+  <div class="step-box avoid-break">
+    <b class="phase">3. LÉPCSŐ — Csúcstechnológia (Tier 3), Nehéz Flotta és a 3 Boss Citadella</b>
+    <b>7. Harmadik Ereklye &amp; Boss 1 (Cygnus Bastion):</b> Érj el <b>100 Dicsőség Pontot</b> csatákkal &rarr; <b>#6 Küldetés</b> megadja a 3. Ereklyét: <b>🔮 Prekurzor Hozzáférési Kódex</b>. Ha megvan a <b>250 Dicsőség Pont + Chrono-Mag + 15 Korvett (vagy 6 Romboló) + 80 Iso / 150 Adat</b>, ostromold meg a <b>Boss 1-et (#7 Küldetés)</b>!<br>
+    <b>8. Tier 3 Kutatások (Feloldják a 60%-os maximális Hajódokk szintkeretet és a nehéz hajókat):</b>
+    <ul>
+      <li><b>Antianyag Csomópont (Tier 3 Energia)</b> <i>[Kell: Szupervezető Hálózat + Izotóp-tömörítés | 320 Adat, 120 Iso, 12 kör]</i> &rarr; <b>Feloldja a Drón-Hordozó Cirkálót</b>, +50% bolygópajzs és orbitális railgun erő.</li>
+      <li><b>Hipertér-Ugrómotor (Tier 3 Hajtómű)</b> <i>[Kell: Izotóp-tömörítés + Szupervezető Hálózat | 400 Adat, 150 Iso, 15 kör]</i> &rarr; <b>Feloldja a Csatahajót (Dreadnought)</b>, és minden flotta minimális sebességét 6.0-ra emeli.</li>
+      <li><b>Ostrom-töltetek (Tier 3 Haditechnika)</b> <i>[Kell: Kiterjesztett Energiapajzs + Nehézfém Kohászat | 380 Adat, 140 Iso, 15 kör]</i> &rarr; +50% Csatahajó sebzés, feloldja a <i>Spinalis Gerinc-Railgun</i> modult, és <b>kötelező a Boss 3 megtámadásához</b>!</li>
+      <li><b>Nano-Összeszerelés (Tier 3 Ipar)</b> <i>[Kell: Automatizált Hajógyár + Nehézfém Kohászat | 320 Adat, 110 Iso, 12 kör]</i> &rarr; +1 építési slot minden bolygón.</li>
+    </ul>
+    <b>9. Boss 2 (Void Citadel) &rarr; Boss 3 (Omega-Ark-0 Leviatán):</b> 500 GP-nél és 10 Rombolóval pusztítsd el a <b>Boss 2-t (#8 Küldetés)</b>, majd 850 GP-nél, mindhárom Ereklyével, 8 Csatahajóval és 14 Rombolóval indítsd el a végső ostromot a <b>Boss 3 (#9 Küldetés)</b> ellen!
+  </div>
+
+  <!-- 2. FEJEZET -->
+  <h2>2. Fejezet: Technológiai Fa (Mind a 4 Ág és 13 Kutatás Sorrendben)</h2>
+  <p>Egyszerre 1 technológia kutatható. A kutatás <b>Adat (📊)</b> és <b>Izotóp (🟢)</b> nyersanyagba kerül, és a megadott számú kör (tick) alatt készül el.</p>
+
+  <h3>2.1. Ipar &amp; Bányászat Ág (Economy)</h3>
+  <table>
+    <thead>
+      <tr>
+        <th style="width:8%">Szint</th>
+        <th style="width:20%">Technológia Neve</th>
+        <th style="width:22%">Előfeltétel (Mi kell hozzá?)</th>
+        <th style="width:14%">Költség</th>
+        <th style="width:7%">Idő</th>
+        <th style="width:29%">Hatás &amp; Mit old fel?</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="tier1">Tier 1</td>
+        <td><b>Mélységi Fúrás</b><br><small>(deep_core_mining)</small></td>
+        <td><i>Nincs (Alapból kutatható)</i></td>
+        <td><b>80 Adat</b><br><b>25 Izotóp</b></td>
+        <td>3 kör</td>
+        <td>• <b>+25% Fémtermelés</b> minden birtokolt bolygón.<br>• Megnyitja: <i>Nehézfém Kohászat</i> és <i>Automatizált Hajógyár</i>.</td>
+      </tr>
+      <tr>
+        <td class="tier2">Tier 2</td>
+        <td><b>Nehézfém Kohászat</b><br><small>(heavy_metallurgy)</small></td>
+        <td><span class="req-tag">Mélységi Fúrás</span></td>
+        <td><b>160 Adat</b><br><b>55 Izotóp</b></td>
+        <td>6 kör</td>
+        <td>• <b>+30% Hajótest (Hull HP)</b> minden hajóosztálynak.<br>• <span class="unlock-tag">Feloldja: Romboló Cirkáló</span><br>• <span class="unlock-tag">Feloldja: Teherszállító Váz alrendszer</span><br>• <span class="unlock-tag">Feloldja: Tier 2 Hajódokk keret (40%) &amp; Boss 2 Tech</span></td>
+      </tr>
+      <tr>
+        <td class="tier2">Tier 2</td>
+        <td><b>Automatizált Hajógyár</b><br><small>(automated_dock)</small></td>
+        <td><span class="req-tag">Mélységi Fúrás</span> ÉS<br><span class="req-tag">Sötét Anyag Reaktor</span></td>
+        <td><b>200 Adat</b><br><b>70 Izotóp</b></td>
+        <td>8 kör</td>
+        <td>• <b>-20% Fémköltség</b> minden hajó gyártásakor.<br>• <span class="unlock-tag">Feloldja: Kolóniahajó</span><br>• <span class="unlock-tag">Feloldja: Taktikai Szerelőhajó</span><br>• <span class="unlock-tag">Feloldja: Tier 2 Hajódokk keret (40%)</span></td>
+      </tr>
+      <tr>
+        <td class="tier3">Tier 3</td>
+        <td><b>Nano-Összeszerelés</b><br><small>(nano_assembly)</small></td>
+        <td><span class="req-tag">Automatizált Hajógyár</span> ÉS<br><span class="req-tag">Nehézfém Kohászat</span></td>
+        <td><b>320 Adat</b><br><b>110 Izotóp</b></td>
+        <td>12 kör</td>
+        <td>• <b>+1 Építési Slot</b> minden birtokolt bolygón.<br>• <span class="unlock-tag">Feloldja: Tier 3 Hajódokk keret (60%)</span></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>2.2. Energia &amp; Reaktorok Ág (Energy)</h3>
+  <table>
+    <thead>
+      <tr>
+        <th style="width:8%">Szint</th>
+        <th style="width:20%">Technológia Neve</th>
+        <th style="width:22%">Előfeltétel (Mi kell hozzá?)</th>
+        <th style="width:14%">Költség</th>
+        <th style="width:7%">Idő</th>
+        <th style="width:29%">Hatás &amp; Mit old fel?</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="tier1">Tier 1</td>
+        <td><b>Sötét Anyag Reaktor</b><br><small>(dark_matter_reactor)</small></td>
+        <td><i>Nincs (Alapból kutatható)</i></td>
+        <td><b>80 Adat</b><br><b>25 Izotóp</b></td>
+        <td>3 kör</td>
+        <td>• <b>+30% Energiatermelés</b> minden bolygón.<br>• <span class="unlock-tag">Feloldja: Korvett ECM Zavarórendszer</span><br>• Megnyitja: <i>Szupervezető Hálózat</i>, <i>Automatizált Hajógyár</i>, <i>Kiterjesztett Energiapajzs</i>.</td>
+      </tr>
+      <tr>
+        <td class="tier2">Tier 2</td>
+        <td><b>Szupervezető Hálózat</b><br><small>(superconductor_grid)</small></td>
+        <td><span class="req-tag">Sötét Anyag Reaktor</span></td>
+        <td><b>160 Adat</b><br><b>55 Izotóp</b></td>
+        <td>6 kör</td>
+        <td>• <b>-25% épület energiafogyasztás</b> bolygókon.<br>• <span class="unlock-tag">Feloldja: Cirkáló Drón-Rajvezérlő Mátrix</span><br>• <span class="unlock-tag">Feloldja: Tier 2 Hajódokk keret (40%)</span></td>
+      </tr>
+      <tr>
+        <td class="tier3">Tier 3</td>
+        <td><b>Antianyag Csomópont</b><br><small>(antimatter_containment)</small></td>
+        <td><span class="req-tag">Szupervezető Hálózat</span> ÉS<br><span class="req-tag">Izotóp-tömörítés</span></td>
+        <td><b>320 Adat</b><br><b>120 Izotóp</b></td>
+        <td>12 kör</td>
+        <td>• <b>+50% Planetáris Pajzs és Orbitális Railgun</b> hatékonyság.<br>• <span class="unlock-tag">Feloldja: Drón-Hordozó Cirkáló</span><br>• <span class="unlock-tag">Feloldja: Tier 3 Hajódokk keret (60%) &amp; Boss 3 Tech</span></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>2.3. Haditechnika &amp; Védelem Ág (Military)</h3>
+  <table>
+    <thead>
+      <tr>
+        <th style="width:8%">Szint</th>
+        <th style="width:20%">Technológia Neve</th>
+        <th style="width:22%">Előfeltétel (Mi kell hozzá?)</th>
+        <th style="width:14%">Költség</th>
+        <th style="width:7%">Idő</th>
+        <th style="width:29%">Hatás &amp; Mit old fel?</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="tier1">Tier 1</td>
+        <td><b>Kinetikus Kalibráció</b><br><small>(kinetic_calibration)</small></td>
+        <td><i>Nincs (Alapból kutatható)</i></td>
+        <td><b>80 Adat</b><br><b>25 Izotóp</b></td>
+        <td>3 kör</td>
+        <td>• <b>+15% Sebzés</b> minden Korvettnek, Elfogóvadásznak és Rombolónak.<br>• Megnyitja: <i>Kiterjesztett Energiapajzs</i>.</td>
+      </tr>
+      <tr>
+        <td class="tier2">Tier 2</td>
+        <td><b>Kiterjesztett Energiapajzs</b><br><small>(extended_shielding)</small></td>
+        <td><span class="req-tag">Kinetikus Kalibráció</span> ÉS<br><span class="req-tag">Sötét Anyag Reaktor</span></td>
+        <td><b>180 Adat</b><br><b>65 Izotóp</b></td>
+        <td>7 kör</td>
+        <td>• <b>+25% Pajzskapacitás</b> minden hajóosztályon.<br>• <span class="unlock-tag">Feloldja: Lopakodó Torpedó Fregatt</span><br>• <span class="unlock-tag">Feloldja: Fregatt Torpedó &amp; Romboló Pajzs modul</span><br>• <span class="unlock-tag">Feloldja: Tier 2 Hajódokk keret (40%) &amp; Boss 2 Tech</span></td>
+      </tr>
+      <tr>
+        <td class="tier3">Tier 3</td>
+        <td><b>Ostrom-töltetek</b><br><small>(siege_warheads)</small></td>
+        <td><span class="req-tag">Kiterjesztett Energiapajzs</span> ÉS<br><span class="req-tag">Nehézfém Kohászat</span></td>
+        <td><b>380 Adat</b><br><b>140 Izotóp</b></td>
+        <td>15 kör</td>
+        <td>• <b>+50% Csatahajó sebzés</b> minden harcban.<br>• <span class="unlock-tag">Feloldja: Csatahajó Spinalis Gerinc-Railgun</span><br>• <span class="unlock-tag">Kötelező Boss 3 Tech &amp; Tier 3 Hajódokk keret (60%)</span></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>2.4. Hajtómű &amp; Logisztika Ág (Propulsion)</h3>
+  <table>
+    <thead>
+      <tr>
+        <th style="width:8%">Szint</th>
+        <th style="width:20%">Technológia Neve</th>
+        <th style="width:22%">Előfeltétel (Mi kell hozzá?)</th>
+        <th style="width:14%">Költség</th>
+        <th style="width:7%">Idő</th>
+        <th style="width:29%">Hatás &amp; Mit old fel?</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="tier1">Tier 1</td>
+        <td><b>Ionos Impulzus-hajtómű</b><br><small>(ion_thrusters)</small></td>
+        <td><i>Nincs (Alapból kutatható)</i></td>
+        <td><b>80 Adat</b><br><b>25 Izotóp</b></td>
+        <td>3 kör</td>
+        <td>• <b>+25% Sebesség</b> minden hajóosztálynak (rövidebb menetidő).<br>• <span class="unlock-tag">Feloldja: Gyors Elfogóvadász</span><br>• <span class="unlock-tag">Feloldja: Elfogóvadász Utánégető modul</span></td>
+      </tr>
+      <tr>
+        <td class="tier2">Tier 2</td>
+        <td><b>Izotóp-tömörítés</b><br><small>(isotope_compression)</small></td>
+        <td><span class="req-tag">Ionos Impulzus-hajtómű</span></td>
+        <td><b>160 Adat</b><br><b>55 Izotóp</b></td>
+        <td>6 kör</td>
+        <td>• <b>-30% Izotóp üzemanyagköltség</b> minden flotta indításakor.<br>• <span class="unlock-tag">Feloldja: Tier 2 Hajódokk keret (40%)</span></td>
+      </tr>
+      <tr>
+        <td class="tier3">Tier 3</td>
+        <td><b>Hipertér-Ugrómotor</b><br><small>(hyperspace_gate)</small></td>
+        <td><span class="req-tag">Izotóp-tömörítés</span> ÉS<br><span class="req-tag">Szupervezető Hálózat</span></td>
+        <td><b>400 Adat</b><br><b>150 Izotóp</b></td>
+        <td>15 kör</td>
+        <td>• <b>Flották minimális sebessége 6.0-ra nő</b> (nehéz flották is gyorsan érnek célba).<br>• <span class="unlock-tag">Feloldja: Csatahajó (Dreadnought)</span><br>• <span class="unlock-tag">Feloldja: Tier 3 Hajódokk keret (60%) &amp; Boss 3 Tech</span></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="page-break"></div>
+
+  <!-- 3. FEJEZET -->
+  <h2>3. Fejezet: Bolygó Építmények és Fejlesztési Szintek (Lv.1 &rarr; Lv.3)</h2>
+  <p>Minden bolygó meghatározott számú építési slottal rendelkezik (amit a <b>Nano-Összeszerelés</b> Tier 3 tech +1 slottal növel). Az épületek <b>Lv.1-ről indulnak</b>, és <b>Lv.3-ig</b> fejleszthetők:</p>
+  <table>
+    <thead>
+      <tr>
+        <th style="width:22%">Építmény Neve</th>
+        <th style="width:16%">Lv.1 &rarr; Lv.2 Költség</th>
+        <th style="width:16%">Lv.2 &rarr; Lv.3 Költség</th>
+        <th style="width:46%">Pontos Hatás és Stratégiai Szerep</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><b>🏭 Ipari Központ</b><br><small>(industrial_hub)</small></td>
+        <td><b>120 Fém</b><br><small>(Azonnali)</small></td>
+        <td><b>250 Fém</b><br><small>(Azonnali)</small></td>
+        <td>Növeli a bolygó Fém-, Energia-, Izotóp- és Adat-kitermelési szorzóját szintenként. <b>Kronos-IV-en a Lv.2 elérése teljesíti az 1. Küldetést!</b></td>
+      </tr>
+      <tr>
+        <td><b>🛡️ Planetáris Pajzsgenerátor</b><br><small>(planetary_shield)</small></td>
+        <td><b>120 Fém</b><br><small>(Azonnali)</small></td>
+        <td><b>250 Fém</b><br><small>(Azonnali)</small></td>
+        <td>Ostrom esetén elnyeli a támadó flotta sebzését a bolygó helyőrsége előtt. Az <b>Antianyag Csomópont (Tier 3)</b> kutatás +50%-kal növeli az erejét.</td>
+      </tr>
+      <tr>
+        <td><b>⚓ Automatizált Hajódokk</b><br><small>(automated_dock)</small></td>
+        <td><b>120 Fém</b><br><small>(Azonnali)</small></td>
+        <td><b>250 Fém</b><br><small>(Azonnali)</small></td>
+        <td>Hajógyártási és dokk-központ. <b>FONTOS:</b> Bármely bolygón az <b>Automatizált Hajódokk Lv.2-re fejlesztése</b> (120 Fémért) kutatás nélkül is azonnal <b>feloldja a Tier 2 (40%-os) Hajódokk alrendszer-keretet!</b></td>
+      </tr>
+      <tr>
+        <td><b>☄️ Orbitális Railgun Üteg</b><br><small>(orbital_railgun)</small></td>
+        <td><b>120 Fém</b><br><small>(Azonnali)</small></td>
+        <td><b>250 Fém</b><br><small>(Azonnali)</small></td>
+        <td>Bolygóvédelmi nehézlöveg: ostromkor minden harci körben nagy sebzést mér a támadó flottára. Az <b>Antianyag Csomópont (Tier 3)</b> +50% sebzést ad neki.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- 4. FEJEZET -->
+  <h2>4. Fejezet: Hajóosztályok Feloldási Sorrendje (10 Hajóosztály)</h2>
+  <p>A hajók gyártása a <b>Hajógyár</b> fülön történik. Ha kifejleszted az <b>Automatizált Hajógyár (Tier 2)</b> technológiát, minden hajó Fémköltsége <b>20%-kal csökken</b>!</p>
+  <table>
+    <thead>
+      <tr>
+        <th style="width:4%">#</th>
+        <th style="width:17%">Hajóosztály</th>
+        <th style="width:19%">Előfeltétel (Mi után jön?)</th>
+        <th style="width:15%">Alap Költség<br><small>(-20% Fémmel)</small></th>
+        <th style="width:17%">Alap Statisztikák<br><small>(HP / Pajzs / DMG / Seb.)</small></th>
+        <th style="width:28%">Különleges Képesség &amp; Harci Szerep</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><b>1</b></td>
+        <td><b>Felderítő Szonda</b><br><small>(scout)</small></td>
+        <td><i>Alapból elérhető</i></td>
+        <td><b>30 Fém</b> (24)<br>10 E, 10 Iso</td>
+        <td>HP: <b>40</b> | Pajzs: <b>0</b><br>DMG: <b>0</b> | Seb: <b>9.0</b><br><small>Fenntartás: 0.5 E/h</small></td>
+        <td><b>Tachion Kémkedés:</b> Felfedi az idegen bolygók pontos védőflottáját, épületeit és nyersanyagait.</td>
+      </tr>
+      <tr>
+        <td><b>2</b></td>
+        <td><b>Könnyű Korvett</b><br><small>(corvette)</small></td>
+        <td><i>Alapból elérhető</i></td>
+        <td><b>60 Fém</b> (48)<br>20 E, 5 Iso</td>
+        <td>HP: <b>120</b> | Pajzs: <b>40</b><br>DMG: <b>35</b> | Seb: <b>5.5</b><br><small>Fenntartás: 1.0 E/h</small></td>
+        <td><b>Zavarómező (25% Kitérés):</b> A nehéz Csatahajók -40% pontossággal találják el. Kiváló raj-egység.</td>
+      </tr>
+      <tr>
+        <td><b>3</b></td>
+        <td><b>Nehéz Teherszállító</b><br><small>(freighter)</small></td>
+        <td><i>Alapból elérhető</i></td>
+        <td><b>180 Fém</b> (144)<br>60 E, 15 Iso</td>
+        <td>HP: <b>350</b> | Pajzs: <b>60</b><br>DMG: <b>0</b> | Seb: <b>4.0</b><br><small>Raktér: 500 | 1.5 E/h</small></td>
+        <td><b>Galaktikus Kereskedelem &amp; Roncsmentés:</b> A Nexus Piacra küldve 3 körig kereskedhetsz vele; csata után +50% roncsot ment ki.</td>
+      </tr>
+      <tr>
+        <td><b>4</b></td>
+        <td><b>Gyors Elfogóvadász</b><br><small>(interceptor)</small></td>
+        <td><span class="req-tag">Ionos Impulzus-hajtómű</span><br><small>(Tier 1 Hajtómű)</small></td>
+        <td><b>45 Fém</b> (36)<br>15 E, 8 Iso</td>
+        <td>HP: <b>70</b> | Pajzs: <b>25</b><br>DMG: <b>45</b> | Seb: <b>10.0</b><br><small>Fenntartás: 0.8 E/h</small></td>
+        <td><b>Villámcsapás:</b> A játék leggyorsabb hajója (10.0), amely az <b>1. harci körben +25% bónusz sebzést</b> okoz.</td>
+      </tr>
+      <tr>
+        <td><b>5</b></td>
+        <td><b>Kolóniahajó</b><br><small>(colony_ship)</small></td>
+        <td><span class="req-tag">Automatizált Hajógyár</span><br><small>(Tier 2 Ipar)</small></td>
+        <td><b>300 Fém</b> (240)<br>150 E, 60 Iso</td>
+        <td>HP: <b>200</b> | Pajzs: <b>50</b><br>DMG: <b>0</b> | Seb: <b>3.0</b><br><small>Fenntartás: 2.0 E/h</small></td>
+        <td><b>Bolygó Kolonizálás:</b> Semleges bolygókra küldve megalapítja az új kolóniát (a hajó beépül a bázisba).</td>
+      </tr>
+      <tr>
+        <td><b>6</b></td>
+        <td><b>Lopakodó Torpedó Fregatt</b><br><small>(frigate)</small></td>
+        <td><span class="req-tag">Kiterjesztett Energiapajzs</span><br><small>(Tier 2 Haditechnika)</small></td>
+        <td><b>140 Fém</b> (112)<br>50 E, 18 Iso</td>
+        <td>HP: <b>280</b> | Pajzs: <b>120</b><br>DMG: <b>85</b> | Seb: <b>4.5</b><br><small>Fenntartás: 2.5 E/h</small></td>
+        <td><b>Pajzs-Átütő Torpedók:</b> Sebzésének <b>30%-a figyelmen kívül hagyja az ellenséges pajzsot</b> és egyenesen a hajótestet (Hull) rombolja.</td>
+      </tr>
+      <tr>
+        <td><b>7</b></td>
+        <td><b>Romboló Cirkáló</b><br><small>(destroyer)</small></td>
+        <td><span class="req-tag">Nehézfém Kohászat</span><br><small>(Tier 2 Ipar)</small></td>
+        <td><b>220 Fém</b> (176)<br>80 E, 20 Iso</td>
+        <td>HP: <b>450</b> | Pajzs: <b>200</b><br>DMG: <b>110</b> | Seb: <b>3.5</b><br><small>Fenntartás: 4.0 E/h</small></td>
+        <td><b>Pajzs-Szinkronizáció:</b> Ha legalább 3 Romboló van a flottában, minden harci körben <b>+15% pajzsot regenerálnak</b>.</td>
+      </tr>
+      <tr>
+        <td><b>8</b></td>
+        <td><b>Taktikai Szerelőhajó</b><br><small>(repair_ship)</small></td>
+        <td><span class="req-tag">Automatizált Hajógyár</span><br><small>(Tier 2 Ipar)</small></td>
+        <td><b>260 Fém</b> (208)<br>100 E, 25 Iso</td>
+        <td>HP: <b>500</b> | Pajzs: <b>250</b><br>DMG: <b>15</b> | Seb: <b>3.5</b><br><small>Fenntartás: 3.0 E/h</small></td>
+        <td><b>Harctéri Nano-Javítás &amp; Védőháló:</b> Kör végén <b>+12% HP-t és +18% Pajzsot</b> tölt vissza a 4 legsérültebb hajónak (triázs), és <b>-5% kapott sebzés</b> aurát ad a flottának!</td>
+      </tr>
+      <tr>
+        <td><b>9</b></td>
+        <td><b>Drón-Hordozó Cirkáló</b><br><small>(cruiser)</small></td>
+        <td><span class="req-tag">Antianyag Csomópont</span><br><small>(Tier 3 Energia)</small></td>
+        <td><b>450 Fém</b> (360)<br>180 E, 50 Iso</td>
+        <td>HP: <b>800</b> | Pajzs: <b>400</b><br>DMG: <b>75</b> | Seb: <b>3.0</b><br><small>Fenntartás: 8.0 E/h</small></td>
+        <td><b>Drónraj Kíséret &amp; ECM Mátrix:</b> A teljes saját flotta védelmét <b>+15%-kal növeli</b>, az ellenség találati esélyét 15%-kal rontja.</td>
+      </tr>
+      <tr>
+        <td><b>10</b></td>
+        <td><b>Csatahajó (Dreadnought)</b><br><small>(battleship)</small></td>
+        <td><span class="req-tag">Hipertér-Ugrómotor</span><br><small>(Tier 3 Hajtómű)</small></td>
+        <td><b>800 Fém</b> (640)<br>300 E, 80 Iso</td>
+        <td>HP: <b>1600</b> | Pajzs: <b>800</b><br>DMG: <b>380</b> | Seb: <b>2.0</b><br><small>Fenntartás: 15.0 E/h</small></td>
+        <td><b>Spinalis Railgun &amp; Orbitális Blokád:</b> Brutális tűzerő (+50% DMG az <i>Ostrom-töltetek</i> techhel). Megsemmisíti a nagy célpontokat és erődöket.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="page-break"></div>
+
+  <!-- 5. FEJEZET -->
+  <h2>5. Fejezet: Hajódokk Alrendszerek (Lv.1 &rarr; Lv.10) és a 60%-os Szintkeret</h2>
+  <p>A <b>Hajódokk (Alrendszerek)</b> fülön minden hajóosztály 3, 4 vagy 5 egyedi alrendszer-modullal rendelkezik, amelyek egyenként <b>Lv.10 (Apex)</b> szintig fejleszthetők. Egy hajó összes moduljának együttes szintje azonban <b>nem lépheti túl a 60%-os maximális keretet</b>, így taktikusan kell specializálnod a hajóidat!</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width:18%">Hajódokk Keret Szint</th>
+        <th style="width:22%">Szintplafon (% és Szintek)</th>
+        <th style="width:60%">Hogyan oldható fel? (Előfeltétel)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="tier1">Tier 1 Keret (Alap)</td>
+        <td><b>20% keret</b><br><small>3 slot: 6 | 4 slot: 8 | 5 slot: 10 szint</small></td>
+        <td>A játék kezdetétől automatikusan elérhető minden hajóosztályon.</td>
+      </tr>
+      <tr>
+        <td class="tier2">Tier 2 Keret (Közepes)</td>
+        <td><b>40% keret</b><br><small>3 slot: 12 | 4 slot: 16 | 5 slot: 20 szint</small></td>
+        <td>Fejlessz ki <b>BÁRMELY Tier 2 technológiát</b> (<i>Nehézfém Kohászat, Automatizált Hajógyár, Szupervezető Hálózat, Kiterjesztett Energiapajzs, Izotóp-tömörítés</i>) <b>VAGY</b> építs <b>Automatizált Hajódokk Lv.2 épületet</b> bármelyik bolygódon!</td>
+      </tr>
+      <tr>
+        <td class="tier3">Tier 3 Keret (Maximális)</td>
+        <td><b>60% keret (Plafon)</b><br><small>3 slot: 18 | 4 slot: 24 | 5 slot: 30 szint</small></td>
+        <td>Fejlessz ki <b>BÁRMELY Tier 3 technológiát</b> (<i>Nano-Összeszerelés, Antianyag Csomópont, Ostrom-töltetek</i> vagy <i>Hipertér-Ugrómotor</i>).</td>
+      </tr>
+    </tbody>
+  </table>
+
+  
+    <div class="card avoid-break">
+      <div class="card-header">
+        <span>🚀 <b>Felderítő Szonda</b> — Alrendszer Fejlesztések (3 modul slot)</span>
+        <span class="badge">Keret: T1: 6 sz. | T2: 12 sz. | T3: 18 sz. (Max 60%)</span>
+      </div>
+      <table class="compact-table">
+        <thead>
+          <tr>
+            <th style="width:20%">Alrendszer Slot</th>
+            <th style="width:26%">Modul Megnevezése</th>
+            <th style="width:24%">Előfeltétel (Tech)</th>
+            <th style="width:30%">Szintenkénti Hatás (Lv.1 &rarr; Lv.10)</th>
+          </tr>
+        </thead>
+        <tbody>
+    <tr>
+      <td><b>Hajótest (hull)</b></td>
+      <td>Könnyített Titán-Kompozit Váz</td>
+      <td>Alap</td>
+      <td>+10 HP / szint (+100 HP Lv.10-en)</td>
+    </tr>
+  
+    <tr>
+      <td><b>Hajtómű (engine)</b></td>
+      <td>Mikro-Impulzus Vektorfúvókák</td>
+      <td>Alap</td>
+      <td>+0.4 Sebesség / szint (+4.0 Lv.10-en)</td>
+    </tr>
+  
+    <tr>
+      <td><b>Szenzor (avionics)</b></td>
+      <td>Mélyűr Tachion-Szkenner Mátrix</td>
+      <td>Alap</td>
+      <td>-4% lebukási esély / szint (-40% Lv.10-en)</td>
+    </tr>
+  </tbody>
+      </table>
+      <div class="sub-label">Egyetlen modul fejlesztési költsége szintenként (Lv.1 – Lv.10) | 1 modul Lv.1&rarr;10 összesen: <b>825 Fém, 550 E, 294 Iso</b>:</div>
+      <table class="cost-grid">
+        <thead>
+          <tr>
+            <th>Lv.1 (Mk.I)</th><th>Lv.2 (Mk.II)</th><th>Lv.3 (Mk.III)</th><th>Lv.4 (Mk.IV)</th><th>Lv.5 (Mk.V)</th>
+            <th>Lv.6 (Mk.VI)</th><th>Lv.7 (Mk.VII)</th><th>Lv.8 (Mk.VIII)</th><th>Lv.9 (Mk.IX)</th><th>Lv.10 (Apex)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td><b>15</b> Fém<br>10 E</td><td><b>30</b> Fém<br>20 E</td><td><b>45</b> Fém<br>30 E</td><td><b>60</b> Fém<br>40 E<br><span class="iso">8 Iso</span></td><td><b>75</b> Fém<br>50 E<br><span class="iso">16 Iso</span></td><td><b>90</b> Fém<br>60 E<br><span class="iso">24 Iso</span></td><td><b>105</b> Fém<br>70 E<br><span class="iso">39 Iso</span></td><td><b>120</b> Fém<br>80 E<br><span class="iso">54 Iso</span></td><td><b>135</b> Fém<br>90 E<br><span class="iso">69 Iso</span></td><td><b>150</b> Fém<br>100 E<br><span class="iso">84 Iso</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  
+    <div class="card avoid-break">
+      <div class="card-header">
+        <span>🚀 <b>Gyors Elfogóvadász</b> — Alrendszer Fejlesztések (4 modul slot)</span>
+        <span class="badge">Keret: T1: 8 sz. | T2: 16 sz. | T3: 24 sz. (Max 60%)</span>
+      </div>
+      <table class="compact-table">
+        <thead>
+          <tr>
+            <th style="width:20%">Alrendszer Slot</th>
+            <th style="width:26%">Modul Megnevezése</th>
+            <th style="width:24%">Előfeltétel (Tech)</th>
+            <th style="width:30%">Szintenkénti Hatás (Lv.1 &rarr; Lv.10)</th>
+          </tr>
+        </thead>
+        <tbody>
+    <tr>
+      <td><b>Hajótest (hull)</b></td>
+      <td>Karbon-Nanocső Merevítés</td>
+      <td>Alap</td>
+      <td>+15 HP / szint (+150 HP Lv.10-en)</td>
+    </tr>
+  
+    <tr>
+      <td><b>Pajzs (shield)</b></td>
+      <td>Impulzus-Deflektor Burok</td>
+      <td>Alap</td>
+      <td>+8 Pajzs / szint (+80 Pajzs Lv.10-en)</td>
+    </tr>
+  
+    <tr>
+      <td><b>Fegyverzet (weapon)</b></td>
+      <td>Dupla Plazma-Gyorstüzelő Ágyú</td>
+      <td>Alap</td>
+      <td>+7 DMG / szint (+70 DMG Lv.10-en)</td>
+    </tr>
+  
+    <tr>
+      <td><b>Hajtómű (engine)</b></td>
+      <td>Hiperszonikus Utánégetők</td>
+      <td>🔒 Ionos Impulzus-hajtómű (Tier 1)</td>
+      <td>+0.4 Sebesség & +2% 1. körös sebzés / szint</td>
+    </tr>
+  </tbody>
+      </table>
+      <div class="sub-label">Egyetlen modul fejlesztési költsége szintenként (Lv.1 – Lv.10) | 1 modul Lv.1&rarr;10 összesen: <b>1100 Fém, 660 E, 304 Iso</b>:</div>
+      <table class="cost-grid">
+        <thead>
+          <tr>
+            <th>Lv.1 (Mk.I)</th><th>Lv.2 (Mk.II)</th><th>Lv.3 (Mk.III)</th><th>Lv.4 (Mk.IV)</th><th>Lv.5 (Mk.V)</th>
+            <th>Lv.6 (Mk.VI)</th><th>Lv.7 (Mk.VII)</th><th>Lv.8 (Mk.VIII)</th><th>Lv.9 (Mk.IX)</th><th>Lv.10 (Apex)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td><b>20</b> Fém<br>12 E</td><td><b>40</b> Fém<br>24 E</td><td><b>60</b> Fém<br>36 E</td><td><b>80</b> Fém<br>48 E<br><span class="iso">8 Iso</span></td><td><b>100</b> Fém<br>60 E<br><span class="iso">16 Iso</span></td><td><b>120</b> Fém<br>72 E<br><span class="iso">24 Iso</span></td><td><b>140</b> Fém<br>84 E<br><span class="iso">40 Iso</span></td><td><b>160</b> Fém<br>96 E<br><span class="iso">56 Iso</span></td><td><b>180</b> Fém<br>108 E<br><span class="iso">72 Iso</span></td><td><b>200</b> Fém<br>120 E<br><span class="iso">88 Iso</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  
+    <div class="card avoid-break">
+      <div class="card-header">
+        <span>🚀 <b>Könnyű Korvett</b> — Alrendszer Fejlesztések (4 modul slot)</span>
+        <span class="badge">Keret: T1: 8 sz. | T2: 16 sz. | T3: 24 sz. (Max 60%)</span>
+      </div>
+      <table class="compact-table">
+        <thead>
+          <tr>
+            <th style="width:20%">Alrendszer Slot</th>
+            <th style="width:26%">Modul Megnevezése</th>
+            <th style="width:24%">Előfeltétel (Tech)</th>
+            <th style="width:30%">Szintenkénti Hatás (Lv.1 &rarr; Lv.10)</th>
+          </tr>
+        </thead>
+        <tbody>
+    <tr>
+      <td><b>Hajótest (hull)</b></td>
+      <td>Reaktív Páncéllemezek</td>
+      <td>Alap</td>
+      <td>+25 HP / szint (+250 HP Lv.10-en)</td>
+    </tr>
+  
+    <tr>
+      <td><b>Pajzs (shield)</b></td>
+      <td>Fázis-eltolt Pajzscella</td>
+      <td>Alap</td>
+      <td>+10 Pajzs / szint (+100 Pajzs Lv.10-en)</td>
+    </tr>
+  
+    <tr>
+      <td><b>Fegyverzet (weapon)</b></td>
+      <td>Kinetikus Gatling-Torony</td>
+      <td>Alap</td>
+      <td>+6 DMG / szint (+60 DMG Lv.10-en)</td>
+    </tr>
+  
+    <tr>
+      <td><b>Avionika (avionics)</b></td>
+      <td>Mélyűr Zavarórendszer (ECM)</td>
+      <td>🔒 Sötét Anyag Reaktor (Tier 1)</td>
+      <td>+1.5% Kitérés (Evasion) / szint (+15% Lv.10-en)</td>
+    </tr>
+  </tbody>
+      </table>
+      <div class="sub-label">Egyetlen modul fejlesztési költsége szintenként (Lv.1 – Lv.10) | 1 modul Lv.1&rarr;10 összesen: <b>1375 Fém, 825 E, 380 Iso</b>:</div>
+      <table class="cost-grid">
+        <thead>
+          <tr>
+            <th>Lv.1 (Mk.I)</th><th>Lv.2 (Mk.II)</th><th>Lv.3 (Mk.III)</th><th>Lv.4 (Mk.IV)</th><th>Lv.5 (Mk.V)</th>
+            <th>Lv.6 (Mk.VI)</th><th>Lv.7 (Mk.VII)</th><th>Lv.8 (Mk.VIII)</th><th>Lv.9 (Mk.IX)</th><th>Lv.10 (Apex)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td><b>25</b> Fém<br>15 E</td><td><b>50</b> Fém<br>30 E</td><td><b>75</b> Fém<br>45 E</td><td><b>100</b> Fém<br>60 E<br><span class="iso">10 Iso</span></td><td><b>125</b> Fém<br>75 E<br><span class="iso">20 Iso</span></td><td><b>150</b> Fém<br>90 E<br><span class="iso">30 Iso</span></td><td><b>175</b> Fém<br>105 E<br><span class="iso">50 Iso</span></td><td><b>200</b> Fém<br>120 E<br><span class="iso">70 Iso</span></td><td><b>225</b> Fém<br>135 E<br><span class="iso">90 Iso</span></td><td><b>250</b> Fém<br>150 E<br><span class="iso">110 Iso</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  
+    <div class="card avoid-break">
+      <div class="card-header">
+        <span>🚀 <b>Nehéz Teherszállító</b> — Alrendszer Fejlesztések (3 modul slot)</span>
+        <span class="badge">Keret: T1: 6 sz. | T2: 12 sz. | T3: 18 sz. (Max 60%)</span>
+      </div>
+      <table class="compact-table">
+        <thead>
+          <tr>
+            <th style="width:20%">Alrendszer Slot</th>
+            <th style="width:26%">Modul Megnevezése</th>
+            <th style="width:24%">Előfeltétel (Tech)</th>
+            <th style="width:30%">Szintenkénti Hatás (Lv.1 &rarr; Lv.10)</th>
+          </tr>
+        </thead>
+        <tbody>
+    <tr>
+      <td><b>Hajótest (hull)</b></td>
+      <td>Megerősített Teherkonténer Váz</td>
+      <td>🔒 Nehézfém Kohászat (Tier 2)</td>
+      <td>+60 HP & +50 Raktér / szint (+600 HP, +500 Raktér Lv.10)</td>
+    </tr>
+  
+    <tr>
+      <td><b>Pajzs (shield)</b></td>
+      <td>Ipari Deflektor-Háló</td>
+      <td>Alap</td>
+      <td>+15 Pajzs / szint (+150 Pajzs Lv.10-en)</td>
+    </tr>
+  
+    <tr>
+      <td><b>Hajtómű (engine)</b></td>
+      <td>Nagynyomású Teher-Hajtómű</td>
+      <td>Alap</td>
+      <td>+0.25 Sebesség / szint (+2.5 Lv.10-en)</td>
+    </tr>
+  </tbody>
+      </table>
+      <div class="sub-label">Egyetlen modul fejlesztési költsége szintenként (Lv.1 – Lv.10) | 1 modul Lv.1&rarr;10 összesen: <b>1925 Fém, 1100 E, 436 Iso</b>:</div>
+      <table class="cost-grid">
+        <thead>
+          <tr>
+            <th>Lv.1 (Mk.I)</th><th>Lv.2 (Mk.II)</th><th>Lv.3 (Mk.III)</th><th>Lv.4 (Mk.IV)</th><th>Lv.5 (Mk.V)</th>
+            <th>Lv.6 (Mk.VI)</th><th>Lv.7 (Mk.VII)</th><th>Lv.8 (Mk.VIII)</th><th>Lv.9 (Mk.IX)</th><th>Lv.10 (Apex)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td><b>35</b> Fém<br>20 E</td><td><b>70</b> Fém<br>40 E</td><td><b>105</b> Fém<br>60 E</td><td><b>140</b> Fém<br>80 E<br><span class="iso">12 Iso</span></td><td><b>175</b> Fém<br>100 E<br><span class="iso">24 Iso</span></td><td><b>210</b> Fém<br>120 E<br><span class="iso">36 Iso</span></td><td><b>245</b> Fém<br>140 E<br><span class="iso">58 Iso</span></td><td><b>280</b> Fém<br>160 E<br><span class="iso">80 Iso</span></td><td><b>315</b> Fém<br>180 E<br><span class="iso">102 Iso</span></td><td><b>350</b> Fém<br>200 E<br><span class="iso">124 Iso</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  
+    <div class="card avoid-break">
+      <div class="card-header">
+        <span>🚀 <b>Kolóniahajó</b> — Alrendszer Fejlesztések (3 modul slot)</span>
+        <span class="badge">Keret: T1: 6 sz. | T2: 12 sz. | T3: 18 sz. (Max 60%)</span>
+      </div>
+      <table class="compact-table">
+        <thead>
+          <tr>
+            <th style="width:20%">Alrendszer Slot</th>
+            <th style="width:26%">Modul Megnevezése</th>
+            <th style="width:24%">Előfeltétel (Tech)</th>
+            <th style="width:30%">Szintenkénti Hatás (Lv.1 &rarr; Lv.10)</th>
+          </tr>
+        </thead>
+        <tbody>
+    <tr>
+      <td><b>Hajótest (hull)</b></td>
+      <td>Bárka-osztályú Moduláris Héj</td>
+      <td>Alap</td>
+      <td>+45 HP / szint (+450 HP Lv.10-en)</td>
+    </tr>
+  
+    <tr>
+      <td><b>Pajzs (shield)</b></td>
+      <td>Kolónia-Védő Kupolagenerátor</td>
+      <td>Alap</td>
+      <td>+12 Pajzs / szint (+120 Pajzs Lv.10-en)</td>
+    </tr>
+  
+    <tr>
+      <td><b>Hajtómű (engine)</b></td>
+      <td>Kriogén Hosszútávú Hajtómű</td>
+      <td>Alap</td>
+      <td>+0.25 Sebesség / szint (+2.5 Lv.10-en)</td>
+    </tr>
+  </tbody>
+      </table>
+      <div class="sub-label">Egyetlen modul fejlesztési költsége szintenként (Lv.1 – Lv.10) | 1 modul Lv.1&rarr;10 összesen: <b>2200 Fém, 1375 E, 436 Iso</b>:</div>
+      <table class="cost-grid">
+        <thead>
+          <tr>
+            <th>Lv.1 (Mk.I)</th><th>Lv.2 (Mk.II)</th><th>Lv.3 (Mk.III)</th><th>Lv.4 (Mk.IV)</th><th>Lv.5 (Mk.V)</th>
+            <th>Lv.6 (Mk.VI)</th><th>Lv.7 (Mk.VII)</th><th>Lv.8 (Mk.VIII)</th><th>Lv.9 (Mk.IX)</th><th>Lv.10 (Apex)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td><b>40</b> Fém<br>25 E</td><td><b>80</b> Fém<br>50 E</td><td><b>120</b> Fém<br>75 E</td><td><b>160</b> Fém<br>100 E<br><span class="iso">12 Iso</span></td><td><b>200</b> Fém<br>125 E<br><span class="iso">24 Iso</span></td><td><b>240</b> Fém<br>150 E<br><span class="iso">36 Iso</span></td><td><b>280</b> Fém<br>175 E<br><span class="iso">58 Iso</span></td><td><b>320</b> Fém<br>200 E<br><span class="iso">80 Iso</span></td><td><b>360</b> Fém<br>225 E<br><span class="iso">102 Iso</span></td><td><b>400</b> Fém<br>250 E<br><span class="iso">124 Iso</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  
+    <div class="card avoid-break">
+      <div class="card-header">
+        <span>🚀 <b>Lopakodó Torpedó Fregatt</b> — Alrendszer Fejlesztések (4 modul slot)</span>
+        <span class="badge">Keret: T1: 8 sz. | T2: 16 sz. | T3: 24 sz. (Max 60%)</span>
+      </div>
+      <table class="compact-table">
+        <thead>
+          <tr>
+            <th style="width:20%">Alrendszer Slot</th>
+            <th style="width:26%">Modul Megnevezése</th>
+            <th style="width:24%">Előfeltétel (Tech)</th>
+            <th style="width:30%">Szintenkénti Hatás (Lv.1 &rarr; Lv.10)</th>
+          </tr>
+        </thead>
+        <tbody>
+    <tr>
+      <td><b>Hajótest (hull)</b></td>
+      <td>Radar-elnyelő Kompozit Héj</td>
+      <td>Alap</td>
+      <td>+45 HP / szint (+450 HP Lv.10-en)</td>
+    </tr>
+  
+    <tr>
+      <td><b>Pajzs (shield)</b></td>
+      <td>Lopakodó Árnyék-Pajzs</td>
+      <td>Alap</td>
+      <td>+22 Pajzs / szint (+220 Pajzs Lv.10-en)</td>
+    </tr>
+  
+    <tr>
+      <td><b>Fegyverzet (weapon)</b></td>
+      <td>Kvantum-Torpedó Kilövők</td>
+      <td>🔒 Kiterjesztett Energiapajzs (Tier 2)</td>
+      <td>+14 DMG & +1.5% Pajzs-átütés / szint (+140 DMG, +15% átütés)</td>
+    </tr>
+  
+    <tr>
+      <td><b>Hajtómű (engine)</b></td>
+      <td>Néma Ion-Meghajtás</td>
+      <td>Alap</td>
+      <td>+0.25 Sebesség / szint (+2.5 Lv.10-en)</td>
+    </tr>
+  </tbody>
+      </table>
+      <div class="sub-label">Egyetlen modul fejlesztési költsége szintenként (Lv.1 – Lv.10) | 1 modul Lv.1&rarr;10 összesen: <b>2475 Fém, 1375 E, 512 Iso</b>:</div>
+      <table class="cost-grid">
+        <thead>
+          <tr>
+            <th>Lv.1 (Mk.I)</th><th>Lv.2 (Mk.II)</th><th>Lv.3 (Mk.III)</th><th>Lv.4 (Mk.IV)</th><th>Lv.5 (Mk.V)</th>
+            <th>Lv.6 (Mk.VI)</th><th>Lv.7 (Mk.VII)</th><th>Lv.8 (Mk.VIII)</th><th>Lv.9 (Mk.IX)</th><th>Lv.10 (Apex)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td><b>45</b> Fém<br>25 E</td><td><b>90</b> Fém<br>50 E</td><td><b>135</b> Fém<br>75 E</td><td><b>180</b> Fém<br>100 E<br><span class="iso">14 Iso</span></td><td><b>225</b> Fém<br>125 E<br><span class="iso">28 Iso</span></td><td><b>270</b> Fém<br>150 E<br><span class="iso">42 Iso</span></td><td><b>315</b> Fém<br>175 E<br><span class="iso">68 Iso</span></td><td><b>360</b> Fém<br>200 E<br><span class="iso">94 Iso</span></td><td><b>405</b> Fém<br>225 E<br><span class="iso">120 Iso</span></td><td><b>450</b> Fém<br>250 E<br><span class="iso">146 Iso</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  
+    <div class="card avoid-break">
+      <div class="card-header">
+        <span>🚀 <b>Romboló Cirkáló</b> — Alrendszer Fejlesztések (4 modul slot)</span>
+        <span class="badge">Keret: T1: 8 sz. | T2: 16 sz. | T3: 24 sz. (Max 60%)</span>
+      </div>
+      <table class="compact-table">
+        <thead>
+          <tr>
+            <th style="width:20%">Alrendszer Slot</th>
+            <th style="width:26%">Modul Megnevezése</th>
+            <th style="width:24%">Előfeltétel (Tech)</th>
+            <th style="width:30%">Szintenkénti Hatás (Lv.1 &rarr; Lv.10)</th>
+          </tr>
+        </thead>
+        <tbody>
+    <tr>
+      <td><b>Hajótest (hull)</b></td>
+      <td>Nehéz Adamantium Vázszerkezet</td>
+      <td>Alap</td>
+      <td>+75 HP / szint (+750 HP Lv.10-en)</td>
+    </tr>
+  
+    <tr>
+      <td><b>Pajzs (shield)</b></td>
+      <td>Pajzs-Szinkronizáló Erősítő</td>
+      <td>🔒 Kiterjesztett Energiapajzs (Tier 2)</td>
+      <td>+38 Pajzs & +1% Pajzs-regeneráció / szint</td>
+    </tr>
+  
+    <tr>
+      <td><b>Fegyverzet (weapon)</b></td>
+      <td>Nehéz Plazma-Üteg</td>
+      <td>Alap</td>
+      <td>+18 DMG / szint (+180 DMG Lv.10-en)</td>
+    </tr>
+  
+    <tr>
+      <td><b>Hajtómű (engine)</b></td>
+      <td>Fúziós Tolóerő-Vektorozó</td>
+      <td>Alap</td>
+      <td>+0.2 Sebesség / szint (+2.0 Lv.10-en)</td>
+    </tr>
+  </tbody>
+      </table>
+      <div class="sub-label">Egyetlen modul fejlesztési költsége szintenként (Lv.1 – Lv.10) | 1 modul Lv.1&rarr;10 összesen: <b>3300 Fém, 1925 E, 644 Iso</b>:</div>
+      <table class="cost-grid">
+        <thead>
+          <tr>
+            <th>Lv.1 (Mk.I)</th><th>Lv.2 (Mk.II)</th><th>Lv.3 (Mk.III)</th><th>Lv.4 (Mk.IV)</th><th>Lv.5 (Mk.V)</th>
+            <th>Lv.6 (Mk.VI)</th><th>Lv.7 (Mk.VII)</th><th>Lv.8 (Mk.VIII)</th><th>Lv.9 (Mk.IX)</th><th>Lv.10 (Apex)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td><b>60</b> Fém<br>35 E</td><td><b>120</b> Fém<br>70 E</td><td><b>180</b> Fém<br>105 E</td><td><b>240</b> Fém<br>140 E<br><span class="iso">18 Iso</span></td><td><b>300</b> Fém<br>175 E<br><span class="iso">36 Iso</span></td><td><b>360</b> Fém<br>210 E<br><span class="iso">54 Iso</span></td><td><b>420</b> Fém<br>245 E<br><span class="iso">86 Iso</span></td><td><b>480</b> Fém<br>280 E<br><span class="iso">118 Iso</span></td><td><b>540</b> Fém<br>315 E<br><span class="iso">150 Iso</span></td><td><b>600</b> Fém<br>350 E<br><span class="iso">182 Iso</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  
+    <div class="card avoid-break">
+      <div class="card-header">
+        <span>🚀 <b>Taktikai Szerelőhajó</b> — Alrendszer Fejlesztések (4 modul slot)</span>
+        <span class="badge">Keret: T1: 8 sz. | T2: 16 sz. | T3: 24 sz. (Max 60%)</span>
+      </div>
+      <table class="compact-table">
+        <thead>
+          <tr>
+            <th style="width:20%">Alrendszer Slot</th>
+            <th style="width:26%">Modul Megnevezése</th>
+            <th style="width:24%">Előfeltétel (Tech)</th>
+            <th style="width:30%">Szintenkénti Hatás (Lv.1 &rarr; Lv.10)</th>
+          </tr>
+        </thead>
+        <tbody>
+    <tr>
+      <td><b>Hajótest (hull)</b></td>
+      <td>Megerősített Szanitéc Páncélzat</td>
+      <td>Alap (+HP növelés)</td>
+      <td>+90 HP / szint (+900 HP Lv.10-en)</td>
+    </tr>
+  
+    <tr>
+      <td><b>Pajzs (shield)</b></td>
+      <td>Kvantum Védőháló Projektora</td>
+      <td>Alap (Flotta sebzéscsökkentés)</td>
+      <td>+40 Pajzs & +0.8% Flotta Sebzéscsökkentés / szint</td>
+    </tr>
+  
+    <tr>
+      <td><b>Javító (weapon)</b></td>
+      <td>Nanit-Regeneráló Sugárvető</td>
+      <td>Alap (Javítás % növelése)</td>
+      <td>+1.2% Hull & +1.8% Pajzs körvégi javítás / szint</td>
+    </tr>
+  
+    <tr>
+      <td><b>Avionika (avionics)</b></td>
+      <td>Multi-Vektoros Dokkoló Mátrix</td>
+      <td>Alap (Kapacitás & Sebesség)</td>
+      <td>+0.2 Sebesség / szint & +1 javítható hajó célpont 3 szintenként</td>
+    </tr>
+  </tbody>
+      </table>
+      <div class="sub-label">Egyetlen modul fejlesztési költsége szintenként (Lv.1 – Lv.10) | 1 modul Lv.1&rarr;10 összesen: <b>3575 Fém, 1925 E, 644 Iso</b>:</div>
+      <table class="cost-grid">
+        <thead>
+          <tr>
+            <th>Lv.1 (Mk.I)</th><th>Lv.2 (Mk.II)</th><th>Lv.3 (Mk.III)</th><th>Lv.4 (Mk.IV)</th><th>Lv.5 (Mk.V)</th>
+            <th>Lv.6 (Mk.VI)</th><th>Lv.7 (Mk.VII)</th><th>Lv.8 (Mk.VIII)</th><th>Lv.9 (Mk.IX)</th><th>Lv.10 (Apex)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td><b>65</b> Fém<br>35 E</td><td><b>130</b> Fém<br>70 E</td><td><b>195</b> Fém<br>105 E</td><td><b>260</b> Fém<br>140 E<br><span class="iso">18 Iso</span></td><td><b>325</b> Fém<br>175 E<br><span class="iso">36 Iso</span></td><td><b>390</b> Fém<br>210 E<br><span class="iso">54 Iso</span></td><td><b>455</b> Fém<br>245 E<br><span class="iso">86 Iso</span></td><td><b>520</b> Fém<br>280 E<br><span class="iso">118 Iso</span></td><td><b>585</b> Fém<br>315 E<br><span class="iso">150 Iso</span></td><td><b>650</b> Fém<br>350 E<br><span class="iso">182 Iso</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  
+    <div class="card avoid-break">
+      <div class="card-header">
+        <span>🚀 <b>Drón-Hordozó Cirkáló</b> — Alrendszer Fejlesztések (4 modul slot)</span>
+        <span class="badge">Keret: T1: 8 sz. | T2: 16 sz. | T3: 24 sz. (Max 60%)</span>
+      </div>
+      <table class="compact-table">
+        <thead>
+          <tr>
+            <th style="width:20%">Alrendszer Slot</th>
+            <th style="width:26%">Modul Megnevezése</th>
+            <th style="width:24%">Előfeltétel (Tech)</th>
+            <th style="width:30%">Szintenkénti Hatás (Lv.1 &rarr; Lv.10)</th>
+          </tr>
+        </thead>
+        <tbody>
+    <tr>
+      <td><b>Hajótest (hull)</b></td>
+      <td>Hordozó Hangár-Páncélzat</td>
+      <td>Alap</td>
+      <td>+130 HP / szint (+1300 HP Lv.10-en)</td>
+    </tr>
+  
+    <tr>
+      <td><b>Pajzs (shield)</b></td>
+      <td>Többrétegű Citadella-Pajzs</td>
+      <td>Alap</td>
+      <td>+65 Pajzs / szint (+650 Pajzs Lv.10-en)</td>
+    </tr>
+  
+    <tr>
+      <td><b>Fegyverzet (weapon)</b></td>
+      <td>Autonóm Támadó Drónrajok</td>
+      <td>Alap</td>
+      <td>+14 DMG / szint (+140 DMG Lv.10-en)</td>
+    </tr>
+  
+    <tr>
+      <td><b>Avionika (avionics)</b></td>
+      <td>Drón-Rajvezérlő Mátrix</td>
+      <td>🔒 Szupervezető Hálózat (Tier 2)</td>
+      <td>+1.2% Flotta Védelem & ECM zavarás / szint (+12% Lv.10)</td>
+    </tr>
+  </tbody>
+      </table>
+      <div class="sub-label">Egyetlen modul fejlesztési költsége szintenként (Lv.1 – Lv.10) | 1 modul Lv.1&rarr;10 összesen: <b>4950 Fém, 3025 E, 928 Iso</b>:</div>
+      <table class="cost-grid">
+        <thead>
+          <tr>
+            <th>Lv.1 (Mk.I)</th><th>Lv.2 (Mk.II)</th><th>Lv.3 (Mk.III)</th><th>Lv.4 (Mk.IV)</th><th>Lv.5 (Mk.V)</th>
+            <th>Lv.6 (Mk.VI)</th><th>Lv.7 (Mk.VII)</th><th>Lv.8 (Mk.VIII)</th><th>Lv.9 (Mk.IX)</th><th>Lv.10 (Apex)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td><b>90</b> Fém<br>55 E</td><td><b>180</b> Fém<br>110 E</td><td><b>270</b> Fém<br>165 E</td><td><b>360</b> Fém<br>220 E<br><span class="iso">26 Iso</span></td><td><b>450</b> Fém<br>275 E<br><span class="iso">52 Iso</span></td><td><b>540</b> Fém<br>330 E<br><span class="iso">78 Iso</span></td><td><b>630</b> Fém<br>385 E<br><span class="iso">124 Iso</span></td><td><b>720</b> Fém<br>440 E<br><span class="iso">170 Iso</span></td><td><b>810</b> Fém<br>495 E<br><span class="iso">216 Iso</span></td><td><b>900</b> Fém<br>550 E<br><span class="iso">262 Iso</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  
+    <div class="card avoid-break">
+      <div class="card-header">
+        <span>🚀 <b>Csatahajó (Dreadnought)</b> — Alrendszer Fejlesztések (5 modul slot)</span>
+        <span class="badge">Keret: T1: 10 sz. | T2: 20 sz. | T3: 30 sz. (Max 60%)</span>
+      </div>
+      <table class="compact-table">
+        <thead>
+          <tr>
+            <th style="width:20%">Alrendszer Slot</th>
+            <th style="width:26%">Modul Megnevezése</th>
+            <th style="width:24%">Előfeltétel (Tech)</th>
+            <th style="width:30%">Szintenkénti Hatás (Lv.1 &rarr; Lv.10)</th>
+          </tr>
+        </thead>
+        <tbody>
+    <tr>
+      <td><b>Hajótest (hull)</b></td>
+      <td>Dreadnought Szupernehéz Páncél</td>
+      <td>Alap</td>
+      <td>+250 HP / szint (+2500 HP Lv.10-en)</td>
+    </tr>
+  
+    <tr>
+      <td><b>Pajzs (shield)</b></td>
+      <td>Antianyag Erőtér-Generátor</td>
+      <td>Alap</td>
+      <td>+125 Pajzs / szint (+1250 Pajzs Lv.10-en)</td>
+    </tr>
+  
+    <tr>
+      <td><b>Fegyverzet (weapon)</b></td>
+      <td>Spinalis Gerinc-Railgun</td>
+      <td>🔒 Ostrom-töltetek (Tier 3)</td>
+      <td>+55 DMG / szint (+550 DMG Lv.10-en)</td>
+    </tr>
+  
+    <tr>
+      <td><b>Hajtómű (engine)</b></td>
+      <td>Szupernehéz Hipertér-Hajtómű</td>
+      <td>Alap</td>
+      <td>+0.15 Sebesség / szint (+1.5 Lv.10-en)</td>
+    </tr>
+  
+    <tr>
+      <td><b>Avionika (avionics)</b></td>
+      <td>Tűzvezető Kvantum-Szuperszámítógép</td>
+      <td>Alap</td>
+      <td>+2% Találati pontosság Korvettek ellen / szint</td>
+    </tr>
+  </tbody>
+      </table>
+      <div class="sub-label">Egyetlen modul fejlesztési költsége szintenként (Lv.1 – Lv.10) | 1 modul Lv.1&rarr;10 összesen: <b>6600 Fém, 3850 E, 1126 Iso</b>:</div>
+      <table class="cost-grid">
+        <thead>
+          <tr>
+            <th>Lv.1 (Mk.I)</th><th>Lv.2 (Mk.II)</th><th>Lv.3 (Mk.III)</th><th>Lv.4 (Mk.IV)</th><th>Lv.5 (Mk.V)</th>
+            <th>Lv.6 (Mk.VI)</th><th>Lv.7 (Mk.VII)</th><th>Lv.8 (Mk.VIII)</th><th>Lv.9 (Mk.IX)</th><th>Lv.10 (Apex)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td><b>120</b> Fém<br>70 E</td><td><b>240</b> Fém<br>140 E</td><td><b>360</b> Fém<br>210 E</td><td><b>480</b> Fém<br>280 E<br><span class="iso">32 Iso</span></td><td><b>600</b> Fém<br>350 E<br><span class="iso">64 Iso</span></td><td><b>720</b> Fém<br>420 E<br><span class="iso">96 Iso</span></td><td><b>840</b> Fém<br>490 E<br><span class="iso">151 Iso</span></td><td><b>960</b> Fém<br>560 E<br><span class="iso">206 Iso</span></td><td><b>1080</b> Fém<br>630 E<br><span class="iso">261 Iso</span></td><td><b>1200</b> Fém<br>700 E<br><span class="iso">316 Iso</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  
+
+  <div class="page-break"></div>
+
+  <!-- 6. FEJEZET -->
+  <h2>6. Fejezet: Küldetések (1–9), Prekurzor Ereklyék és a 3 Boss Citadella</h2>
+
+  <h3>6.1. Birodalmi Küldetések Sorrendben (m1 &rarr; m9)</h3>
+  <table>
+    <thead>
+      <tr>
+        <th style="width:6%">#</th>
+        <th style="width:22%">Küldetés Neve</th>
+        <th style="width:32%">Teljesítési Feltétel (Mit kell tenned?)</th>
+        <th style="width:40%">Jutalom, Ereklye &amp; Ideiglenes Birodalmi Buff</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><b>m1</b></td>
+        <td><b>Bázisfejlesztés</b></td>
+        <td>Fejleszd a főbolygód (<i>Kronos-IV</i>) <b>Ipari Központját Lv.2-re</b> (120 Fém).</td>
+        <td><b>+150 Fém, +50 Energia</b><br><span class="unlock-tag">Buff: +25% Bányászati Kitermelés (5 körig)</span></td>
+      </tr>
+      <tr>
+        <td><b>m2</b></td>
+        <td><b>Kozmikus Felderítés</b></td>
+        <td>Építs egy <b>Felderítő Szondát</b> és kémleld ki a szomszédos <b>Zephyr-7</b> bolygót.</td>
+        <td><b>+40 Izotóp, +50 Adat</b><br><span class="unlock-tag">Buff: +20% Flotta Sebesség (6 körig)</span></td>
+      </tr>
+      <tr>
+        <td><b>m3</b></td>
+        <td><b>Hadiflotta Alapítása</b></td>
+        <td>Rendelkezz összesen <b>8 db Könnyű Korvettel VAGY 3 db Rombolóval</b>.</td>
+        <td><b>+200 Fém, +100 Energia</b><br><span class="req-tag">🏺 1. EREKLYE: Kvantum Chrono-Mag</span> (Boss 1-hez kell!)</td>
+      </tr>
+      <tr>
+        <td><b>m4</b></td>
+        <td><b>Kolónia-alapítás</b></td>
+        <td>Foglald el <b>Zephyr-7</b> vagy <b>Nexus-Alpha</b> bolygót egy Kolóniahajóval.</td>
+        <td><b>+250 Fém, +150 Energia, +50 Izotóp</b><br><span class="unlock-tag">Buff: +20% Pajzs Túlterhelés (8 körig)</span></td>
+      </tr>
+      <tr>
+        <td><b>m5</b></td>
+        <td><b>Mélységi Expanzió</b></td>
+        <td>Birtokolj egyidejűleg legalább <b>3 kolóniát (bolygót)</b> a szektorban.</td>
+        <td><b>+500 Fém, +250 E, +100 Iso, +300 Adat</b><br><span class="req-tag">💎 2. EREKLYE: Sötét Anyag Rezonátor</span> (Boss 2-höz kell!)</td>
+      </tr>
+      <tr>
+        <td><b>m6</b></td>
+        <td><b>Birodalmi Hadúr</b></td>
+        <td>Gyűjts össze <b>100 Dicsőség Pontot (GP)</b> csatákból és hódításokból.</td>
+        <td><b>+500 Fém, +200 E, +100 Iso, +200 Adat</b> + <span class="unlock-tag">+20% DMG (8 kör)</span><br><span class="req-tag">🔮 3. EREKLYE: Prekurzor Hozzáférési Kódex</span> (Boss 3-hoz kell!)</td>
+      </tr>
+      <tr>
+        <td><b>m7</b></td>
+        <td><b>Cygnus Bastion Ostroma</b></td>
+        <td>Semmisítsd meg az 1. Fő Boss erődöt: <b>Cygnus Bastion // Ősi Előőrs</b>.</td>
+        <td><b>+1500 Fém, +500 E, +500 Iso, +500 Adat, +100 GP</b><br><span class="unlock-tag">Buff: +25% Hajótest (Hull HP) Megerősítés (10 körig)</span></td>
+      </tr>
+      <tr>
+        <td><b>m8</b></td>
+        <td><b>Void Citadel Felszámolása</b></td>
+        <td>Semmisítsd meg a 2. Fő Boss erődöt: <b>Void Citadel // Üresség Citadellája</b>.</td>
+        <td><b>+2500 Fém, +1000 E, +1000 Iso, +1000 Adat, +200 GP</b><br><span class="unlock-tag">Buff: +25% Fegyverzet Tűzerő (12 körig)</span></td>
+      </tr>
+      <tr>
+        <td><b>m9</b></td>
+        <td><b>Omega-Protokoll: Leviatán</b></td>
+        <td>Semmisítsd meg a 3. Fő Boss erődöt: <b>Omega-Ark-0 // Kronos-Leviatán</b>.</td>
+        <td><b>+5000 Fém, +3000 E, +2000 Iso, +2000 Adat</b><br><span class="unlock-tag">🏆 VÉGSŐ SZEKTORGYŐZELEM!</span></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>6.2. A 3 Fő Boss Citadella Megtámadási Feltételei és Statisztikái</h3>
+  <p>A Boss erődök a <b>Flották &rarr; Boss Citadellák</b> fülön érhetők el. Egyénileg vagy szövetségi közös támadással (max. 5 szövitag) is ostromolhatók. <b>Underdog Bónusz:</b> Ha kevesebben támadjátok meg a Bosst, a flottátok extra harci sebzés és védelem bónuszt kap: <b>Egyedül (1 fő): +35%</b> | <b>Ketten (2 fő): +20%</b> | <b>Hárman (3 fő): +10%</b> (4–5 fő esetén 0%).</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width:18%">Boss Citadella</th>
+        <th style="width:27%">Erőd Statisztikák &amp; Védő Helyőrség</th>
+        <th style="width:55%">Megtámadási Előfeltételek (Minden pontnak teljesülnie kell!)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><b>1. BOSS<br>CYGNUS BASTION</b><br><small>Ősi Előőrs (x:22, y:18)</small></td>
+        <td><b>Citadella:</b> 12,000 HP | 7,000 Pajzs<br><b>Főágyú:</b> 900 DMG + 5 Railgun<br><b>Helyőrség:</b> 16 Fregatt, 12 Romboló, 8 Szerelőhajó, 4 Cirkáló</td>
+        <td>
+          1. <b>Dicsőség Pont:</b> Legalább <b>250 GP</b><br>
+          2. <b>Prekurzor Ereklye:</b> 🏺 <b>Kvantum Chrono-Mag</b> (#3 Küldetés jutalma)<br>
+          3. <b>Flotta Kritérium:</b> Legalább <b>15 db Korvett VAGY 6 db Romboló</b> a támadó flottában<br>
+          4. <b>Ugrókapu Aktiválás:</b> <b>80 Izotóp + 150 Adat</b> (támadáskor levonásra kerül)
+        </td>
+      </tr>
+      <tr>
+        <td><b>2. BOSS<br>VOID CITADEL</b><br><small>Üresség Citadellája (x:78, y:24)</small></td>
+        <td><b>Citadella:</b> 20,000 HP | 12,000 Pajzs<br><b>Főágyú:</b> 1,450 DMG + 8 Railgun<br><b>Helyőrség:</b> 16 Romboló, 12 Szerelőhajó, 12 Cirkáló, 6 Csatahajó</td>
+        <td>
+          1. <b>Dicsőség Pont:</b> Legalább <b>500 GP</b><br>
+          2. <b>Prekurzor Ereklyék (2 db):</b> 🏺 <b>Chrono-Mag</b> ÉS 💎 <b>Sötét Anyag Rezonátor</b> (#3 és #5 Küldetés)<br>
+          3. <b>Technológia:</b> <b>Kiterjesztett Energiapajzs</b> VAGY <b>Nehézfém Kohászat</b> (Tier 2)<br>
+          4. <b>Flotta Kritérium:</b> Legalább <b>10 db Romboló ÉS (6 db Fregatt VAGY 20 db Korvett)</b><br>
+          5. <b>Ugrókapu Aktiválás:</b> <b>160 Izotóp + 300 Adat</b>
+        </td>
+      </tr>
+      <tr>
+        <td><b>3. BOSS<br>OMEGA-ARK-0</b><br><small>Kronos-Leviatán (x:50, y:8)</small></td>
+        <td><b>Citadella:</b> 32,000 HP | 26,000 Pajzs<br><b>Főágyú:</b> 2,200 DMG + 16 Railgun<br><b>Helyőrség:</b> 24 Szerelőhajó, 18 Cirkáló, 12 Csatahajó</td>
+        <td>
+          1. <b>Dicsőség Pont:</b> Legalább <b>850 GP</b><br>
+          2. <b>Prekurzor Ereklyék (Mind a 3):</b> 🏺 <b>Chrono-Mag</b> + 💎 <b>Rezonátor</b> + 🔮 <b>Hozzáférési Kódex</b><br>
+          3. <b>Technológia:</b> <b>Ostrom-töltetek</b> ÉS (<b>Antianyag Csomópont</b> VAGY <b>Hipertér-Ugrómotor</b>) (Tier 3)<br>
+          4. <b>Flotta Kritérium:</b> Legalább <b>8 db Csatahajó ÉS 14 db Romboló</b><br>
+          5. <b>Ugrókapu Aktiválás:</b> <b>250 Izotóp + 500 Adat</b>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+</body>
+</html>

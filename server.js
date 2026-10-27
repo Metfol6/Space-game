@@ -1730,6 +1730,19 @@ const server = http.createServer((req, res) => {
         return;
     }
 
+    if (pathname === '/SPACE_4X_TACTICS_Fejlesztesi_Utmutato.pdf' || pathname === '/fejlesztesi_utmutato.pdf') {
+        const filePath = path.join(__dirname, 'SPACE_4X_TACTICS_Fejlesztesi_Utmutato.pdf');
+        fs.readFile(filePath, (err, data) => {
+            if (err) { res.writeHead(404); res.end("Not found"); return; }
+            res.writeHead(200, {
+                'Content-Type': 'application/pdf',
+                'Content-Disposition': 'inline; filename="SPACE_4X_TACTICS_Fejlesztesi_Utmutato.pdf"'
+            });
+            res.end(data);
+        });
+        return;
+    }
+
     res.writeHead(404);
     res.end("Not Found");
 });
