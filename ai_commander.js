@@ -19,42 +19,35 @@ class AICommander {
         if (!aiPlayer) return [];
 
         const allPlanets = this.db.getAllPlanets();
-        const aiPlanets = allPlanets.filter(p => p.owner_id === this.aiId);
-        const playerPlanets = allPlanets.filter(p => p.owner_id === 'player');
-        const neutralPlanets = allPlanets.filter(p => p.owner_id === null || p.owner_id === 'neutral');
+        const aiPlanets = allPlanets.filter(p => p.owner_id === this.aiId && p.planet_type === 'colony');
+        const playerPlanets = allPlanets.filter(p => p.owner_id === 'player' && p.planet_type === 'colony');
+        const neutralPlanets = allPlanets.filter(p => (p.owner_id === null || p.owner_id === 'neutral') && p.planet_type === 'colony');
 
         const actionsTaken = [];
 
-        // 1. DÖNTÉS: BOLYGÓI SLOTO-K ÉPÍTÉSE ÉS GAZDASÁGI FEJLESZTÉS
+        // 1. DÖNTÉS: BOLYGÓI SLOTOK ÉPÍTÉSE ÉS GAZDASÁGI FEJLESZTÉS
         for (const p of aiPlanets) {
-            if (p.structures.length < p.size_slots) {
-                // Van szabad slot!
-                if (aiPlayer.metal >= 150) {
-                    const nextSlot = p.structures.length;
-                    let structType = 'industrial_hub';
-                    let branch = 'economy';
-
-                    // Ha a bolygón nincs még védelem, építsen Orbitális Railgunt
-                    const hasDefense = p.structures.some(s => s.branch_type === 'defense');
-                    if (!hasDefense && aiPlayer.energy >= 50) {
-                        structType = 'orbital_railgun';
-                        branch = 'defense';
-                    }
-
-                    const structId = `s_ai_${p.id}_${nextSlot}_${currentTick}`;
-                    this.db.db.prepare(`
-                        INSERT INTO planet_structures (id, planet_id, slot_index, branch_type, structure_type, level)
-                        VALUES (?, ?, ?, ?, ?, 1)
-                    `).run(structId, p.id, nextSlot, branch, structType);
-
-                    aiPlayer.metal -= 150;
-                    actionsTaken.push(`[MI GAZDASÁG] Vektor-9 új struktúrát (${structType}) épített a ${p.name} bolygón.`);
+            if (p.free_slots > 0) {
+                let desiredType = 'surface_mine';
+                if (!p.has_ship_dock) {
+                    desiredType = 'ship_dock';
+                } else {
+                    const cycle = ['surface_mine', 'solar_farm', 'isotope_filter', 'relay_station'];
+                    desiredType = cycle[p.structures.length % cycle.length];
+                }
+                const buildRes = this.db.buildStructure(p.id, desiredType, this.aiId);
+                if (buildRes && buildRes.success) {
+                    const refreshed = this.db.getPlayer(this.aiId);
+                    aiPlayer.metal = refreshed.metal;
+                    aiPlayer.energy = refreshed.energy;
+                    aiPlayer.isotope = refreshed.isotope;
+                    aiPlayer.data_points = refreshed.data_points;
+                    actionsTaken.push(`[MI GAZDASÁG] Vektor-9 új épületet (${desiredType}) húzott fel a(z) ${p.name} kolónián.`);
                 }
             }
         }
 
-        // 2. DÖNTÉS: HAJÓGYÁRTÁS (KŐ-PAPÍR-OLLÓ LOGIKA)
-        // Megvizsgálja a játékos látható flottaösszetételét
+        // 2. DÖNTÉS: HAJÓGYÁRTÁS (CSAK HAJÓDOKKAL RENDELKEZŐ BOLYGÓN)
         let playerCorvettes = 0;
         let playerDestroyers = 0;
         let playerBattleships = 0;
@@ -65,22 +58,24 @@ class AICommander {
         }
 
         for (const p of aiPlanets) {
+            if (!p.has_ship_dock && !p.is_homeworld) continue;
             const sf = p.stationedFleet;
-            // Ha a játékos sok korvettel rendelkezik -> az MI Rombolókat gyárt
             let desiredShip = 'destroyer';
-            if (playerDestroyers > playerCorvettes) {
+            const colInfo = this.db.getPlayerColonyCount(this.aiId);
+            if (colInfo.canColonizeMore && (sf.colony_ship || 0) === 0 && neutralPlanets.length > 0 && currentTick % 3 === 0) {
+                desiredShip = 'colony_ship';
+            } else if (playerDestroyers > playerCorvettes) {
                 desiredShip = 'battleship';
             } else if (sf.corvette < 10) {
                 desiredShip = 'corvette';
             }
 
             const spec = SHIP_SPECS[desiredShip];
-            if (aiPlayer.metal >= spec.cost_metal && aiPlayer.energy >= spec.cost_energy && aiPlayer.isotope >= spec.cost_isotope) {
+            if (spec && aiPlayer.metal >= spec.cost_metal && aiPlayer.energy >= spec.cost_energy && aiPlayer.isotope >= spec.cost_isotope) {
                 aiPlayer.metal -= spec.cost_metal;
                 aiPlayer.energy -= spec.cost_energy;
                 aiPlayer.isotope -= spec.cost_isotope;
 
-                // Növeljük a bolygón állomásozó flottát
                 let fleetId = sf.fleetId;
                 if (!fleetId) {
                     fleetId = `f_${p.id}_${aiPlayer.id}`;
@@ -108,8 +103,8 @@ class AICommander {
             }
         }
 
-        // 3. DÖNTÉS: EXPEDÍCIÓ ÉS TERJESZKEDÉS (KOLONIZÁCIÓ)
-        // Ha van elérhető semleges bolygó és az MI bázison van legalább 5 hajó, indítson kolonizációt
+        // 3. DÖNTÉS: EXPEDÍCIÓ ÉS TERJESZKEDÉS (KOLONIZÁCIÓ - MAX 5 KOLÓNIA)
+        const aiColLimit = this.db.getPlayerColonyCount(this.aiId);
         for (const p of aiPlanets) {
             const sf = p.stationedFleet;
             let totalShips = 0;
@@ -117,9 +112,8 @@ class AICommander {
                 totalShips += (sf[st] || 0);
             }
 
-            if (neutralPlanets.length > 0 && totalShips >= 5) {
-                // Válasszuk a legközelebbi semleges bolygót
-                const target = neutralPlanets.sort((a, b) => Math.hypot(a.pos_x - p.pos_x, a.pos_y - p.pos_y) - Math.hypot(b.pos_x - p.pos_x, b.pos_y - p.pos_y))[0];
+            if (neutralPlanets.length > 0 && aiColLimit.canColonizeMore && (sf.colony_ship || 0) >= 1 && totalShips >= 4) {
+                const target = neutralPlanets.sort((a, b) => (a.ring_index || 1) - (b.ring_index || 1))[0];
                 const dist = Math.hypot(target.pos_x - p.pos_x, target.pos_y - p.pos_y);
                 const fuelNeeded = 15;
 
@@ -129,8 +123,8 @@ class AICommander {
                     const sendDest = Math.min(1, sf.destroyer);
 
                     if (sendCorv > 0) {
-                        this._dispatchAIFleet(p, target, { corvette: sendCorv, destroyer: sendDest, battleship: 0 }, dist, currentTick);
-                        actionsTaken.push(`[MI EXPEDÍCIÓ] Vektor-9 kolonizáló flottát indított a(z) ${target.name} semleges világ felé!`);
+                        this._dispatchAIFleet(p, target, { corvette: sendCorv, destroyer: sendDest, battleship: 0, colony_ship: 1 }, dist, currentTick);
+                        actionsTaken.push(`[MI EXPEDÍCIÓ] Vektor-9 kolonizáló flottát indított a(z) ${target.name} (${target.ring_index}. gyűrű) világ felé!`);
                     }
                 }
             } else if (playerPlanets.length > 0 && totalShips >= 12) {
@@ -146,7 +140,7 @@ class AICommander {
                     const sendBB = sf.battleship;
 
                     if (sendCorv + sendDest + sendBB > 0) {
-                        this._dispatchAIFleet(p, target, { corvette: sendCorv, destroyer: sendDest, battleship: sendBB }, dist, currentTick);
+                        this._dispatchAIFleet(p, target, { corvette: sendCorv, destroyer: sendDest, battleship: sendBB, colony_ship: 0 }, dist, currentTick);
                         actionsTaken.push(`[MI RAJTAÜTÉS] VIGYÁZAT! Vektor-9 inváziós haderőt indított ${target.name} ellen!`);
                     }
                 }
@@ -196,16 +190,14 @@ class AICommander {
     _dispatchAIFleet(originPlanet, targetPlanet, ships, dist, currentTick) {
         // Levonás a bázisról
         const sf = originPlanet.stationedFleet;
-        this.db.db.prepare(`UPDATE fleet_ships SET count = count - ? WHERE fleet_id = ? AND ship_type = 'corvette'`).run(ships.corvette, sf.fleetId);
-        this.db.db.prepare(`UPDATE fleet_ships SET count = count - ? WHERE fleet_id = ? AND ship_type = 'destroyer'`).run(ships.destroyer, sf.fleetId);
-        this.db.db.prepare(`UPDATE fleet_ships SET count = count - ? WHERE fleet_id = ? AND ship_type = 'battleship'`).run(ships.battleship, sf.fleetId);
+        this.db.db.prepare(`UPDATE fleet_ships SET count = count - ? WHERE fleet_id = ? AND ship_type = 'corvette'`).run(ships.corvette || 0, sf.fleetId);
+        this.db.db.prepare(`UPDATE fleet_ships SET count = count - ? WHERE fleet_id = ? AND ship_type = 'destroyer'`).run(ships.destroyer || 0, sf.fleetId);
+        this.db.db.prepare(`UPDATE fleet_ships SET count = count - ? WHERE fleet_id = ? AND ship_type = 'battleship'`).run(ships.battleship || 0, sf.fleetId);
+        if (ships.colony_ship) {
+            this.db.db.prepare(`UPDATE fleet_ships SET count = count - ? WHERE fleet_id = ? AND ship_type = 'colony_ship'`).run(ships.colony_ship, sf.fleetId);
+        }
 
-        // Sebesség és érkezés
-        let minSpeed = 5.0;
-        if (ships.battleship > 0) minSpeed = 2.0;
-        else if (ships.destroyer > 0) minSpeed = 3.5;
-
-        const travelHours = Math.max(1, Math.ceil(dist / minSpeed));
+        const travelHours = this.db.calculateRingTravelTicks(originPlanet, targetPlanet);
         const fleetId = `f_ai_trans_${Date.now()}_${Math.floor(Math.random()*1000)}`;
 
         this.db.db.prepare(`
@@ -217,6 +209,7 @@ class AICommander {
         if (ships.corvette > 0) insertShip.run(`${fleetId}_c`, fleetId, 'corvette', ships.corvette, ships.corvette * 120, ships.corvette * 40);
         if (ships.destroyer > 0) insertShip.run(`${fleetId}_d`, fleetId, 'destroyer', ships.destroyer, ships.destroyer * 450, ships.destroyer * 200);
         if (ships.battleship > 0) insertShip.run(`${fleetId}_b`, fleetId, 'battleship', ships.battleship, ships.battleship * 1600, ships.battleship * 800);
+        if (ships.colony_ship > 0) insertShip.run(`${fleetId}_col`, fleetId, 'colony_ship', ships.colony_ship, ships.colony_ship * 300, ships.colony_ship * 50);
     }
 }
 

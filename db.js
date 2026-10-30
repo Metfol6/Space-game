@@ -410,6 +410,195 @@ for (const [shipType, slots] of Object.entries(SHIP_SUBSYSTEMS)) {
     });
 }
 
+// ============================================================================
+// BOLYGÓI ÉPÜLETEK ÉS SLOT RENDSZER DEFINÍCIÓI (6 KATEGÓRIA, 10 ÉPÜLETTÍPUS)
+// ============================================================================
+const BUILDING_SPECS = {
+    terraformer: {
+        id: 'terraformer',
+        name: 'Terraformáló Állomás',
+        category: 'terraformer',
+        tier: 1,
+        icon: '🌍',
+        maxLevel: 5,
+        baseSlots: 0, // Nem foglal slotot, hanem növeli a bolygó slotjait (+4 / +5 / +6 per szint)!
+        upgradeSlotCost: 0,
+        uniquePerPlanet: true,
+        baseCostMetal: 180,
+        baseCostEnergy: 90,
+        baseCostIsotope: 15,
+        desc: '5 szintig fejleszthető. Minden szint újabb slotokat ad a bolygóhoz (Kicsi: +4, Közepes: +5, Nagy: +6 slot/szint).'
+    },
+    ship_dock: {
+        id: 'ship_dock',
+        name: 'Hajódokk',
+        category: 'dock',
+        tier: 1,
+        icon: '⚓',
+        maxLevel: 5,
+        baseSlots: 1,
+        upgradeSlotCost: 1,
+        uniquePerPlanet: true,
+        baseCostMetal: 150,
+        baseCostEnergy: 75,
+        baseCostIsotope: 10,
+        desc: 'Megépítése után állomásozhat itt védőflotta (nem fordul vissza haza), és lehetővé teszi a hajógyártást a bolygón (+250 Pajzs HP/szint).'
+    },
+    // 1. Fémtermelő épületek
+    surface_mine: {
+        id: 'surface_mine',
+        name: 'Felszíni bányatelep',
+        category: 'metal',
+        resource: 'metal',
+        tier: 1,
+        icon: '⛏️',
+        maxLevel: 10,
+        baseSlots: 1,
+        upgradeSlotCost: 1,
+        baseCostMetal: 75,
+        baseCostEnergy: 25,
+        baseCostIsotope: 0,
+        baseProduction: 25,
+        desc: 'Alap fémkitermelő telep (1 slot). Olcsó és megbízható (+25 Fém/óra szintenként).'
+    },
+    deep_core_drill: {
+        id: 'deep_core_drill',
+        name: 'Mélységi Mag-fúró',
+        category: 'metal',
+        resource: 'metal',
+        tier: 2,
+        icon: '🌋',
+        maxLevel: 10,
+        baseSlots: 2,
+        upgradeSlotCost: 1,
+        prereqBuilding: 'surface_mine',
+        prereqLevel: 1,
+        baseCostMetal: 300,
+        baseCostEnergy: 130,
+        baseCostIsotope: 25,
+        baseProduction: 110,
+        desc: 'Nehéz fémkitermelő komplexum (alapból 2 slot, fejlesztés +1 slot). Hatalmas hozam (+110 Fém/óra szintenként). Előfeltétel: Felszíni bányatelep (vagy Nagy bolygó Fém bónusz).'
+    },
+    // 2. Energiatermelő épületek
+    solar_farm: {
+        id: 'solar_farm',
+        name: 'Szolár-farm',
+        category: 'energy',
+        resource: 'energy',
+        tier: 1,
+        icon: '☀️',
+        maxLevel: 10,
+        baseSlots: 1,
+        upgradeSlotCost: 1,
+        baseCostMetal: 65,
+        baseCostEnergy: 20,
+        baseCostIsotope: 0,
+        baseProduction: 20,
+        desc: 'Felszíni napenergia-kollektor (1 slot). Stabil energiatermelés (+20 Energia/óra szintenként).'
+    },
+    fusion_plant: {
+        id: 'fusion_plant',
+        name: 'Fúziós Erőmű',
+        category: 'energy',
+        resource: 'energy',
+        tier: 2,
+        icon: '⚛️',
+        maxLevel: 10,
+        baseSlots: 2,
+        upgradeSlotCost: 1,
+        prereqBuilding: 'solar_farm',
+        prereqLevel: 1,
+        baseCostMetal: 270,
+        baseCostEnergy: 110,
+        baseCostIsotope: 25,
+        baseProduction: 90,
+        desc: 'Nagy teljesítményű magfúziós reaktor (alapból 2 slot, fejlesztés +1 slot). (+90 Energia/óra szintenként). Előfeltétel: Szolár-farm (vagy Nagy bolygó Energia bónusz).'
+    },
+    // 3. Izotóp termelő épületek
+    isotope_filter: {
+        id: 'isotope_filter',
+        name: 'Izotóp szűrő állomás',
+        category: 'isotope',
+        resource: 'isotope',
+        tier: 1,
+        icon: '🧪',
+        maxLevel: 10,
+        baseSlots: 1,
+        upgradeSlotCost: 1,
+        baseCostMetal: 95,
+        baseCostEnergy: 45,
+        baseCostIsotope: 0,
+        baseProduction: 8,
+        desc: 'Könnyű izotóp-kivonó állomás (1 slot). (+8 Izotóp/óra szintenként).'
+    },
+    enrichment_complex: {
+        id: 'enrichment_complex',
+        name: 'Dúsító Komplexum',
+        category: 'isotope',
+        resource: 'isotope',
+        tier: 2,
+        icon: '☣️',
+        maxLevel: 10,
+        baseSlots: 2,
+        upgradeSlotCost: 1,
+        prereqBuilding: 'isotope_filter',
+        prereqLevel: 1,
+        baseCostMetal: 340,
+        baseCostEnergy: 160,
+        baseCostIsotope: 35,
+        baseProduction: 36,
+        desc: 'Ipari sötétizotóp-dúsító (alapból 2 slot, fejlesztés +1 slot). (+36 Izotóp/óra szintenként). Előfeltétel: Izotóp szűrő állomás (vagy Nagy bolygó Izotóp bónusz).'
+    },
+    // 4. Adat termelő épületek
+    relay_station: {
+        id: 'relay_station',
+        name: 'Reléállomás',
+        category: 'data',
+        resource: 'data',
+        tier: 1,
+        icon: '📡',
+        maxLevel: 10,
+        baseSlots: 1,
+        upgradeSlotCost: 1,
+        baseCostMetal: 85,
+        baseCostEnergy: 40,
+        baseCostIsotope: 0,
+        baseProduction: 10,
+        desc: 'Orbitális adat- és kommunikációs relé (1 slot). (+10 Adat/óra szintenként).'
+    },
+    quantum_server_park: {
+        id: 'quantum_server_park',
+        name: 'Kvantum Szerverpark',
+        category: 'data',
+        resource: 'data',
+        tier: 2,
+        icon: '🖥️',
+        maxLevel: 10,
+        baseSlots: 2,
+        upgradeSlotCost: 1,
+        prereqBuilding: 'relay_station',
+        prereqLevel: 1,
+        baseCostMetal: 320,
+        baseCostEnergy: 150,
+        baseCostIsotope: 30,
+        baseProduction: 45,
+        desc: 'Mélyűri kvantumszámítógép-központ (alapból 2 slot, fejlesztés +1 slot). (+45 Adat/óra szintenként). Előfeltétel: Reléállomás (vagy Nagy bolygó Adat bónusz).'
+    }
+};
+
+const LEGACY_BUILDING_MAP = {
+    industrial_hub: 'surface_mine',
+    trade_network: 'relay_station',
+    planetary_shield: 'ship_dock',
+    orbital_railgun: 'solar_farm',
+    automated_dock: 'ship_dock',
+    sensor_array: 'relay_station'
+};
+
+const GALAXY_CENTER = { x: 500, y: 500 };
+const MAX_COLONIES_PER_PLAYER = 5; // Főbolygón kívül max 5 kolónia (összesen 6 bolygó)
+
+
 class DatabaseService {
     constructor(dbPath = DB_FILE) {
         this.db = new DatabaseSync(dbPath);
@@ -596,30 +785,28 @@ class DatabaseService {
             );
         `);
 
-        // 9. Kereskedelmi Állomás és Kémkedési oszlopok migrációja
+        // 9. Kereskedelmi Állomás, Kémkedési és Új Bolygó/Gyűrű oszlopok migrációja
         try { this.db.prepare("ALTER TABLE planets ADD COLUMN is_trade_station INTEGER NOT NULL DEFAULT 0").run(); } catch(e){}
         try { this.db.prepare("ALTER TABLE planets ADD COLUMN scouted_by_player INTEGER NOT NULL DEFAULT 0").run(); } catch(e){}
+        try { this.db.prepare("ALTER TABLE planets ADD COLUMN ring_index INTEGER NOT NULL DEFAULT 1").run(); } catch(e){}
+        try { this.db.prepare("ALTER TABLE planets ADD COLUMN planet_type TEXT NOT NULL DEFAULT 'colony'").run(); } catch(e){}
+        try { this.db.prepare("ALTER TABLE planets ADD COLUMN colony_size TEXT NULL DEFAULT 'small'").run(); } catch(e){}
+        try { this.db.prepare("ALTER TABLE planets ADD COLUMN bonus_resource TEXT NULL").run(); } catch(e){}
+        try { this.db.prepare("ALTER TABLE planets ADD COLUMN is_homeworld INTEGER NOT NULL DEFAULT 0").run(); } catch(e){}
+        try { this.db.prepare("ALTER TABLE planets ADD COLUMN terraform_level INTEGER NOT NULL DEFAULT 0").run(); } catch(e){}
+        try { this.db.prepare("ALTER TABLE planets ADD COLUMN artifact_tier TEXT NULL").run(); } catch(e){}
 
-        // Kereskedelmi Konzorcium és Állomás (Nexus Kereskedelmi Központ) magvetése
+        // Kereskedelmi Konzorcium magvetése
         this.db.prepare(`
             INSERT OR IGNORE INTO players (id, username, color_hex, metal, energy, isotope, data_points, is_ai)
             VALUES ('neutral', 'Galaktikus Kereskedelmi Konzorcium', '#38bdf8', 0, 0, 0, 0, 1)
         `).run();
 
-        const hasTradeStation = this.db.prepare("SELECT id FROM planets WHERE id = 'station_trade'").get();
-        if (!hasTradeStation) {
-            this.db.prepare(`
-                INSERT INTO planets (id, name, pos_x, pos_y, size_slots, owner_id, base_metal_rate, base_energy_rate, planetary_shield_hp, max_shield_hp, railgun_count, status, is_bot, bot_type, loot_type, loot_data, loot_revealed, difficulty_tier, is_trade_station, scouted_by_player)
-                VALUES ('station_trade', 'NEXUS KERESKEDELMI KÖZPONT', 410, 290, 4, 'neutral', 0, 0, 500, 500, 0, 'normal', 0, NULL, NULL, NULL, 0, 1, 1, 1)
-            `).run();
-            this.db.prepare("INSERT OR IGNORE INTO fleets (id, owner_id, name, current_x, current_y, state) VALUES ('fleet_station_trade', 'neutral', 'Kereskedelmi Állomás Helyőrség', 410, 290, 'stationed')").run();
-        }
-
         // 3 Fő Boss Bolygó (Prekurzor Citadellák - Végjáték Titánok)
         const bossList = [
-            { id: 'boss_1', name: 'CYGNUS BASTION // ŐSI ELŐŐRS', hull: 12000.0, max_hull: 12000.0, shield: 7000.0, max_shield: 7000.0, damage: 900.0, pos_x: 180.0, pos_y: 140.0, salvage_metal: 7500.0, salvage_isotope: 3000.0 },
-            { id: 'boss_2', name: 'VOID CITADEL // ÜRESSÉG CITADELLÁJA', hull: 20000.0, max_hull: 20000.0, shield: 12000.0, max_shield: 12000.0, damage: 1450.0, pos_x: 360.0, pos_y: 180.0, salvage_metal: 14000.0, salvage_isotope: 6000.0 },
-            { id: 'boss_3', name: 'OMEGA-ARK-0 // KRONOS-LEVIATÁN', hull: 32000.0, max_hull: 32000.0, shield: 18000.0, max_shield: 18000.0, damage: 2200.0, pos_x: 280.0, pos_y: 200.0, salvage_metal: 25000.0, salvage_isotope: 12000.0 }
+            { id: 'boss_1', name: 'CYGNUS BASTION // ŐSI ELŐŐRS', hull: 12000.0, max_hull: 12000.0, shield: 7000.0, max_shield: 7000.0, damage: 900.0, pos_x: 240.0, pos_y: 240.0, salvage_metal: 7500.0, salvage_isotope: 3000.0 },
+            { id: 'boss_2', name: 'VOID CITADEL // ÜRESSÉG CITADELLÁJA', hull: 20000.0, max_hull: 20000.0, shield: 12000.0, max_shield: 12000.0, damage: 1450.0, pos_x: 760.0, pos_y: 240.0, salvage_metal: 14000.0, salvage_isotope: 6000.0 },
+            { id: 'boss_3', name: 'OMEGA-ARK-0 // KRONOS-LEVIATÁN', hull: 32000.0, max_hull: 32000.0, shield: 18000.0, max_shield: 18000.0, damage: 2200.0, pos_x: 500.0, pos_y: 120.0, salvage_metal: 25000.0, salvage_isotope: 12000.0 }
         ];
 
         for (const b of bossList) {
@@ -634,12 +821,12 @@ class DatabaseService {
 
         // Bővített 9 Küldetés (Missions) bónuszokkal és relikviákkal
         const newMissions = [
-            { id: 'm1', title: 'Bázisfejlesztés', description: 'Fejleszd a Kronos-IV bolygó Ipari Központját Lv.2-re!', reward_text: '+150 Fém, +50 E, ⛏️ +25% Bányászat (5 kör)', reward_metal: 150, reward_energy: 50, reward_isotope: 0, reward_data: 0, reward_buff_type: 'mining_boost', reward_buff_value: 0.25, reward_buff_duration: 5, reward_artifact_id: null, sort_order: 1 },
-            { id: 'm2', title: 'Kozmikus Felderítés', description: 'Építs egy Felderítő Szondát és küldd felderíteni a Zephyr-7-et!', reward_text: '+40 Izotóp, +50 Adat, 🚀 +20% Flotta Sebesség (6 kör)', reward_metal: 0, reward_energy: 0, reward_isotope: 40, reward_data: 50, reward_buff_type: 'speed_boost', reward_buff_value: 0.20, reward_buff_duration: 6, reward_artifact_id: null, sort_order: 2 },
+            { id: 'm1', title: 'Bázisfejlesztés', description: 'Építs vagy fejlessz egy Felszíni bányatelepet Lv.2-re a főbolygódon!', reward_text: '+150 Fém, +50 E, ⛏️ +25% Bányászat (5 kör)', reward_metal: 150, reward_energy: 50, reward_isotope: 0, reward_data: 0, reward_buff_type: 'mining_boost', reward_buff_value: 0.25, reward_buff_duration: 5, reward_artifact_id: null, sort_order: 1 },
+            { id: 'm2', title: 'Kozmikus Felderítés', description: 'Építs egy Felderítő Szondát és deríts fel egy titkos bolygót az 1. gyűrűn!', reward_text: '+40 Izotóp, +50 Adat, 🚀 +20% Flotta Sebesség (6 kör)', reward_metal: 0, reward_energy: 0, reward_isotope: 40, reward_data: 50, reward_buff_type: 'speed_boost', reward_buff_value: 0.20, reward_buff_duration: 6, reward_artifact_id: null, sort_order: 2 },
             { id: 'm3', title: 'Hadiflotta Alapítása', description: 'Bővítsd a haderőd legalább 8 Korvettre vagy 3 Rombolóra!', reward_text: '+200 Fém, +100 E, 🏺 KVANTUM CHRONO-MAG', reward_metal: 200, reward_energy: 100, reward_isotope: 0, reward_data: 0, reward_buff_type: null, reward_buff_value: 0, reward_buff_duration: 0, reward_artifact_id: 'artifact_chrono_core', sort_order: 3 },
-            { id: 'm4', title: 'Kolónia-alapítás', description: 'Építs Kolóniahajót és kolonizáld a Zephyr-7 vagy Nexus-Alpha világot!', reward_text: '+250 Fém, +150 E, 🛡️ +20% Pajzskapacitás (8 kör)', reward_metal: 250, reward_energy: 150, reward_isotope: 50, reward_data: 0, reward_buff_type: 'shield_overcharge', reward_buff_value: 0.20, reward_buff_duration: 8, reward_artifact_id: null, sort_order: 4 },
-            { id: 'm5', title: 'Mélységi Expanzió & Dominancia', description: 'Birtokolj legalább 3 bolygót a szektorban!', reward_text: '+500 Fém, +300 Adat, 💎 SÖTÉT ANYAG REZONÁTOR', reward_metal: 500, reward_energy: 250, reward_isotope: 100, reward_data: 300, reward_buff_type: null, reward_buff_value: 0, reward_buff_duration: 0, reward_artifact_id: 'artifact_dark_resonator', sort_order: 5 },
-            { id: 'm6', title: 'Birodalmi Hadúr & Dicsőség', description: 'Gyűjts össze legalább 100 Dicsőség Pontot rivális játékosok megtámadásával!', reward_text: '+500 Fém, 🔮 PREKURZOR HOZZÁFÉRÉSI KÓDEX, ⚔️ +20% Sebzés (8 kör)', reward_metal: 500, reward_energy: 200, reward_isotope: 100, reward_data: 200, reward_buff_type: 'combat_dmg_buff', reward_buff_value: 0.20, reward_buff_duration: 8, reward_artifact_id: 'artifact_codex', sort_order: 6 },
+            { id: 'm4', title: 'Kolónia-alapítás', description: 'Építs Kolóniahajót és kolonizálj egy felderített Kolónia bolygót!', reward_text: '+250 Fém, +150 E, 🛡️ +20% Pajzskapacitás (8 kör)', reward_metal: 250, reward_energy: 150, reward_isotope: 50, reward_data: 0, reward_buff_type: 'shield_overcharge', reward_buff_value: 0.20, reward_buff_duration: 8, reward_artifact_id: null, sort_order: 4 },
+            { id: 'm5', title: 'Mélységi Expanzió & Dominancia', description: 'Birtokolj legalább 3 bolygót a szektorban (max. Főbolygó + 5 kolónia)!', reward_text: '+500 Fém, +300 Adat, 💎 SÖTÉT ANYAG REZONÁTOR', reward_metal: 500, reward_energy: 250, reward_isotope: 100, reward_data: 300, reward_buff_type: null, reward_buff_value: 0, reward_buff_duration: 0, reward_artifact_id: 'artifact_dark_resonator', sort_order: 5 },
+            { id: 'm6', title: 'Birodalmi Hadúr & Dicsőség', description: 'Gyűjts össze legalább 100 Dicsőség Pontot!', reward_text: '+500 Fém, 🔮 PREKURZOR HOZZÁFÉRÉSI KÓDEX, ⚔️ +20% Sebzés (8 kör)', reward_metal: 500, reward_energy: 200, reward_isotope: 100, reward_data: 200, reward_buff_type: 'combat_dmg_buff', reward_buff_value: 0.20, reward_buff_duration: 8, reward_artifact_id: 'artifact_codex', sort_order: 6 },
             { id: 'm7', title: 'Cygnus Bastion Elpusztítása', description: 'Pusztítsd el az Ősi Cygnus Előőrsöt (Boss 1)!', reward_text: '+1500 Fém, +100 Dicsőség, 🛡️ +25% Hull HP (10 kör)', reward_metal: 1500, reward_energy: 500, reward_isotope: 500, reward_data: 500, reward_buff_type: 'combat_hull_buff', reward_buff_value: 0.25, reward_buff_duration: 10, reward_artifact_id: null, sort_order: 7 },
             { id: 'm8', title: 'Void Citadel Felszámolása', description: 'Törd át az Üresség Citadellájának (Boss 2) védelmi falát!', reward_text: '+2500 Fém, +200 Dicsőség, 💥 +25% Tűzerő (12 kör)', reward_metal: 2500, reward_energy: 1000, reward_isotope: 1000, reward_data: 1000, reward_buff_type: 'combat_dmg_buff', reward_buff_value: 0.25, reward_buff_duration: 12, reward_artifact_id: null, sort_order: 8 },
             { id: 'm9', title: 'Omega-Protokoll: Leviatán Bukása', description: 'Semmisítsd meg az OMEGA-ARK-0 Kronos-Leviatánt (Boss 3)!', reward_text: 'Teljes Galaktikus Megdicsőülés & Végső Győzelem!', reward_metal: 5000, reward_energy: 3000, reward_isotope: 2000, reward_data: 2000, reward_buff_type: null, reward_buff_value: 0, reward_buff_duration: 0, reward_artifact_id: null, sort_order: 9 }
@@ -667,326 +854,327 @@ class DatabaseService {
     seedBotPlanets() {
         this.db.prepare(`
             INSERT OR IGNORE INTO players (id, username, color_hex, metal, energy, isotope, data_points, is_ai)
-            VALUES ('bot_hostile', 'Kozmikus Renegátok (Bot)', '#f59e0b', 0, 0, 0, 0, 1)
+            VALUES ('bot_hostile', 'Kozmikus Őrszemek (Bot)', '#f59e0b', 0, 0, 0, 0, 1)
         `).run();
         this.db.prepare(`
             INSERT OR IGNORE INTO players (id, username, color_hex, metal, energy, isotope, data_points, is_ai)
             VALUES ('precursor_boss', 'Prekurzor Ős-Kolosszusok', '#dc2626', 0, 0, 0, 0, 1)
         `).run();
 
+        // Ellenőrizzük, hogy az új 4-bolygótípusos, 10-gyűrűs galaxis be van-e már töltve
+        const hasNewGalaxy = this.db.prepare("SELECT COUNT(*) as c FROM planets WHERE planet_type IN ('dead_colony', 'technology')").get();
+        if (hasNewGalaxy && hasNewGalaxy.c > 0) {
+            return;
+        }
+
+        // Ha régi adatbázis van, tisztítsuk meg a régi bot bolygókat és építsük fel a 10 koncentrikus gyűrűt
+        this.db.prepare("DELETE FROM fleet_ships WHERE fleet_id LIKE 'f_bot_%'").run();
+        this.db.prepare("DELETE FROM fleets WHERE id LIKE 'f_bot_%'").run();
+        this.db.prepare("DELETE FROM planets WHERE id LIKE 'bot_p%'").run();
+
+        // Segédfüggvény polár koordinátákhoz a Galaxis Középpontja (500, 500) körül
+        const ringPos = (ringIdx, angleDeg) => {
+            const radius = ringIdx === 0 ? 55 : (75 + ringIdx * 65);
+            const rad = (angleDeg * Math.PI) / 180.0;
+            return {
+                x: Math.round(GALAXY_CENTER.x + Math.cos(rad) * radius),
+                y: Math.round(GALAXY_CENTER.y + Math.sin(rad) * radius)
+            };
+        };
+
+        // Frissítsük a Főbolygókat (Ring 0) és a Kereskedelmi Központot (Ring 1)
+        const p1Pos = ringPos(0, -135);
+        this.db.prepare(`
+            INSERT INTO planets (id, name, pos_x, pos_y, ring_index, planet_type, colony_size, bonus_resource, is_homeworld, size_slots, terraform_level, owner_id, base_metal_rate, base_energy_rate, planetary_shield_hp, max_shield_hp, railgun_count, status, is_bot, scouted_by_player)
+            VALUES ('p1', 'KRONOS-IV (Főbolygó)', ?, ?, 0, 'colony', 'medium', NULL, 1, 10, 0, 'player', 40.0, 20.0, 500.0, 500.0, 0, 'normal', 0, 1)
+            ON CONFLICT(id) DO UPDATE SET
+                name='KRONOS-IV (Főbolygó)', pos_x=excluded.pos_x, pos_y=excluded.pos_y,
+                ring_index=0, planet_type='colony', colony_size='medium', is_homeworld=1,
+                size_slots=MAX(planets.size_slots, 10), scouted_by_player=1
+        `).run(p1Pos.x, p1Pos.y);
+        this.db.prepare("UPDATE fleets SET current_x = ?, current_y = ? WHERE origin_planet_id = 'p1' AND state = 'stationed'").run(p1Pos.x, p1Pos.y);
+
+        const p4Pos = ringPos(0, 45);
+        this.db.prepare(`
+            INSERT INTO planets (id, name, pos_x, pos_y, ring_index, planet_type, colony_size, bonus_resource, is_homeworld, size_slots, terraform_level, owner_id, base_metal_rate, base_energy_rate, planetary_shield_hp, max_shield_hp, railgun_count, status, is_bot, scouted_by_player)
+            VALUES ('p4', 'VEKTOR-9 (Főbolygó)', ?, ?, 0, 'colony', 'medium', NULL, 1, 10, 0, 'enemy', 40.0, 20.0, 400.0, 400.0, 1, 'normal', 0, 0)
+            ON CONFLICT(id) DO UPDATE SET
+                name='VEKTOR-9 (Főbolygó)', pos_x=excluded.pos_x, pos_y=excluded.pos_y,
+                ring_index=0, planet_type='colony', colony_size='medium', is_homeworld=1,
+                size_slots=MAX(planets.size_slots, 10)
+        `).run(p4Pos.x, p4Pos.y);
+        this.db.prepare("UPDATE fleets SET current_x = ?, current_y = ? WHERE origin_planet_id = 'p4' AND state = 'stationed'").run(p4Pos.x, p4Pos.y);
+
+        // Kezdő épületek frissítése az új épülettípusokra (p1 és p4), ha még régiek vannak
+        const existingP1Structs = this.db.prepare("SELECT * FROM planet_structures WHERE planet_id = 'p1'").all();
+        const hasNewStructs = existingP1Structs.some(s => BUILDING_SPECS[s.structure_type]);
+        if (!hasNewStructs) {
+            this.db.prepare("DELETE FROM planet_structures WHERE planet_id IN ('p1', 'p4')").run();
+            const insSt = this.db.prepare("INSERT INTO planet_structures (id, planet_id, slot_index, branch_type, structure_type, level) VALUES (?, ?, ?, ?, ?, ?)");
+            insSt.run('s_p1_dock', 'p1', 0, 'dock', 'ship_dock', 1);
+            insSt.run('s_p1_mine', 'p1', 1, 'metal', 'surface_mine', 2);
+            insSt.run('s_p1_solar', 'p1', 2, 'energy', 'solar_farm', 1);
+            insSt.run('s_p1_iso', 'p1', 3, 'isotope', 'isotope_filter', 1);
+            insSt.run('s_p1_data', 'p1', 4, 'data', 'relay_station', 1);
+
+            insSt.run('s_p4_dock', 'p4', 0, 'dock', 'ship_dock', 1);
+            insSt.run('s_p4_mine', 'p4', 1, 'metal', 'surface_mine', 1);
+            insSt.run('s_p4_solar', 'p4', 2, 'energy', 'solar_farm', 1);
+        }
+
+        const tradePos = ringPos(1, -45);
+        this.db.prepare(`
+            INSERT INTO planets (id, name, pos_x, pos_y, ring_index, planet_type, colony_size, size_slots, owner_id, base_metal_rate, base_energy_rate, planetary_shield_hp, max_shield_hp, railgun_count, status, is_bot, difficulty_tier, is_trade_station, scouted_by_player)
+            VALUES ('station_trade', 'NEXUS KERESKEDELMI KÖZPONT', ?, ?, 1, 'trade_station', NULL, 4, 'neutral', 0, 0, 500, 500, 0, 'normal', 0, 1, 1, 1)
+            ON CONFLICT(id) DO UPDATE SET pos_x=excluded.pos_x, pos_y=excluded.pos_y, ring_index=1, planet_type='trade_station', is_trade_station=1, scouted_by_player=1
+        `).run(tradePos.x, tradePos.y);
+        this.db.prepare("INSERT OR IGNORE INTO fleets (id, owner_id, name, current_x, current_y, state) VALUES ('fleet_station_trade', 'neutral', 'Kereskedelmi Állomás Helyőrség', ?, ?, 'stationed')").run(tradePos.x, tradePos.y);
+
+        // ====================================================================
+        // 10 KONCENTRIKUS KÖRGYŰRŰ BOLYGÓI (4 BOLYGÓTÍPUS ARÁNYOSAN ELOSZTVA)
+        // - Közelebbi gyűrűk (1-3): Kicsi kolónia bolygók (+4 slot/fejl.) és Halott kolónia bolygók
+        // - Középső gyűrűk (3-7): Közepes kolónia bolygók (+5 slot/fejl.), Technológia bolygók, Kicsi és Közepes Artifact bolygók
+        // - Távoli gyűrűk (7-10): Nagy kolónia bolygók (+6 slot/fejl. + nyersanyag bónusz), Erős Technológia bolygók és Nagy Artifact bolygók
+        // - Összesen pontosan 9 Artifact bolygó (3 kicsi, 3 közepes, 3 nagy)
+        // - Minden bolygó alapból TITKOS (scouted_by_player = 0), amíg szondával fel nem fedik!
+        // ====================================================================
+        const ringPlanets = [
+            // --- 1. GYŰRŰ (1 kör út: Kicsi kolóniák & Halott kolóniák) ---
+            { id: 'p2', name: 'ZEPHYR-7', ring: 1, angle: -155, type: 'colony', size: 'small', bonus: null },
+            { id: 'col_r1_2', name: 'AURELIA-I', ring: 1, angle: 120, type: 'colony', size: 'small', bonus: null },
+            { id: 'dead_r1_1', name: 'HAMU-HOLD X1', ring: 1, angle: 25, type: 'dead_colony', size: 'small', bonus: null },
+            { id: 'dead_r1_2', name: 'KRÁTER-SZIKLA V2', ring: 1, angle: -95, type: 'dead_colony', size: 'small', bonus: null },
+
+            // --- 2. GYŰRŰ (2 kör út: Kicsi kolóniák & Halott kolóniák) ---
+            { id: 'col_r2_1', name: 'BOREALIS-II', ring: 2, angle: -175, type: 'colony', size: 'small', bonus: null },
+            { id: 'col_r2_2', name: 'HELIOS-PEREM', ring: 2, angle: -65, type: 'colony', size: 'small', bonus: null },
+            { id: 'col_r2_3', name: 'KORALL-4', ring: 2, angle: 75, type: 'colony', size: 'small', bonus: null },
+            { id: 'dead_r2_1', name: 'KIHALT KOLÓNIA B-4', ring: 2, angle: -15, type: 'dead_colony', size: 'small', bonus: null },
+            { id: 'dead_r2_2', name: 'POR-VILÁG D-9', ring: 2, angle: 145, type: 'dead_colony', size: 'small', bonus: null },
+
+            // --- 3. GYŰRŰ (3 kör út: Kicsi/Közepes kolónia, Halott kolónia, Tech #1, Kicsi Arti #1) ---
+            { id: 'col_r3_1', name: 'VULCAN-MINOR', ring: 3, angle: -130, type: 'colony', size: 'small', bonus: null },
+            { id: 'col_r3_2', name: 'SYLVANA-3', ring: 3, angle: 15, type: 'colony', size: 'small', bonus: null },
+            { id: 'p3', name: 'NEXUS-ALPHA', ring: 3, angle: 105, type: 'colony', size: 'medium', bonus: null },
+            { id: 'dead_r3_1', name: 'ÜSZKÖS VILÁG R-3', ring: 3, angle: -40, type: 'dead_colony', size: 'small', bonus: null },
+            {
+                id: 'tech_r3_1', name: 'TACHION KUTATÓBÁZIS', ring: 3, angle: 165, type: 'technology', tier: 1,
+                shield: 240, railguns: 1, ships: { interceptor: 6, corvette: 5 },
+                loot_data: { buff_type: 'speed_boost', buff_value: 0.25, buff_duration: 8, buff_name: 'Tachion Hajtómű Túltöltés (+25% Sebesség)', buff_icon: '🚀' }
+            },
+            {
+                id: 'art_s1', name: 'KRIPTA-HOLD ALFA', ring: 3, angle: -85, type: 'artifact', artifact_tier: 'small', tier: 1,
+                shield: 360, railguns: 1, ships: { interceptor: 8, corvette: 6, frigate: 2 },
+                loot_data: { artifact_id: 'artifact_chrono_core', artifact_tier: 'small', name: 'Kicsi Ereklye: Kvantum Chrono-Mag (1/3)' }
+            },
+
+            // --- 4. GYŰRŰ (4 kör út: Közepes kolóniák, Tech #2, Kicsi Arti #2 és #3, Halott kolónia) ---
+            { id: 'col_r4_1', name: 'ORION-KERT', ring: 4, angle: -150, type: 'colony', size: 'medium', bonus: null },
+            { id: 'col_r4_2', name: 'VEGA-PRIME', ring: 4, angle: 50, type: 'colony', size: 'medium', bonus: null },
+            { id: 'dead_r4_1', name: 'FAGYOTT SZEKTOR F-4', ring: 4, angle: -20, type: 'dead_colony', size: 'medium', bonus: null },
+            {
+                id: 'tech_r4_1', name: 'PAJZS-GENERÁTOR LABOR', ring: 4, angle: 130, type: 'technology', tier: 1,
+                shield: 300, railguns: 1, ships: { corvette: 7, frigate: 3 },
+                loot_data: { buff_type: 'shield_overcharge', buff_value: 0.25, buff_duration: 8, buff_name: 'Fázispajzs Túlterhelés (+25% Pajzs)', buff_icon: '🛡️' }
+            },
+            {
+                id: 'art_s2', name: 'IDŐ-SZENTÉLY BÉTA', ring: 4, angle: -70, type: 'artifact', artifact_tier: 'small', tier: 1,
+                shield: 400, railguns: 2, ships: { interceptor: 9, corvette: 6, frigate: 3 },
+                loot_data: { artifact_id: 'artifact_chrono_core', artifact_tier: 'small', name: 'Kicsi Ereklye: Kvantum Chrono-Mag (2/3)' }
+            },
+            {
+                id: 'art_s3', name: 'CHRONO-OBELISZK GAMMA', ring: 4, angle: -195, type: 'artifact', artifact_tier: 'small', tier: 1,
+                shield: 420, railguns: 2, ships: { corvette: 8, frigate: 4, destroyer: 2 },
+                loot_data: { artifact_id: 'artifact_chrono_core', artifact_tier: 'small', name: 'Kicsi Ereklye: Kvantum Chrono-Mag (3/3)' }
+            },
+
+            // --- 5. GYŰRŰ (5 kör út: Közepes kolóniák, Tech #3 és #4, Közepes Arti #1, Halott kolónia) ---
+            { id: 'col_r5_1', name: 'LYRA-KÖZÉP', ring: 5, angle: -115, type: 'colony', size: 'medium', bonus: null },
+            { id: 'col_r5_2', name: 'ALTAIR-VI', ring: 5, angle: 20, type: 'colony', size: 'medium', bonus: null },
+            { id: 'dead_r5_1', name: 'HALOTT HOLD M-5', ring: 5, angle: 85, type: 'dead_colony', size: 'medium', bonus: null },
+            {
+                id: 'tech_r5_1', name: 'TITÁN-ÖTVÖZET MŰHELY', ring: 5, angle: -45, type: 'technology', tier: 2,
+                shield: 480, railguns: 2, ships: { corvette: 9, destroyer: 3 },
+                loot_data: { buff_type: 'combat_hull_buff', buff_value: 0.25, buff_duration: 9, buff_name: 'Megerősített Titánburkolat (+25% Hajótest HP)', buff_icon: '🧱' }
+            },
+            {
+                id: 'tech_r5_2', name: 'MÉLYŰRI BÁNYÁSZATI KÖZPONT', ring: 5, angle: 150, type: 'technology', tier: 2,
+                shield: 500, railguns: 2, ships: { frigate: 5, destroyer: 3 },
+                loot_data: { buff_type: 'mining_boost', buff_value: 0.30, buff_duration: 9, buff_name: 'Ipari Termelés-Túltöltés (+30% Termelés)', buff_icon: '⛏️' }
+            },
+            {
+                id: 'art_m1', name: 'SÖTÉT REZONÁTOR ALFA', ring: 5, angle: -170, type: 'artifact', artifact_tier: 'medium', tier: 2,
+                shield: 650, railguns: 2, ships: { frigate: 6, destroyer: 5, cruiser: 2 },
+                loot_data: { artifact_id: 'artifact_dark_resonator', artifact_tier: 'medium', name: 'Közepes Ereklye: Sötét Anyag Rezonátor (1/3)' }
+            },
+
+            // --- 6. GYŰRŰ (6 kör út: Közepes kolóniák, Tech #5, Közepes Arti #2, Halott kolónia) ---
+            { id: 'col_r6_1', name: 'DRACO-VÖLGY', ring: 6, angle: -140, type: 'colony', size: 'medium', bonus: null },
+            { id: 'col_r6_2', name: 'SIRIUS-DELTA', ring: 6, angle: 60, type: 'colony', size: 'medium', bonus: null },
+            { id: 'dead_r6_1', name: 'KIÉGETT KOLÓNIA K-6', ring: 6, angle: -10, type: 'dead_colony', size: 'medium', bonus: null },
+            {
+                id: 'tech_r6_1', name: 'PLAZMA-KALIBRÁLÓ ERŐD', ring: 6, angle: 120, type: 'technology', tier: 2,
+                shield: 580, railguns: 2, ships: { frigate: 5, destroyer: 4, repair_ship: 2 },
+                loot_data: { buff_type: 'combat_dmg_buff', buff_value: 0.25, buff_duration: 10, buff_name: 'Plazma Tűzerő Kalibráció (+25% Sebzés)', buff_icon: '💥' }
+            },
+            {
+                id: 'art_m2', name: 'SÖTÉT REZONÁTOR BÉTA', ring: 6, angle: -75, type: 'artifact', artifact_tier: 'medium', tier: 2,
+                shield: 720, railguns: 3, ships: { frigate: 7, destroyer: 5, cruiser: 3 },
+                loot_data: { artifact_id: 'artifact_dark_resonator', artifact_tier: 'medium', name: 'Közepes Ereklye: Sötét Anyag Rezonátor (2/3)' }
+            },
+
+            // --- 7. GYŰRŰ (7 kör út: Nagy kolónia [Fém], Közepes kolónia, Tech #6, Közepes Arti #3, Halott kolónia) ---
+            { id: 'col_r7_1', name: 'TITÁN-ÓRIÁS I', ring: 7, angle: -160, type: 'colony', size: 'large', bonus: 'metal' },
+            { id: 'col_r7_2', name: 'CENTAURI-8', ring: 7, angle: 35, type: 'colony', size: 'medium', bonus: null },
+            { id: 'dead_r7_1', name: 'CSENDES SZEKTOR S-7', ring: 7, angle: -35, type: 'dead_colony', size: 'large', bonus: 'energy' },
+            {
+                id: 'tech_r7_1', name: 'KVANTUM PAJZS-AKADÉMIA', ring: 7, angle: 100, type: 'technology', tier: 2,
+                shield: 750, railguns: 3, ships: { destroyer: 6, repair_ship: 3, cruiser: 2 },
+                loot_data: { buff_type: 'shield_overcharge', buff_value: 0.35, buff_duration: 10, buff_name: 'Kvantum Pajzspajzs-Mátrix (+35% Pajzs)', buff_icon: '🌐' }
+            },
+            {
+                id: 'art_m3', name: 'SÖTÉT REZONÁTOR GAMMA', ring: 7, angle: 165, type: 'artifact', artifact_tier: 'medium', tier: 2,
+                shield: 800, railguns: 3, ships: { frigate: 8, destroyer: 6, cruiser: 3 },
+                loot_data: { artifact_id: 'artifact_dark_resonator', artifact_tier: 'medium', name: 'Közepes Ereklye: Sötét Anyag Rezonátor (3/3)' }
+            },
+
+            // --- 8. GYŰRŰ (8 kör út: Nagy kolóniák [Energia, Fém], Tech #7, Nagy Arti #1, Halott kolónia) ---
+            { id: 'col_r8_1', name: 'SOLARIS-GIGÁSZ', ring: 8, angle: -125, type: 'colony', size: 'large', bonus: 'energy' },
+            { id: 'col_r8_2', name: 'HYPERION-PRIME', ring: 8, angle: 15, type: 'colony', size: 'large', bonus: 'metal' },
+            { id: 'dead_r8_1', name: 'RONCS-VILÁG Z-8', ring: 8, angle: 75, type: 'dead_colony', size: 'large', bonus: 'isotope' },
+            {
+                id: 'tech_r8_1', name: 'NEHÉZPÁNCÉL KÍSÉRLETI TELEP', ring: 8, angle: -55, type: 'technology', tier: 3,
+                shield: 950, railguns: 3, ships: { destroyer: 6, repair_ship: 4, cruiser: 3 },
+                loot_data: { buff_type: 'combat_hull_buff', buff_value: 0.35, buff_duration: 12, buff_name: 'Dreadnought Nano-Páncélzat (+35% Hajótest HP)', buff_icon: '🛡️' }
+            },
+            {
+                id: 'art_l1', name: 'PREKURZOR KÓDEX-TEMPLOM I', ring: 8, angle: 140, type: 'artifact', artifact_tier: 'large', tier: 3,
+                shield: 1150, railguns: 4, ships: { frigate: 8, repair_ship: 4, cruiser: 4, battleship: 2 },
+                loot_data: { artifact_id: 'artifact_codex', artifact_tier: 'large', name: 'Nagy Ereklye: Prekurzor Hozzáférési Kódex (1/3)' }
+            },
+
+            // --- 9. GYŰRŰ (9 kör út: Nagy kolóniák [Izotóp, Adat], Tech #8, Nagy Arti #2) ---
+            { id: 'col_r9_1', name: 'NEBULA-ÓRIÁS', ring: 9, angle: -145, type: 'colony', size: 'large', bonus: 'isotope' },
+            { id: 'col_r9_2', name: 'CASSIOPEIA-MAG', ring: 9, angle: 45, type: 'colony', size: 'large', bonus: 'data' },
+            {
+                id: 'tech_r9_1', name: 'ANTIANYAG TERMELÉSI NEXUS', ring: 9, angle: -25, type: 'technology', tier: 3,
+                shield: 1050, railguns: 3, ships: { destroyer: 7, cruiser: 4, battleship: 2 },
+                loot_data: { buff_type: 'mining_boost', buff_value: 0.45, buff_duration: 12, buff_name: 'Antianyag Kitermelő Rezonancia (+45% Termelés)', buff_icon: '⚡' }
+            },
+            {
+                id: 'art_l2', name: 'PREKURZOR KÓDEX-TEMPLOM II', ring: 9, angle: 115, type: 'artifact', artifact_tier: 'large', tier: 3,
+                shield: 1280, railguns: 4, ships: { destroyer: 8, repair_ship: 5, cruiser: 5, battleship: 3 },
+                loot_data: { artifact_id: 'artifact_codex', artifact_tier: 'large', name: 'Nagy Ereklye: Prekurzor Hozzáférési Kódex (2/3)' }
+            },
+
+            // --- 10. GYŰRŰ (10 kör út: Nagy kolóniák [Izotóp, Adat], Tech #9, Nagy Arti #3) ---
+            { id: 'col_r10_1', name: 'APEX-LEVIATÁN VILÁG', ring: 10, angle: -110, type: 'colony', size: 'large', bonus: 'isotope' },
+            { id: 'col_r10_2', name: 'OMICRON-SZUPERVILÁG', ring: 10, angle: 10, type: 'colony', size: 'large', bonus: 'data' },
+            {
+                id: 'tech_r10_1', name: 'OMEGA FEGYVERKÍSÉRLETI BÁZIS', ring: 10, angle: -175, type: 'technology', tier: 3,
+                shield: 1200, railguns: 4, ships: { repair_ship: 5, cruiser: 5, battleship: 3 },
+                loot_data: { buff_type: 'combat_dmg_buff', buff_value: 0.40, buff_duration: 12, buff_name: 'Omega Szingularitás Tűzerő (+40% Sebzés)', buff_icon: '🔥' }
+            },
+            {
+                id: 'art_l3', name: 'PREKURZOR KÓDEX-TEMPLOM III', ring: 10, angle: 85, type: 'artifact', artifact_tier: 'large', tier: 3,
+                shield: 1450, railguns: 4, ships: { frigate: 10, repair_ship: 6, cruiser: 6, battleship: 4 },
+                loot_data: { artifact_id: 'artifact_codex', artifact_tier: 'large', name: 'Nagy Ereklye: Prekurzor Hozzáférési Kódex (3/3)' }
+            }
+        ];
+
+        const insPlanet = this.db.prepare(`
+            INSERT INTO planets (
+                id, name, pos_x, pos_y, ring_index, planet_type, colony_size, bonus_resource, is_homeworld,
+                size_slots, terraform_level, owner_id, base_metal_rate, base_energy_rate,
+                planetary_shield_hp, max_shield_hp, railgun_count, is_bot, bot_type, artifact_tier,
+                loot_type, loot_data, loot_revealed, difficulty_tier, status, scouted_by_player
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, 10, 0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, 'normal', 0)
+            ON CONFLICT(id) DO UPDATE SET
+                name=excluded.name, pos_x=excluded.pos_x, pos_y=excluded.pos_y,
+                ring_index=excluded.ring_index, planet_type=excluded.planet_type,
+                colony_size=excluded.colony_size, bonus_resource=excluded.bonus_resource,
+                is_bot=excluded.is_bot, bot_type=excluded.bot_type, artifact_tier=excluded.artifact_tier,
+                loot_type=excluded.loot_type, loot_data=excluded.loot_data, difficulty_tier=excluded.difficulty_tier
+        `);
+
+        for (const rp of ringPlanets) {
+            const pos = ringPos(rp.ring, rp.angle);
+            const isBot = (rp.type === 'artifact' || rp.type === 'technology') ? 1 : 0;
+            const ownerId = isBot ? 'bot_hostile' : null;
+            const botType = isBot ? rp.type : null;
+            const lootType = rp.type === 'artifact' ? 'artifact' : (rp.type === 'technology' ? 'tech_buff' : null);
+            const lootData = rp.loot_data ? JSON.stringify(rp.loot_data) : null;
+            const baseMetal = rp.type === 'colony' ? (rp.size === 'large' ? 45 : (rp.size === 'medium' ? 35 : 25)) : 0;
+            const baseEnergy = rp.type === 'colony' ? (rp.size === 'large' ? 20 : (rp.size === 'medium' ? 15 : 10)) : 0;
+            const shield = rp.shield || 0;
+            const railguns = rp.railguns || 0;
+            const tier = rp.tier || Math.max(1, Math.ceil(rp.ring / 3.5));
+
+            insPlanet.run(
+                rp.id, rp.name, pos.x, pos.y, rp.ring, rp.type, rp.size || null, rp.bonus || null,
+                ownerId, baseMetal, baseEnergy, shield, shield, railguns,
+                isBot, botType, rp.artifact_tier || null, lootType, lootData, tier
+            );
+
+            // Állomásozó flotta létrehozása
+            const existingFleet = this.db.prepare("SELECT id FROM fleets WHERE id = ?").get(`f_${rp.id}`);
+            if (!existingFleet) {
+                this.createFleet(`f_${rp.id}`, ownerId || 'neutral', `${rp.name} Helyőrség`, pos.x, pos.y, rp.id, rp.ships || {});
+            }
+        }
+
         // 3 Fő Boss Citadella (Végjáték Prekurzor Bástyák)
         const bossPlanets = [
             {
-                id: 'boss_1',
-                name: 'CYGNUS BASTION // ŐSI ELŐŐRS',
-                pos_x: 180, pos_y: 140, size_slots: 6,
+                id: 'boss_1', name: 'CYGNUS BASTION // ŐSI ELŐŐRS',
+                pos_x: 240, pos_y: 240, ring: 4, size_slots: 6,
                 is_bot: 1, bot_type: 'boss', difficulty_tier: 3,
-                loot_type: 'resources',
-                loot_data: JSON.stringify({ metal: 7500, energy: 3750, isotope: 2000, data: 2000, glory: 400 }),
+                loot_type: 'resources', loot_data: JSON.stringify({ metal: 7500, energy: 3750, isotope: 2000, data: 2000, glory: 400 }),
                 planetary_shield_hp: 7000.0, max_shield_hp: 7000.0, railgun_count: 5,
                 ships: { frigate: 16, destroyer: 12, repair_ship: 8, cruiser: 4 }
             },
             {
-                id: 'boss_2',
-                name: 'VOID CITADEL // ÜRESSÉG CITADELLÁJA',
-                pos_x: 360, pos_y: 180, size_slots: 6,
+                id: 'boss_2', name: 'VOID CITADEL // ÜRESSÉG CITADELLÁJA',
+                pos_x: 760, pos_y: 240, ring: 7, size_slots: 6,
                 is_bot: 1, bot_type: 'boss', difficulty_tier: 4,
-                loot_type: 'resources',
-                loot_data: JSON.stringify({ metal: 14000, energy: 6500, isotope: 4000, data: 4000, glory: 800 }),
+                loot_type: 'resources', loot_data: JSON.stringify({ metal: 14000, energy: 6500, isotope: 4000, data: 4000, glory: 800 }),
                 planetary_shield_hp: 12000.0, max_shield_hp: 12000.0, railgun_count: 8,
                 ships: { destroyer: 16, repair_ship: 12, cruiser: 12, battleship: 6 }
             },
             {
-                id: 'boss_3',
-                name: 'OMEGA-ARK-0 // KRONOS-LEVIATÁN',
-                pos_x: 280, pos_y: 200, size_slots: 6,
+                id: 'boss_3', name: 'OMEGA-ARK-0 // KRONOS-LEVIATÁN',
+                pos_x: 500, pos_y: 120, ring: 10, size_slots: 6,
                 is_bot: 1, bot_type: 'boss', difficulty_tier: 5,
-                loot_type: 'resources',
-                loot_data: JSON.stringify({ metal: 28000, energy: 14000, isotope: 8000, data: 8000, glory: 1600 }),
+                loot_type: 'resources', loot_data: JSON.stringify({ metal: 28000, energy: 14000, isotope: 8000, data: 8000, glory: 1600 }),
                 planetary_shield_hp: 26000.0, max_shield_hp: 26000.0, railgun_count: 16,
                 ships: { repair_ship: 24, cruiser: 18, battleship: 12 }
             }
         ];
 
-        // 30 Kis Ellenséges Bot Bolygó a rejtett zsákmányokkal (Tier 1-3)
-        const botOutposts = [
-            // --- TIER 1 (10 Bolygó: Kalózok, Bányásztelepek, Drónok) ---
-            {
-                id: 'bot_p1', name: 'DRAKON KALÓZTÁMASZPONT',
-                pos_x: 80, pos_y: 220, size_slots: 3,
-                is_bot: 1, bot_type: 'outpost', difficulty_tier: 1,
-                loot_type: 'resources', loot_data: JSON.stringify({ metal: 1200, energy: 500, isotope: 180, data: 120 }),
-                planetary_shield_hp: 230.0, max_shield_hp: 230.0, railgun_count: 1,
-                ships: { interceptor: 6, corvette: 5 }
-            },
-            {
-                id: 'bot_p2', name: 'RENEGÁT IZOTÓP-BÁNYA',
-                pos_x: 240, pos_y: 50, size_slots: 3,
-                is_bot: 1, bot_type: 'outpost', difficulty_tier: 1,
-                loot_type: 'glory', loot_data: JSON.stringify({ glory: 15 }),
-                planetary_shield_hp: 173.0, max_shield_hp: 173.0, railgun_count: 1,
-                ships: { corvette: 6, frigate: 3 }
-            },
-            {
-                id: 'bot_p3', name: 'PREKURZOR KRIPTA-HOLD',
-                pos_x: 390, pos_y: 70, size_slots: 3,
-                is_bot: 1, bot_type: 'outpost', difficulty_tier: 1,
-                loot_type: 'artifact', loot_data: JSON.stringify({ artifact_id: 'artifact_chrono_core', name: 'Kvantum Chrono-Mag' }),
-                planetary_shield_hp: 288.0, max_shield_hp: 288.0, railgun_count: 1,
-                ships: { interceptor: 7, corvette: 4 }
-            },
-            {
-                id: 'bot_p4', name: 'ASZTEROIDA-CSOMÓPONT',
-                pos_x: 90, pos_y: 340, size_slots: 3,
-                is_bot: 1, bot_type: 'outpost', difficulty_tier: 1,
-                loot_type: 'resources', loot_data: JSON.stringify({ metal: 1100, energy: 450, isotope: 160, data: 110 }),
-                planetary_shield_hp: 207.0, max_shield_hp: 207.0, railgun_count: 1,
-                ships: { interceptor: 5, corvette: 5 }
-            },
-            {
-                id: 'bot_p5', name: 'ORBITÁLIS KALÓZ-DOKK',
-                pos_x: 170, pos_y: 440, size_slots: 3,
-                is_bot: 1, bot_type: 'outpost', difficulty_tier: 1,
-                loot_type: 'glory', loot_data: JSON.stringify({ glory: 18 }),
-                planetary_shield_hp: 230.0, max_shield_hp: 230.0, railgun_count: 1,
-                ships: { corvette: 7, frigate: 2 }
-            },
-            {
-                id: 'bot_p6', name: 'REJTETT DRÓN-SZONDAŐR',
-                pos_x: 480, pos_y: 60, size_slots: 3,
-                is_bot: 1, bot_type: 'outpost', difficulty_tier: 1,
-                loot_type: 'artifact', loot_data: JSON.stringify({ artifact_id: 'artifact_chrono_core', name: 'Kvantum Chrono-Mag' }),
-                planetary_shield_hp: 253.0, max_shield_hp: 253.0, railgun_count: 1,
-                ships: { scout: 5, interceptor: 7 }
-            },
-            {
-                id: 'bot_p7', name: 'RONGÁLT ADAT-SZIGET',
-                pos_x: 520, pos_y: 150, size_slots: 3,
-                is_bot: 1, bot_type: 'outpost', difficulty_tier: 1,
-                loot_type: 'resources', loot_data: JSON.stringify({ metal: 1300, energy: 600, isotope: 200, data: 180 }),
-                planetary_shield_hp: 230.0, max_shield_hp: 230.0, railgun_count: 1,
-                ships: { corvette: 6, frigate: 3 }
-            },
-            {
-                id: 'bot_p8', name: 'KALÓZ ÜZEMANYAG-RAKTÁR',
-                pos_x: 70, pos_y: 150, size_slots: 3,
-                is_bot: 1, bot_type: 'outpost', difficulty_tier: 1,
-                loot_type: 'glory', loot_data: JSON.stringify({ glory: 20 }),
-                planetary_shield_hp: 253.0, max_shield_hp: 253.0, railgun_count: 1,
-                ships: { interceptor: 9, corvette: 4 }
-            },
-            {
-                id: 'bot_p9', name: 'ELHAGYOTT SZENZOR-ÁLLOMÁS',
-                pos_x: 300, pos_y: 450, size_slots: 3,
-                is_bot: 1, bot_type: 'outpost', difficulty_tier: 1,
-                loot_type: 'resources', loot_data: JSON.stringify({ metal: 1250, energy: 550, isotope: 190, data: 160 }),
-                planetary_shield_hp: 241.0, max_shield_hp: 241.0, railgun_count: 1,
-                ships: { corvette: 7, frigate: 3 }
-            },
-            {
-                id: 'bot_p10', name: 'REZONÁTOR-KRÁTER',
-                pos_x: 440, pos_y: 460, size_slots: 3,
-                is_bot: 1, bot_type: 'outpost', difficulty_tier: 1,
-                loot_type: 'artifact', loot_data: JSON.stringify({ artifact_id: 'artifact_dark_resonator', name: 'Sötét Anyag Rezonátor' }),
-                planetary_shield_hp: 299.0, max_shield_hp: 299.0, railgun_count: 1,
-                ships: { interceptor: 10, frigate: 3 }
-            },
-
-            // --- TIER 2 (10 Bolygó: Gépgyárak, Nehéz Roncsok, Erődítmények) ---
-            {
-                id: 'bot_p11', name: 'ROBOT GÉPGYÁR ALFA',
-                pos_x: 160, pos_y: 240, size_slots: 4,
-                is_bot: 1, bot_type: 'outpost', difficulty_tier: 2,
-                loot_type: 'resources', loot_data: JSON.stringify({ metal: 1800, energy: 800, isotope: 300, data: 220 }),
-                planetary_shield_hp: 460.0, max_shield_hp: 460.0, railgun_count: 2,
-                ships: { corvette: 10, destroyer: 3 }
-            },
-            {
-                id: 'bot_p12', name: 'KOZMIKUS RONCS-ERŐD',
-                pos_x: 350, pos_y: 260, size_slots: 4,
-                is_bot: 1, bot_type: 'outpost', difficulty_tier: 2,
-                loot_type: 'glory', loot_data: JSON.stringify({ glory: 25 }),
-                planetary_shield_hp: 518.0, max_shield_hp: 518.0, railgun_count: 2,
-                ships: { destroyer: 5, cruiser: 2 }
-            },
-            {
-                id: 'bot_p13', name: 'SÖTÉT CSILLAG ŐRHELY',
-                pos_x: 480, pos_y: 230, size_slots: 4,
-                is_bot: 1, bot_type: 'outpost', difficulty_tier: 2,
-                loot_type: 'artifact', loot_data: JSON.stringify({ artifact_id: 'artifact_dark_resonator', name: 'Sötét Anyag Rezonátor' }),
-                planetary_shield_hp: 575.0, max_shield_hp: 575.0, railgun_count: 2,
-                ships: { frigate: 5, destroyer: 4, cruiser: 2 }
-            },
-            {
-                id: 'bot_p14', name: 'KVANTUM-SZERELŐCSARNOK',
-                pos_x: 270, pos_y: 160, size_slots: 4,
-                is_bot: 1, bot_type: 'outpost', difficulty_tier: 2,
-                loot_type: 'resources', loot_data: JSON.stringify({ metal: 2000, energy: 900, isotope: 350, data: 250 }),
-                planetary_shield_hp: 518.0, max_shield_hp: 518.0, railgun_count: 2,
-                ships: { corvette: 7, frigate: 5, destroyer: 3 }
-            },
-            {
-                id: 'bot_p15', name: 'PLAZMA-ÁGYÚTORONY BÁZIS',
-                pos_x: 390, pos_y: 410, size_slots: 4,
-                is_bot: 1, bot_type: 'outpost', difficulty_tier: 2,
-                loot_type: 'glory', loot_data: JSON.stringify({ glory: 30 }),
-                planetary_shield_hp: 633.0, max_shield_hp: 633.0, railgun_count: 3,
-                ships: { repair_ship: 3, destroyer: 4 }
-            },
-            {
-                id: 'bot_p16', name: 'PREKURZOR KÓDEX-SZENTÉLY',
-                pos_x: 580, pos_y: 100, size_slots: 4,
-                is_bot: 1, bot_type: 'outpost', difficulty_tier: 2,
-                loot_type: 'artifact', loot_data: JSON.stringify({ artifact_id: 'artifact_codex', name: 'Prekurzor Hozzáférési Kódex' }),
-                planetary_shield_hp: 575.0, max_shield_hp: 575.0, railgun_count: 2,
-                ships: { frigate: 6, destroyer: 4 }
-            },
-            {
-                id: 'bot_p17', name: 'NEHÉZIPARI KOHÓ-BÁRKA',
-                pos_x: 600, pos_y: 210, size_slots: 4,
-                is_bot: 1, bot_type: 'outpost', difficulty_tier: 2,
-                loot_type: 'resources', loot_data: JSON.stringify({ metal: 2200, energy: 1000, isotope: 400, data: 300 }),
-                planetary_shield_hp: 552.0, max_shield_hp: 552.0, railgun_count: 2,
-                ships: { corvette: 10, repair_ship: 3 }
-            },
-            {
-                id: 'bot_p18', name: 'CIKLON-KORSZAK ERŐDÍTÉS',
-                pos_x: 530, pos_y: 330, size_slots: 4,
-                is_bot: 1, bot_type: 'outpost', difficulty_tier: 2,
-                loot_type: 'glory', loot_data: JSON.stringify({ glory: 30 }),
-                planetary_shield_hp: 598.0, max_shield_hp: 598.0, railgun_count: 2,
-                ships: { frigate: 5, destroyer: 5 }
-            },
-            {
-                id: 'bot_p19', name: 'KÜLSŐ TACHION-VISSZHANG',
-                pos_x: 650, pos_y: 310, size_slots: 4,
-                is_bot: 1, bot_type: 'outpost', difficulty_tier: 2,
-                loot_type: 'artifact', loot_data: JSON.stringify({ artifact_id: 'artifact_chrono_core', name: 'Kvantum Chrono-Mag' }),
-                planetary_shield_hp: 564.0, max_shield_hp: 564.0, railgun_count: 2,
-                ships: { interceptor: 10, destroyer: 4 }
-            },
-            {
-                id: 'bot_p20', name: 'TITÁN-SZIKLA DEPO',
-                pos_x: 210, pos_y: 520, size_slots: 4,
-                is_bot: 1, bot_type: 'outpost', difficulty_tier: 2,
-                loot_type: 'resources', loot_data: JSON.stringify({ metal: 2100, energy: 950, isotope: 380, data: 280 }),
-                planetary_shield_hp: 529.0, max_shield_hp: 529.0, railgun_count: 2,
-                ships: { corvette: 12, destroyer: 4 }
-            },
-
-            // --- TIER 3 (10 Bolygó: Prekurzor Bástyák, Haladó Hadiszektorok) ---
-            {
-                id: 'bot_p21', name: 'ELŐŐRS CITADELLA-ROM',
-                pos_x: 110, pos_y: 480, size_slots: 5,
-                is_bot: 1, bot_type: 'outpost', difficulty_tier: 3,
-                loot_type: 'resources', loot_data: JSON.stringify({ metal: 3500, energy: 1500, isotope: 600, data: 500 }),
-                planetary_shield_hp: 920.0, max_shield_hp: 920.0, railgun_count: 3,
-                ships: { frigate: 6, repair_ship: 4, cruiser: 3 }
-            },
-            {
-                id: 'bot_p22', name: 'REZONANCIA-MAG ERŐD',
-                pos_x: 360, pos_y: 500, size_slots: 5,
-                is_bot: 1, bot_type: 'outpost', difficulty_tier: 3,
-                loot_type: 'glory', loot_data: JSON.stringify({ glory: 40 }),
-                planetary_shield_hp: 977.0, max_shield_hp: 977.0, railgun_count: 3,
-                ships: { destroyer: 6, cruiser: 3, battleship: 2 }
-            },
-            {
-                id: 'bot_p23', name: 'PREKURZOR ARCHÍVUM-NEXUS',
-                pos_x: 680, pos_y: 130, size_slots: 5,
-                is_bot: 1, bot_type: 'outpost', difficulty_tier: 3,
-                loot_type: 'artifact', loot_data: JSON.stringify({ artifact_id: 'artifact_codex', name: 'Prekurzor Hozzáférési Kódex' }),
-                planetary_shield_hp: 1035.0, max_shield_hp: 1035.0, railgun_count: 3,
-                ships: { frigate: 7, destroyer: 5, cruiser: 3 }
-            },
-            {
-                id: 'bot_p24', name: 'FEKETE-LYUK VÉDŐGYŰRŰ',
-                pos_x: 590, pos_y: 440, size_slots: 5,
-                is_bot: 1, bot_type: 'outpost', difficulty_tier: 3,
-                loot_type: 'resources', loot_data: JSON.stringify({ metal: 3800, energy: 1800, isotope: 750, data: 600 }),
-                planetary_shield_hp: 1093.0, max_shield_hp: 1093.0, railgun_count: 3,
-                ships: { repair_ship: 5, cruiser: 4, battleship: 2 }
-            },
-            {
-                id: 'bot_p25', name: 'ANTIMATTER SILÓ-SZIKLA',
-                pos_x: 690, pos_y: 420, size_slots: 5,
-                is_bot: 1, bot_type: 'outpost', difficulty_tier: 3,
-                loot_type: 'glory', loot_data: JSON.stringify({ glory: 45 }),
-                planetary_shield_hp: 1035.0, max_shield_hp: 1035.0, railgun_count: 3,
-                ships: { destroyer: 7, repair_ship: 4, cruiser: 3 }
-            },
-            {
-                id: 'bot_p26', name: 'KVANTUM-FOLYOSÓ ŐRSZEM',
-                pos_x: 490, pos_y: 520, size_slots: 5,
-                is_bot: 1, bot_type: 'outpost', difficulty_tier: 3,
-                loot_type: 'artifact', loot_data: JSON.stringify({ artifact_id: 'artifact_dark_resonator', name: 'Sötét Anyag Rezonátor' }),
-                planetary_shield_hp: 1058.0, max_shield_hp: 1058.0, railgun_count: 3,
-                ships: { frigate: 7, cruiser: 4, battleship: 2 }
-            },
-            {
-                id: 'bot_p27', name: 'OBLIVION OSTROMPLÁZA',
-                pos_x: 670, pos_y: 230, size_slots: 5,
-                is_bot: 1, bot_type: 'outpost', difficulty_tier: 3,
-                loot_type: 'resources', loot_data: JSON.stringify({ metal: 4000, energy: 2000, isotope: 800, data: 650 }),
-                planetary_shield_hp: 1150.0, max_shield_hp: 1150.0, railgun_count: 4,
-                ships: { repair_ship: 6, cruiser: 4, battleship: 2 }
-            },
-            {
-                id: 'bot_p28', name: 'TITÁN-CSAPATOK KRIPTÁJA',
-                pos_x: 740, pos_y: 330, size_slots: 5,
-                is_bot: 1, bot_type: 'outpost', difficulty_tier: 3,
-                loot_type: 'glory', loot_data: JSON.stringify({ glory: 50 }),
-                planetary_shield_hp: 1265.0, max_shield_hp: 1265.0, railgun_count: 4,
-                ships: { destroyer: 7, cruiser: 5, battleship: 3 }
-            },
-            {
-                id: 'bot_p29', name: 'GIGÁSZ CSATAROBOT DOKK',
-                pos_x: 590, pos_y: 520, size_slots: 5,
-                is_bot: 1, bot_type: 'outpost', difficulty_tier: 3,
-                loot_type: 'resources', loot_data: JSON.stringify({ metal: 4200, energy: 2200, isotope: 900, data: 700 }),
-                planetary_shield_hp: 1323.0, max_shield_hp: 1323.0, railgun_count: 4,
-                ships: { repair_ship: 5, cruiser: 5, battleship: 3 }
-            },
-            {
-                id: 'bot_p30', name: 'PREKURZOR OMEGA-BÁSTYA',
-                pos_x: 720, pos_y: 220, size_slots: 5,
-                is_bot: 1, bot_type: 'outpost', difficulty_tier: 3,
-                loot_type: 'artifact', loot_data: JSON.stringify({ artifact_id: 'artifact_codex', name: 'Prekurzor Hozzáférési Kódex' }),
-                planetary_shield_hp: 1380.0, max_shield_hp: 1380.0, railgun_count: 4,
-                ships: { frigate: 10, repair_ship: 5, cruiser: 5, battleship: 3 }
-            }
-        ];
-
-        const allBots = [...bossPlanets, ...botOutposts];
-        for (const bp of allBots) {
+        for (const bp of bossPlanets) {
             const exists = this.db.prepare('SELECT id FROM planets WHERE id = ?').get(bp.id);
-            const ownerId = bp.bot_type === 'boss' ? 'precursor_boss' : 'bot_hostile';
             if (!exists) {
                 this.db.prepare(`
-                    INSERT INTO planets (id, name, pos_x, pos_y, size_slots, owner_id, base_metal_rate, base_energy_rate, planetary_shield_hp, max_shield_hp, railgun_count, is_bot, bot_type, loot_type, loot_data, loot_revealed, difficulty_tier, status)
-                    VALUES (?, ?, ?, ?, ?, ?, 0, 0, ?, ?, ?, 1, ?, ?, ?, 0, ?, 'normal')
-                `).run(bp.id, bp.name, bp.pos_x, bp.pos_y, bp.size_slots, ownerId, bp.planetary_shield_hp, bp.max_shield_hp, bp.railgun_count, bp.bot_type, bp.loot_type, bp.loot_data, bp.difficulty_tier);
-
-                this.createFleet(`f_${bp.id}`, ownerId, `${bp.name} Védelmi Erő`, bp.pos_x, bp.pos_y, bp.id, bp.ships);
+                    INSERT INTO planets (id, name, pos_x, pos_y, ring_index, planet_type, size_slots, owner_id, base_metal_rate, base_energy_rate, planetary_shield_hp, max_shield_hp, railgun_count, is_bot, bot_type, loot_type, loot_data, loot_revealed, difficulty_tier, status, scouted_by_player)
+                    VALUES (?, ?, ?, ?, ?, 'boss', ?, 'precursor_boss', 0, 0, ?, ?, ?, 1, 'boss', ?, ?, 0, ?, 'normal', 1)
+                `).run(bp.id, bp.name, bp.pos_x, bp.pos_y, bp.ring, bp.size_slots, bp.planetary_shield_hp, bp.max_shield_hp, bp.railgun_count, bp.loot_type, bp.loot_data, bp.difficulty_tier);
+                this.createFleet(`f_${bp.id}`, 'precursor_boss', `${bp.name} Védelmi Erő`, bp.pos_x, bp.pos_y, bp.id, bp.ships);
             } else {
-                // Biztosítjuk a bot mezők beállítását létező soroknál is
-                this.db.prepare(`
-                    UPDATE planets 
-                    SET is_bot = 1, bot_type = ?, loot_type = ?, loot_data = ?, difficulty_tier = ?
-                    WHERE id = ? AND (is_bot = 0 OR is_bot IS NULL)
-                `).run(bp.bot_type, bp.loot_type, bp.loot_data, bp.difficulty_tier, bp.id);
+                this.db.prepare("UPDATE planets SET planet_type = 'boss', ring_index = ?, is_bot = 1, bot_type = 'boss' WHERE id = ?").run(bp.ring, bp.id);
             }
         }
     }
 
     claimBotLoot(planetId, playerId) {
         const planet = this.db.prepare('SELECT * FROM planets WHERE id = ?').get(planetId);
-        if (!planet || !planet.is_bot) return null;
+        if (!planet || (!planet.is_bot && planet.planet_type !== 'artifact' && planet.planet_type !== 'technology')) return null;
         let lootData = {};
         try { lootData = JSON.parse(planet.loot_data || '{}'); } catch(e) {}
 
         const player = this.getPlayer(playerId);
         let rewardSummary = '';
+        let grantedBuff = null;
+        let grantedArtifact = null;
 
         if (planet.loot_type === 'resources') {
             const metal = lootData.metal || 0;
@@ -999,11 +1187,32 @@ class DatabaseService {
                 if (glory > 0) this.addGloryPoints(playerId, glory);
             }
             rewardSummary = `+${metal} Fém, +${energy} E, +${isotope} Iso, +${data} Dat${glory > 0 ? `, +${glory} GP` : ''}`;
-        } else if (planet.loot_type === 'artifact') {
-            const artId = lootData.artifact_id || 'artifact_chrono_core';
-            const artName = lootData.name || 'Ősi Ereklye';
-            this.addPlayerArtifact(playerId, artId, artName);
-            rewardSummary = `🏺 ${artName}`;
+        } else if (planet.loot_type === 'artifact' || planet.planet_type === 'artifact') {
+            const artId = lootData.artifact_id || (planet.artifact_tier === 'large' ? 'artifact_codex' : (planet.artifact_tier === 'medium' ? 'artifact_dark_resonator' : 'artifact_chrono_core'));
+            const artName = lootData.name || 'Ősi Prekurzor Ereklye';
+            const artIcon = planet.artifact_tier === 'large' ? '🔮' : (planet.artifact_tier === 'medium' ? '💎' : '🏺');
+            grantedArtifact = this.addPlayerArtifact(playerId, artId, artName, artIcon);
+            if (player) {
+                const bonusMetal = planet.artifact_tier === 'large' ? 2500 : (planet.artifact_tier === 'medium' ? 1500 : 800);
+                const bonusIso = planet.artifact_tier === 'large' ? 600 : (planet.artifact_tier === 'medium' ? 350 : 180);
+                this.updatePlayerResources(playerId, player.metal + bonusMetal, player.energy, player.isotope + bonusIso, player.data_points);
+                this.addGloryPoints(playerId, planet.artifact_tier === 'large' ? 60 : (planet.artifact_tier === 'medium' ? 40 : 25));
+                rewardSummary = `${artIcon} ${artName} (+${bonusMetal} Fém, +${bonusIso} Iso)`;
+            } else {
+                rewardSummary = `${artIcon} ${artName}`;
+            }
+        } else if (planet.loot_type === 'tech_buff' || planet.planet_type === 'technology') {
+            const bType = lootData.buff_type || 'shield_overcharge';
+            const bVal = lootData.buff_value || 0.25;
+            const bDur = lootData.buff_duration || 8;
+            const bName = lootData.buff_name || 'Technológiai Bolygó Bónusz';
+            const bIcon = lootData.buff_icon || '⚡';
+            grantedBuff = this.addPlayerBuff(playerId, bType, bVal, bDur, bName, bIcon);
+            if (player) {
+                this.updatePlayerResources(playerId, player.metal + 600, player.energy + 300, player.isotope + 120, player.data_points + 250);
+                this.addGloryPoints(playerId, 30);
+            }
+            rewardSummary = `${bIcon} ${bName} (${bDur} körig aktív!) + 250 Adat`;
         } else if (planet.loot_type === 'glory') {
             const glory = lootData.glory || 20;
             this.addGloryPoints(playerId, glory);
@@ -1012,7 +1221,7 @@ class DatabaseService {
 
         this.db.prepare(`
             UPDATE planets 
-            SET loot_revealed = 1, status = 'looted', defeated_by_player_id = ?
+            SET loot_revealed = 1, status = 'looted', defeated_by_player_id = ?, scouted_by_player = 1
             WHERE id = ?
         `).run(playerId, planetId);
 
@@ -1026,6 +1235,8 @@ class DatabaseService {
             planetName: planet.name,
             lootType: planet.loot_type,
             lootData,
+            grantedBuff,
+            grantedArtifact,
             rewardSummary
         };
     }
@@ -1087,35 +1298,38 @@ class DatabaseService {
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         `).run('enemy', 'Vektor-9 Szindikátus (MI)', '#dc2626', 1200.0, 300.0, 50.0, 100.0, 1);
 
-        // 2. Bolygók létrehozása
+        // 2. Kezdő bolygók (seedBotPlanets kiegészíti a teljes 10 gyűrűvel)
         const insertPlanet = this.db.prepare(`
-            INSERT INTO planets (id, name, pos_x, pos_y, size_slots, owner_id, base_metal_rate, base_energy_rate, planetary_shield_hp, max_shield_hp, railgun_count)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO planets (id, name, pos_x, pos_y, ring_index, planet_type, colony_size, is_homeworld, size_slots, terraform_level, owner_id, base_metal_rate, base_energy_rate, planetary_shield_hp, max_shield_hp, railgun_count, scouted_by_player)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?, ?)
         `);
 
-        insertPlanet.run('p1', 'KRONOS-IV', 140, 120, 4, 'player', 40.0, 15.0, 500.0, 500.0, 0);
-        insertPlanet.run('p2', 'ZEPHYR-7', 320, 80, 3, null, 25.0, 10.0, 0.0, 0.0, 0);
-        insertPlanet.run('p3', 'NEXUS-ALPHA', 220, 310, 5, null, 45.0, 20.0, 0.0, 0.0, 0);
-        insertPlanet.run('p4', 'VEKTOR-9', 420, 350, 4, 'enemy', 40.0, 15.0, 400.0, 400.0, 1);
+        insertPlanet.run('p1', 'KRONOS-IV (Főbolygó)', 461, 461, 0, 'colony', 'medium', 1, 10, 'player', 40.0, 20.0, 500.0, 500.0, 0, 1);
+        insertPlanet.run('p2', 'ZEPHYR-7', 375, 442, 1, 'colony', 'small', 0, 10, null, 25.0, 10.0, 0.0, 0.0, 0, 0);
+        insertPlanet.run('p3', 'NEXUS-ALPHA', 430, 761, 3, 'colony', 'medium', 0, 10, null, 35.0, 15.0, 0.0, 0.0, 0, 0);
+        insertPlanet.run('p4', 'VEKTOR-9 (Főbolygó)', 539, 539, 0, 'colony', 'medium', 1, 10, 'enemy', 40.0, 20.0, 400.0, 400.0, 1, 0);
 
-        // 3. Kezdő építmények
+        // 3. Kezdő építmények az új 6-kategóriás rendszerben (6/10 slot foglalt, 4 szabad slot!)
         const insertStruct = this.db.prepare(`
             INSERT INTO planet_structures (id, planet_id, slot_index, branch_type, structure_type, level)
             VALUES (?, ?, ?, ?, ?, ?)
         `);
-        insertStruct.run('s1', 'p1', 0, 'economy', 'industrial_hub', 2);
-        insertStruct.run('s2', 'p1', 1, 'defense', 'planetary_shield', 1);
-        insertStruct.run('s3', 'p1', 2, 'infrastructure', 'automated_dock', 1);
+        insertStruct.run('s_p1_dock', 'p1', 0, 'dock', 'ship_dock', 1);
+        insertStruct.run('s_p1_mine', 'p1', 1, 'metal', 'surface_mine', 2);
+        insertStruct.run('s_p1_solar', 'p1', 2, 'energy', 'solar_farm', 1);
+        insertStruct.run('s_p1_iso', 'p1', 3, 'isotope', 'isotope_filter', 1);
+        insertStruct.run('s_p1_data', 'p1', 4, 'data', 'relay_station', 1);
 
-        insertStruct.run('s4', 'p4', 0, 'economy', 'industrial_hub', 1);
-        insertStruct.run('s5', 'p4', 1, 'defense', 'orbital_railgun', 1);
+        insertStruct.run('s_p4_dock', 'p4', 0, 'dock', 'ship_dock', 1);
+        insertStruct.run('s_p4_mine', 'p4', 1, 'metal', 'surface_mine', 1);
+        insertStruct.run('s_p4_solar', 'p4', 2, 'energy', 'solar_farm', 1);
 
         // 4. Kezdő állomásozó flották
-        this.createFleet('f_p1', 'player', 'Kronos Védelmi Flotta', 140, 120, 'p1', { corvette: 12, destroyer: 3, battleship: 0 });
-        this.createFleet('f_p4', 'enemy', 'Vektor-9 Főflotta', 420, 350, 'p4', { corvette: 8, destroyer: 4, battleship: 1 });
+        this.createFleet('f_p1', 'player', 'Kronos Védelmi Flotta', 461, 461, 'p1', { scout: 1, corvette: 12, destroyer: 3, battleship: 0 });
+        this.createFleet('f_p4', 'enemy', 'Vektor-9 Főflotta', 539, 539, 'p4', { corvette: 8, destroyer: 4, battleship: 1 });
     }
 
-        createFleet(id, ownerId, name, x, y, originPlanetId, shipCounts) {
+    createFleet(id, ownerId, name, x, y, originPlanetId, shipCounts) {
         this.db.prepare(`
             INSERT INTO fleets (id, owner_id, name, current_x, current_y, origin_planet_id, state)
             VALUES (?, ?, ?, ?, ?, ?, 'stationed')
@@ -1194,10 +1408,198 @@ class DatabaseService {
         `).run(metal, energy, isotope, data, playerId);
     }
 
+    calculateRingTravelTicks(originPlanet, targetPlanet) {
+        if (!originPlanet || !targetPlanet) return 1;
+        const r1 = Number.isInteger(originPlanet.ring_index) ? originPlanet.ring_index : 0;
+        const r2 = Number.isInteger(targetPlanet.ring_index) ? targetPlanet.ring_index : 1;
+        // Ha a főbolygóról (ring 0) indulunk, az 1. gyűrű = 1 kör, 2. gyűrű = 2 kör, ..., 10. gyűrű = 10 kör.
+        // Két gyűrű között a gyűrű-különbség (azonos gyűrűn belül minimum 1 kör).
+        return Math.max(1, Math.abs(r2 - r1));
+    }
+
+    getPlayerColonyCount(playerId = 'player') {
+        const owned = this.db.prepare("SELECT id, is_homeworld, planet_type FROM planets WHERE owner_id = ? AND planet_type = 'colony'").all(playerId);
+        const homeworlds = owned.filter(p => p.is_homeworld === 1).length;
+        const colonies = owned.filter(p => !p.is_homeworld || p.is_homeworld === 0).length;
+        return {
+            homeworldCount: homeworlds,
+            colonyCount: colonies,
+            totalPlanets: owned.length,
+            maxColonies: MAX_COLONIES_PER_PLAYER,
+            canColonizeMore: colonies < MAX_COLONIES_PER_PLAYER
+        };
+    }
+
+    checkAndUnlockDeadColonies(forceUnlockOne = false) {
+        const humanAndAiPlayers = this.db.prepare("SELECT COUNT(*) as c FROM players WHERE id NOT IN ('bot_hostile', 'precursor_boss', 'neutral')").get();
+        const playerCount = humanAndAiPlayers ? humanAndAiPlayers.c : 2;
+        const freeColonies = this.db.prepare("SELECT COUNT(*) as c FROM planets WHERE planet_type = 'colony' AND (owner_id IS NULL OR owner_id = 'neutral')").get();
+        const freeCount = freeColonies ? freeColonies.c : 0;
+
+        // Ha a szabad kolónia bolygók száma lecsökken (pl. kevesebb mint 3, vagy játékosszám * 2 alatt), feloldunk halott kolóniákat
+        if (forceUnlockOne || freeCount <= Math.max(2, playerCount)) {
+            const deadPlanets = this.db.prepare("SELECT * FROM planets WHERE planet_type = 'dead_colony' ORDER BY ring_index ASC LIMIT ?").all(forceUnlockOne ? 1 : 2);
+            const unlocked = [];
+            for (const dp of deadPlanets) {
+                const newSize = dp.ring_index >= 7 ? 'large' : (dp.ring_index >= 4 ? 'medium' : 'small');
+                const newBonus = newSize === 'large' ? (dp.bonus_resource || ['metal', 'energy', 'isotope', 'data'][dp.ring_index % 4]) : null;
+                const baseM = newSize === 'large' ? 45 : (newSize === 'medium' ? 35 : 25);
+                const baseE = newSize === 'large' ? 20 : (newSize === 'medium' ? 15 : 10);
+                const cleanName = dp.name.replace(/HAMU-HOLD|KRÁTER-SZIKLA|KIHALT KOLÓNIA|POR-VILÁG|ÜSZKÖS VILÁG|FAGYOTT SZEKTOR|HALOTT HOLD|KIÉGETT KOLÓNIA|CSENDES SZEKTOR|RONCS-VILÁG/i, 'ÚJJÁSZÜLETETT KOLÓNIA');
+
+                this.db.prepare(`
+                    UPDATE planets
+                    SET planet_type = 'colony',
+                        colony_size = ?,
+                        bonus_resource = ?,
+                        size_slots = 10,
+                        terraform_level = 0,
+                        base_metal_rate = ?,
+                        base_energy_rate = ?,
+                        name = ?,
+                        status = 'normal'
+                    WHERE id = ?
+                `).run(newSize, newBonus, baseM, baseE, cleanName, dp.id);
+                unlocked.push({ id: dp.id, name: cleanName, colony_size: newSize, ring_index: dp.ring_index });
+            }
+            return unlocked;
+        }
+        return [];
+    }
+
+    unlockDeadColonyById(planetId) {
+        const dp = this.db.prepare("SELECT * FROM planets WHERE id = ?").get(planetId);
+        if (!dp) return { error: "A bolygó nem található!" };
+        if (dp.planet_type !== 'dead_colony') return { error: "Ez a bolygó nem Halott Kolónia Bolygó!" };
+
+        const newSize = dp.ring_index >= 7 ? 'large' : (dp.ring_index >= 4 ? 'medium' : 'small');
+        const newBonus = newSize === 'large' ? (dp.bonus_resource || ['metal', 'energy', 'isotope', 'data'][dp.ring_index % 4]) : null;
+        const baseM = newSize === 'large' ? 45 : (newSize === 'medium' ? 35 : 25);
+        const baseE = newSize === 'large' ? 20 : (newSize === 'medium' ? 15 : 10);
+        const cleanName = dp.name + ' (Terra-Feloldva)';
+
+        this.db.prepare(`
+            UPDATE planets
+            SET planet_type = 'colony',
+                colony_size = ?,
+                bonus_resource = ?,
+                size_slots = 10,
+                terraform_level = 0,
+                base_metal_rate = ?,
+                base_energy_rate = ?,
+                name = ?,
+                status = 'normal',
+                scouted_by_player = 1
+            WHERE id = ?
+        `).run(newSize, newBonus, baseM, baseE, cleanName, dp.id);
+
+        return {
+            success: true,
+            planetId: dp.id,
+            name: cleanName,
+            colony_size: newSize,
+            bonus_resource: newBonus,
+            message: `${cleanName} sikeresen feloldva mint ${newSize === 'large' ? 'Nagy' : (newSize === 'medium' ? 'Közepes' : 'Kicsi')} Kolónia Bolygó (10 alap slot)!`
+        };
+    }
+
     getAllPlanets() {
-        const planets = this.db.prepare('SELECT * FROM planets').all();
+        const planets = this.db.prepare('SELECT * FROM planets ORDER BY ring_index ASC, id ASC').all();
         for (const p of planets) {
-            p.structures = this.db.prepare('SELECT * FROM planet_structures WHERE planet_id = ? ORDER BY slot_index').all(p.id);
+            const rawStructures = this.db.prepare('SELECT * FROM planet_structures WHERE planet_id = ? ORDER BY slot_index ASC').all(p.id);
+            
+            // Normalizáljuk az épületeket és kiszámítjuk a slot-foglalást
+            let terraformLevel = p.terraform_level || 0;
+            let usedSlots = 0;
+            let hasShipDock = p.is_homeworld === 1;
+            let shipDockLevel = p.is_homeworld === 1 ? 1 : 0;
+
+            p.structures = rawStructures.map(s => {
+                const mappedType = BUILDING_SPECS[s.structure_type] ? s.structure_type : (LEGACY_BUILDING_MAP[s.structure_type] || 'surface_mine');
+                const spec = BUILDING_SPECS[mappedType] || BUILDING_SPECS.surface_mine;
+                const lvl = Math.max(1, s.level || 1);
+
+                let slotsOccupied = 0;
+                if (mappedType === 'terraformer') {
+                    terraformLevel = Math.max(terraformLevel, lvl);
+                    slotsOccupied = 0; // A Terraformáló Állomás slotokat AD a bolygóhoz
+                } else if (spec.tier === 2) {
+                    // Nagyobb épület: alapból 2 slotot foglal, és minden fejlesztés (+szint) még 1 slotot foglal
+                    slotsOccupied = 2 + (lvl - 1);
+                    usedSlots += slotsOccupied;
+                } else {
+                    // Kisebb épület és Hajódokk: alapból 1 slotot foglal, és minden fejlesztés (+szint) 1 slotot foglal
+                    slotsOccupied = lvl;
+                    usedSlots += slotsOccupied;
+                }
+
+                if (mappedType === 'ship_dock') {
+                    hasShipDock = true;
+                    shipDockLevel = Math.max(shipDockLevel, lvl);
+                }
+
+                return {
+                    ...s,
+                    structure_type: mappedType,
+                    name: spec.name,
+                    icon: spec.icon,
+                    category: spec.category,
+                    tier: spec.tier,
+                    resource: spec.resource || null,
+                    level: lvl,
+                    maxLevel: spec.maxLevel,
+                    slotsOccupied
+                };
+            });
+
+            const colSize = p.colony_size || 'small';
+            const slotStep = colSize === 'large' ? 6 : (colSize === 'medium' ? 5 : 4);
+            let maxSlots = p.planet_type === 'colony' ? (10 + terraformLevel * slotStep) : (p.size_slots || 0);
+
+            if (p.owner_id && p.planet_type === 'colony') {
+                const ownerTechs = this.getPlayerResearch(p.owner_id);
+                if (ownerTechs.includes('nano_assembly')) {
+                    maxSlots += 1;
+                }
+            }
+
+            p.ring_index = Number.isInteger(p.ring_index) ? p.ring_index : 1;
+            p.planet_type = p.planet_type || 'colony';
+            p.colony_size = colSize;
+            p.slot_step = slotStep;
+            p.terraform_level = terraformLevel;
+            p.max_slots = maxSlots;
+            p.size_slots = maxSlots;
+            p.used_slots = usedSlots;
+            p.free_slots = Math.max(0, maxSlots - usedSlots);
+            p.has_ship_dock = hasShipDock;
+            p.ship_dock_level = shipDockLevel;
+
+            // Termelési értékek kiszámítása a bolygón lévő épületekből + nagy bolygó bónuszból
+            let prodMetal = p.planet_type === 'colony' ? (p.base_metal_rate || 0) : 0;
+            let prodEnergy = p.planet_type === 'colony' ? (p.base_energy_rate || 0) : 0;
+            let prodIsotope = p.is_homeworld ? 3 : 0;
+            let prodData = p.is_homeworld ? 10 : 0;
+
+            for (const s of p.structures) {
+                const spec = BUILDING_SPECS[s.structure_type];
+                if (!spec || !spec.baseProduction) continue;
+                let amount = spec.baseProduction * s.level;
+                // Nagy bolygó nyersanyag bónusz (+25% termelés a bónuszos nyersanyagra)
+                if (p.colony_size === 'large' && p.bonus_resource === spec.resource) {
+                    amount = Math.round(amount * 1.25);
+                }
+                if (spec.resource === 'metal') prodMetal += amount;
+                else if (spec.resource === 'energy') prodEnergy += amount;
+                else if (spec.resource === 'isotope') prodIsotope += amount;
+                else if (spec.resource === 'data') prodData += amount;
+            }
+
+            p.prod_metal = prodMetal;
+            p.prod_energy = prodEnergy;
+            p.prod_isotope = prodIsotope;
+            p.prod_data = prodData;
+
             // Állomásozó flotta keresése ezen a bolygón
             const fleet = this.db.prepare("SELECT * FROM fleets WHERE origin_planet_id = ? AND state = 'stationed'").get(p.id);
             p.stationedFleet = { fleetId: fleet ? fleet.id : null };
@@ -1227,19 +1629,211 @@ class DatabaseService {
         return fleets;
     }
 
-    upgradeStructure(planetId, slotIndex) {
+    getBuildingCost(planet, structureType, targetLevel = 1) {
+        const spec = BUILDING_SPECS[structureType];
+        if (!spec) return { metal: 100, energy: 50, isotope: 0, discounted: false };
+
+        let mult = targetLevel;
+        if (structureType === 'terraformer') {
+            const tfMults = [1, 1.8, 2.9, 4.4, 6.5];
+            mult = tfMults[Math.min(4, Math.max(0, targetLevel - 1))] || targetLevel;
+        }
+
+        let metal = Math.round(spec.baseCostMetal * mult);
+        let energy = Math.round(spec.baseCostEnergy * mult);
+        let isotope = Math.round((spec.baseCostIsotope || 0) * mult);
+
+        // Nagy bolygó különlegessége: a bónuszos nyersanyagnál a nagyobbik (Tier 2) épület olcsóbban (-35%) építhető és fejleszthető!
+        let discounted = false;
+        if (planet && planet.colony_size === 'large' && spec.tier === 2 && planet.bonus_resource === spec.resource) {
+            metal = Math.round(metal * 0.65);
+            energy = Math.round(energy * 0.65);
+            isotope = Math.round(isotope * 0.65);
+            discounted = true;
+        }
+
+        return { metal, energy, isotope, discounted };
+    }
+
+    buildStructure(planetId, structureType, playerId = 'player') {
+        const mappedType = BUILDING_SPECS[structureType] ? structureType : (LEGACY_BUILDING_MAP[structureType] || null);
+        const spec = BUILDING_SPECS[mappedType];
+        if (!spec) return { error: `Ismeretlen épülettípus: ${structureType}` };
+
+        const planet = this.getAllPlanets().find(p => p.id === planetId);
+        if (!planet) return { error: "Ismeretlen bolygó!" };
+        if (planet.owner_id !== playerId) return { error: "Csak saját birtokolt bolygón építkezhetsz!" };
+        if (planet.planet_type !== 'colony') return { error: "Csak Kolónia bolygóra építhetők épületek!" };
+
+        // Ha Terraformáló Állomást választott és már van, akkor fejlessze azt
+        if (mappedType === 'terraformer') {
+            const existingTf = planet.structures.find(s => s.structure_type === 'terraformer');
+            if (existingTf) {
+                return this.upgradeStructure(planetId, existingTf.slot_index, playerId);
+            }
+            if (planet.terraform_level >= 5) {
+                return { error: "A Terraformáló Állomás már elérte a maximális 5. szintet!" };
+            }
+        } else if (spec.uniquePerPlanet) {
+            const existingUnique = planet.structures.find(s => s.structure_type === mappedType);
+            if (existingUnique) {
+                return { error: `Ebből az épületből (${spec.name}) legfeljebb 1 lehet a bolygón! Fejleszd a meglévőt.` };
+            }
+        }
+
+        // Szabad slot ellenőrzése (Terraformáló nem foglal slotot, Tier 1 = 1 slot, Tier 2 = 2 slot)
+        const requiredSlots = spec.baseSlots;
+        if (requiredSlots > 0 && planet.free_slots < requiredSlots) {
+            return {
+                error: `Nincs elég szabad slot a bolygón! A(z) ${spec.name} megépítéséhez ${requiredSlots} szabad slot szükséges (Jelenleg szabad: ${planet.free_slots}/${planet.max_slots}). Fejleszd a Terraformáló Állomást (+${planet.slot_step} slot/szint)!`
+            };
+        }
+
+        // Tier 2 (nagyobbik épület) előfeltétel ellenőrzése:
+        // Kisebb épület legalább Lv.3 szinten a bolygón, KIVÉVE Nagy bolygón a bónuszos nyersanyagra!
+        const hasLargeBonus = (planet.colony_size === 'large' && planet.bonus_resource === spec.resource);
+        if (spec.tier === 2 && spec.prereqBuilding && !hasLargeBonus) {
+            const prereqSpec = BUILDING_SPECS[spec.prereqBuilding];
+            const hasPrereq = planet.structures.some(s => s.structure_type === spec.prereqBuilding && s.level >= (spec.prereqLevel || 3));
+            if (!hasPrereq) {
+                return {
+                    error: `A(z) ${spec.name} megépítéséhez előbb fejlessz fel legalább egy '${prereqSpec ? prereqSpec.name : spec.prereqBuilding}' épületet Lv.${spec.prereqLevel || 3} szintre ezen a bolygón! (Nagy bolygón ${spec.resource} bónusszal azonnal építhető.)`
+                };
+            }
+        }
+
+        const cost = this.getBuildingCost(planet, mappedType, 1);
+        const player = this.getPlayer(playerId);
+        if (!player) return { error: "Ismeretlen játékos!" };
+
+        if (player.metal < cost.metal || player.energy < cost.energy || player.isotope < cost.isotope) {
+            return {
+                error: `Nincs elég nyersanyag! Szükséges: ${cost.metal} Fém, ${cost.energy} Energia${cost.isotope > 0 ? `, ${cost.isotope} Izotóp` : ''}.`
+            };
+        }
+
+        // Levonás
+        player.metal -= cost.metal;
+        player.energy -= cost.energy;
+        player.isotope -= cost.isotope;
+        this.updatePlayerResources(playerId, player.metal, player.energy, player.isotope, player.data_points);
+
+        // Következő szabad slot_index megkeresése az adatbázisban
+        const maxIdxRow = this.db.prepare('SELECT MAX(slot_index) as maxIdx FROM planet_structures WHERE planet_id = ?').get(planetId);
+        const nextSlotIndex = (maxIdxRow && maxIdxRow.maxIdx !== null && maxIdxRow.maxIdx !== undefined) ? (maxIdxRow.maxIdx + 1) : 0;
+        const structId = `st_${planetId}_${mappedType}_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+
+        this.db.prepare(`
+            INSERT INTO planet_structures (id, planet_id, slot_index, branch_type, structure_type, level)
+            VALUES (?, ?, ?, ?, ?, 1)
+        `).run(structId, planetId, nextSlotIndex, spec.category, mappedType);
+
+        if (mappedType === 'terraformer') {
+            const newTfLvl = 1;
+            const newMaxSlots = 10 + newTfLvl * planet.slot_step;
+            this.db.prepare('UPDATE planets SET terraform_level = ?, size_slots = ? WHERE id = ?').run(newTfLvl, newMaxSlots, planetId);
+        } else if (mappedType === 'ship_dock') {
+            this.db.prepare('UPDATE planets SET planetary_shield_hp = planetary_shield_hp + 250, max_shield_hp = max_shield_hp + 250 WHERE id = ?').run(planetId);
+        }
+
+        const updatedPlanet = this.getAllPlanets().find(p => p.id === planetId);
+        return {
+            success: true,
+            structureId: structId,
+            structureType: mappedType,
+            name: spec.name,
+            level: 1,
+            cost,
+            planet: updatedPlanet,
+            player: this.getPlayer(playerId)
+        };
+    }
+
+    upgradeStructure(planetId, slotIndex, playerId = 'player') {
+        const planet = this.getAllPlanets().find(p => p.id === planetId);
+        if (!planet) return { error: "Ismeretlen bolygó!" };
+        if (planet.owner_id !== playerId) return { error: "Csak saját bolygón fejleszthetsz épületet!" };
+
+        let struct = this.db.prepare('SELECT * FROM planet_structures WHERE planet_id = ? AND slot_index = ?').get(planetId, slotIndex);
+        if (!struct && slotIndex === 'terraformer') {
+            struct = this.db.prepare("SELECT * FROM planet_structures WHERE planet_id = ? AND structure_type = 'terraformer'").get(planetId);
+            if (!struct) {
+                return this.buildStructure(planetId, 'terraformer', playerId);
+            }
+        }
+        if (!struct) return { error: "Nincs épület ezen a helyen!" };
+
+        const mappedType = BUILDING_SPECS[struct.structure_type] ? struct.structure_type : (LEGACY_BUILDING_MAP[struct.structure_type] || 'surface_mine');
+        const spec = BUILDING_SPECS[mappedType] || BUILDING_SPECS.surface_mine;
+        const nextLevel = (struct.level || 1) + 1;
+
+        if (nextLevel > spec.maxLevel) {
+            return { error: `Ez az épület (${spec.name}) már elérte a maximális szintet (Lv.${spec.maxLevel})!` };
+        }
+
+        // Minden fejlesztés 1 szabad slotot foglal (kivéve a Terraformáló Állomást, ami új slotokat ad!)
+        if (mappedType !== 'terraformer' && planet.free_slots < 1) {
+            return {
+                error: `Nincs szabad slot a fejlesztéshez! Minden épületfejlesztés +1 slotot foglal (Szabad slot: ${planet.free_slots}/${planet.max_slots}). Fejleszd a Terraformáló Állomást új slotokért!`
+            };
+        }
+
+        const cost = this.getBuildingCost(planet, mappedType, nextLevel);
+        const player = this.getPlayer(playerId);
+        if (!player) return { error: "Ismeretlen játékos!" };
+
+        if (player.metal < cost.metal || player.energy < cost.energy || player.isotope < cost.isotope) {
+            return {
+                error: `Nincs elég nyersanyag a fejlesztéshez! Szükséges: ${cost.metal} Fém, ${cost.energy} Energia${cost.isotope > 0 ? `, ${cost.isotope} Izotóp` : ''}.`
+            };
+        }
+
+        player.metal -= cost.metal;
+        player.energy -= cost.energy;
+        player.isotope -= cost.isotope;
+        this.updatePlayerResources(playerId, player.metal, player.energy, player.isotope, player.data_points);
+
+        this.db.prepare('UPDATE planet_structures SET structure_type = ?, branch_type = ?, level = ? WHERE id = ?')
+            .run(mappedType, spec.category, nextLevel, struct.id);
+
+        if (mappedType === 'terraformer') {
+            const newMaxSlots = 10 + nextLevel * planet.slot_step;
+            this.db.prepare('UPDATE planets SET terraform_level = ?, size_slots = ? WHERE id = ?').run(nextLevel, newMaxSlots, planetId);
+        } else if (mappedType === 'ship_dock') {
+            this.db.prepare('UPDATE planets SET planetary_shield_hp = planetary_shield_hp + 250, max_shield_hp = max_shield_hp + 250 WHERE id = ?').run(planetId);
+        }
+
+        const updatedPlanet = this.getAllPlanets().find(p => p.id === planetId);
+        return {
+            success: true,
+            newLevel: nextLevel,
+            structureType: mappedType,
+            name: spec.name,
+            cost,
+            costMetal: cost.metal,
+            planet: updatedPlanet,
+            player: this.getPlayer(playerId)
+        };
+    }
+
+    demolishStructure(planetId, slotIndex, playerId = 'player') {
+        const planet = this.getAllPlanets().find(p => p.id === planetId);
+        if (!planet) return { error: "Ismeretlen bolygó!" };
+        if (planet.owner_id !== playerId) return { error: "Csak saját bolygón bonthatsz le épületet!" };
+
         const struct = this.db.prepare('SELECT * FROM planet_structures WHERE planet_id = ? AND slot_index = ?').get(planetId, slotIndex);
-        if (!struct) return { error: "Nincs épület ezen a sloton!" };
-        if (struct.level >= 3) return { error: "Ez az épület már elérte a maximális szintet (Lv.3)!" };
+        if (!struct) return { error: "Nem található épület ezen a sloton!" };
+        if (struct.structure_type === 'terraformer') {
+            return { error: "A Terraformáló Állomás nem bontható le!" };
+        }
 
-        const costMetal = struct.level === 1 ? 120 : 250;
-        const player = this.getPlayer('player');
-        if (player.metal < costMetal) return { error: `Nincs elég Fém! (${costMetal} Fém szükséges)` };
-
-        player.metal -= costMetal;
-        this.updatePlayerResources('player', player.metal, player.energy, player.isotope, player.data_points);
-        this.db.prepare('UPDATE planet_structures SET level = level + 1 WHERE id = ?').run(struct.id);
-        return { success: true, newLevel: struct.level + 1, costMetal };
+        this.db.prepare('DELETE FROM planet_structures WHERE id = ?').run(struct.id);
+        const updatedPlanet = this.getAllPlanets().find(p => p.id === planetId);
+        return {
+            success: true,
+            message: "Épület lebontva, a foglalt slotok felszabadultak!",
+            planet: updatedPlanet
+        };
     }
 
     getMissions() {
@@ -2795,6 +3389,13 @@ class DatabaseService {
             success: true,
             planetId,
             name: planet.name,
+            ringIndex: planet.ring_index,
+            planetType: planet.planet_type,
+            colonySize: planet.colony_size,
+            bonusResource: planet.bonus_resource,
+            artifactTier: planet.artifact_tier,
+            maxSlots: planet.max_slots,
+            slotStep: planet.slot_step,
             lootType: planet.loot_type,
             lootData: planet.loot_data,
             stationedFleet: planet.stationedFleet,
@@ -2804,4 +3405,4 @@ class DatabaseService {
     }
 }
 
-module.exports = { DatabaseService, DB_FILE, ALL_SHIP_TYPES, SHIP_TECH_REQUIREMENTS, SHIP_UPGRADE_MODULES, SHIP_SUBSYSTEMS, SUBSYSTEM_HOTSPOTS, SUBSYSTEM_BONUS_TABLES };
+module.exports = { DatabaseService, DB_FILE, ALL_SHIP_TYPES, SHIP_TECH_REQUIREMENTS, SHIP_UPGRADE_MODULES, SHIP_SUBSYSTEMS, SUBSYSTEM_HOTSPOTS, SUBSYSTEM_BONUS_TABLES, BUILDING_SPECS, GALAXY_CENTER, MAX_COLONIES_PER_PLAYER };

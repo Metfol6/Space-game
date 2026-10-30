@@ -19,7 +19,7 @@ try {
 const http = require('node:http');
 const fs = require('node:fs');
 const path = require('node:path');
-const { DatabaseService, ALL_SHIP_TYPES, SHIP_TECH_REQUIREMENTS, SHIP_UPGRADE_MODULES, SHIP_SUBSYSTEMS, SUBSYSTEM_HOTSPOTS, SUBSYSTEM_BONUS_TABLES } = require('./db');
+const { DatabaseService, ALL_SHIP_TYPES, SHIP_TECH_REQUIREMENTS, SHIP_UPGRADE_MODULES, SHIP_SUBSYSTEMS, SUBSYSTEM_HOTSPOTS, SUBSYSTEM_BONUS_TABLES, BUILDING_SPECS, GALAXY_CENTER, MAX_COLONIES_PER_PLAYER } = require('./db');
 const { AICommander } = require('./ai_commander');
 const { SHIP_SPECS, CombatEngine, Fleet, ShipInstance } = require('./tick_runner');
 
@@ -214,7 +214,15 @@ let recentAIActions = [];
 
 function processTick() {
     const nextTick = db.advanceGameTick();
+    recentAIActions = [];
     console.log(`\n>>> [SZERVER TICK #${nextTick}] Körkiértékelés indul...`);
+
+    // 0/A. Halott kolónia bolygók automatikus feloldása, ha fogytán vannak a szabad kolóniák
+    const unlockedCols = db.checkAndUnlockDeadColonies(false);
+    if (unlockedCols.unlocked && unlockedCols.unlocked.length > 0) {
+        const names = unlockedCols.unlocked.map(u => `${u.name} (${u.colony_size})`).join(', ');
+        recentAIActions.push(`[🌱 HALOTT KOLÓNIA FELOLDVA] A növekvő terjeszkedés miatt új kolónia bolygók váltak lakhatóvá: ${names}!`);
+    }
 
     // 0. Kutatási Sor (Research Queue) befejeződéseinek kiértékelése
     const completedResearches = db.processResearchQueue(nextTick);
@@ -237,72 +245,71 @@ function processTick() {
         }
     }
 
-    // 1. Gazdaság: Játékosok nyersanyagtermelése és Upkeep
-    const players = [db.getPlayer('player'), db.getPlayer('enemy')].filter(Boolean);
+    // 1. Gazdaság: Játékosok nyersanyagtermelése (4 nyersanyag épületekkel + nagy bolygó bónusszal) és Upkeep
+    const players = db.getAllPlayers();
     const allPlanets = db.getAllPlanets();
     const movingFleets = db.getMovingFleets();
 
     for (const player of players) {
         let netMetal = 0;
         let netEnergy = 0;
+        let netIsotope = 0;
+        let netData = 0;
 
         const playerTechs = db.getPlayerResearch(player.id);
-        const ownedPlanets = allPlanets.filter(p => p.owner_id === player.id);
+        const pBuffs = db.getPlayerBuffs(player.id, nextTick);
+        const miningBoostBuff = pBuffs.find(b => b.buff_type === 'mining_boost');
+        const prodBuffMult = miningBoostBuff ? (1.0 + (miningBoostBuff.buff_value || 0.25)) : 1.0;
+
+        const ownedPlanets = allPlanets.filter(p => p.owner_id === player.id && p.planet_type === 'colony');
         for (const p of ownedPlanets) {
-            let m = p.base_metal_rate;
+            let m = (p.prod_metal !== undefined ? p.prod_metal : p.base_metal_rate) * prodBuffMult;
             if (playerTechs.includes('deep_core_mining')) {
                 m *= 1.25;
             }
-            const pBuffs = db.getPlayerBuffs(player.id, nextTick);
-            if (pBuffs.some(b => b.buff_type === 'mining_boost')) {
-                const mb = pBuffs.find(b => b.buff_type === 'mining_boost');
-                m *= (1.0 + (mb.buff_value || 0.25));
-            }
-            let e = p.base_energy_rate;
+
+            let e = (p.prod_energy !== undefined ? p.prod_energy : p.base_energy_rate) * prodBuffMult;
             if (playerTechs.includes('dark_matter_reactor')) {
                 e *= 1.30;
             }
 
-            // Építmény bónuszok
-            for (const s of p.structures) {
-                if (s.structure_type === 'industrial_hub') m *= (1.0 + s.level * 0.25);
-                
-                let railgunUpkeep = playerTechs.includes('superconductor_grid') ? 9 : 12;
-                let shieldUpkeep = playerTechs.includes('superconductor_grid') ? 7.5 : 10;
-                if (s.structure_type === 'orbital_railgun') e -= railgunUpkeep;
-                if (s.structure_type === 'planetary_shield') e -= shieldUpkeep;
-            }
+            let iso = (p.prod_isotope !== undefined ? p.prod_isotope : 2) * prodBuffMult;
+            let dat = (p.prod_data !== undefined ? p.prod_data : 4) * prodBuffMult;
+
             netMetal += m;
             netEnergy += e;
+            netIsotope += iso;
+            netData += dat;
 
             // Állomásozó hajók upkeep
-            const sf = p.stationedFleet;
-            netEnergy -= (sf.scout || 0) * SHIP_SPECS.scout.upkeep_energy;
-            netEnergy -= (sf.corvette || 0) * SHIP_SPECS.corvette.upkeep_energy;
-            netEnergy -= (sf.colony_ship || 0) * SHIP_SPECS.colony_ship.upkeep_energy;
-            netEnergy -= (sf.destroyer || 0) * SHIP_SPECS.destroyer.upkeep_energy;
-            netEnergy -= (sf.battleship || 0) * SHIP_SPECS.battleship.upkeep_energy;
+            const sf = p.stationedFleet || {};
+            for (const st of ALL_SHIP_TYPES) {
+                const count = sf[st] || 0;
+                if (count > 0 && SHIP_SPECS[st]) {
+                    netEnergy -= count * (SHIP_SPECS[st].upkeep_energy || 0);
+                }
+            }
         }
 
         // Mozgó flották upkeep
         const ownedMoving = movingFleets.filter(f => f.owner_id === player.id);
         for (const f of ownedMoving) {
-            netEnergy -= (f.ships.scout || 0) * SHIP_SPECS.scout.upkeep_energy;
-            netEnergy -= (f.ships.corvette || 0) * SHIP_SPECS.corvette.upkeep_energy;
-            netEnergy -= (f.ships.colony_ship || 0) * SHIP_SPECS.colony_ship.upkeep_energy;
-            netEnergy -= (f.ships.destroyer || 0) * SHIP_SPECS.destroyer.upkeep_energy;
-            netEnergy -= (f.ships.battleship || 0) * SHIP_SPECS.battleship.upkeep_energy;
+            for (const st of ALL_SHIP_TYPES) {
+                const count = (f.ships && f.ships[st]) || 0;
+                if (count > 0 && SHIP_SPECS[st]) {
+                    netEnergy -= count * (SHIP_SPECS[st].upkeep_energy || 0);
+                }
+            }
         }
 
-        player.metal += netMetal;
-        player.energy += netEnergy;
-        player.isotope += 3;
-        player.data_points += 10;
+        player.metal += Math.round(netMetal);
+        player.energy += Math.round(netEnergy);
+        player.isotope += Math.round(Math.max(2, netIsotope));
+        player.data_points += Math.round(Math.max(4, netData));
 
         db.updatePlayerResources(player.id, player.metal, player.energy, player.isotope, player.data_points);
     }
 
-    // 2. Mozgó flották léptetése és Érkezések ellenőrzése
     // 2/A. Kereskedelmi Expedíciók állapotfrissítése (Megérkezés, 3 körös dokkolás, automatikus hazaindulás, hazaérkezés)
     const tradeEvents = db.updateTradeExpeditionsTick(nextTick);
     for (const ev of tradeEvents) {
@@ -326,45 +333,71 @@ function processTick() {
                     (fleet.ships.repair_ship || 0) === 0 &&
                     (fleet.ships.heavy_destroyer || 0) === 0 &&
                     (fleet.ships.cruiser || 0) === 0 &&
-                    (fleet.ships.battleship || 0) === 0;
+                    (fleet.ships.battleship || 0) === 0 &&
+                    (fleet.ships.colony_ship || 0) === 0 &&
+                    (fleet.ships.freighter || 0) === 0;
 
                 if (targetPlanet.is_trade_station || targetPlanet.id === 'station_trade') {
                     // Kereskedelmi állomás dokkolás: A flotta dokkol a piacon, nem töröljük!
                     console.log(`[KERESKEDELMI DOKKOLÁS] ${fleet.name} sikeresen megérkezett a(z) ${targetPlanet.name} állomásra.`);
-                    fleet.current_x = targetPlanet.pos_x || 410;
-                    fleet.current_y = targetPlanet.pos_y || 290;
+                    fleet.current_x = targetPlanet.pos_x || 500;
+                    fleet.current_y = targetPlanet.pos_y || 410;
                     db.db.prepare("UPDATE fleets SET state = 'stationed', current_x = ?, current_y = ? WHERE id = ?").run(fleet.current_x, fleet.current_y, fleet.id);
                     continue;
-                } else if (isPureScout && (targetPlanet.is_bot || targetPlanet.owner_id !== fleet.owner_id)) {
-                    // Tachion Felderítési Akció (Harc nélküli kémkedés)
+                } else if (isPureScout && targetPlanet.owner_id !== fleet.owner_id) {
+                    // Felderítő Szonda: Felfedi a titkos bolygó típusát és méretét!
                     _resolveScoutMission(fleet, targetPlanet, nextTick);
+                } else if (targetPlanet.planet_type === 'dead_colony') {
+                    // Halott kolónia bolygóval nem lehet csinálni semmit -> visszafordul!
+                    db.scoutPlanet(targetPlanet.id, fleet.owner_id);
+                    _returnFleetToOrigin(fleet, targetPlanet, nextTick, `[🪨 HALOTT KOLÓNIA] A(z) ${targetPlanet.name} egy Halott Kolónia bolygó, nem kolonizálható! A flotta visszaindult a bázisra.`);
                 } else if (targetPlanet.owner_id === fleet.owner_id) {
-                    // Saját bolygó: flotta összevonása
-                    _mergeFleetIntoPlanet(fleet, targetPlanet);
-                } else if (db.isAllied(targetPlanet.owner_id, fleet.owner_id)) {
-                    // Szövetséges bolygó: Védelmi Erősítésként beáll az állomásozó helyőrségbe!
-                    _stationAlliedDefense(fleet, targetPlanet, nextTick);
-                } else if (targetPlanet.owner_id === null || targetPlanet.owner_id === 'neutral') {
-                    // Semleges bolygó: csak akkor kolonizálható, ha van legalább 1 Kolóniahajó!
-                    if (fleet.ships.colony_ship > 0) {
-                        fleet.ships.colony_ship -= 1; // A kolóniahajó feláldozza magát az új bázis alapításához
-                        targetPlanet.owner_id = fleet.owner_id;
-                        db.db.prepare('UPDATE planets SET owner_id = ? WHERE id = ?').run(fleet.owner_id, targetPlanet.id);
+                    // Saját bolygó: Csak akkor maradhat állomásozva, ha van Hajódokk (vagy Főbolygó)!
+                    if (targetPlanet.has_ship_dock || targetPlanet.is_homeworld) {
                         _mergeFleetIntoPlanet(fleet, targetPlanet);
-                        console.log(`[KOLONIZÁCIÓ SIKERES] ${fleet.name} telepes bárkája benépesítette a(z) ${targetPlanet.name} világot!`);
                     } else {
-                        console.log(`[FELDERÍTÉS] ${fleet.name} elérte a(z) ${targetPlanet.name} semleges világot (nem hozott Kolóniahajót, így nem kolonizálható).`);
-                        _mergeFleetIntoPlanet(fleet, targetPlanet);
+                        _returnFleetToOrigin(fleet, targetPlanet, nextTick, `[⚠️ NINCS HAJÓDOKK] A(z) ${targetPlanet.name} kolónián még nincs megépítve a Hajódokk, így a flotta nem állomásozhat itt — azonnal visszaindult haza!`);
                     }
-                } else if (targetPlanet.is_bot) {
-                    // Bot világ vagy Boss elleni csata & rejtett loot feltárás
+                } else if (db.isAllied(targetPlanet.owner_id, fleet.owner_id)) {
+                    // Szövetséges bolygó: Védelmi Erősítésként beáll az állomásozó helyőrségbe, ha van Hajódokk!
+                    if (targetPlanet.has_ship_dock || targetPlanet.is_homeworld) {
+                        _stationAlliedDefense(fleet, targetPlanet, nextTick);
+                    } else {
+                        _returnFleetToOrigin(fleet, targetPlanet, nextTick, `[⚠️ NINCS HAJÓDOKK] A szövetséges ${targetPlanet.name} bolygón nincs Hajódokk, a flotta visszaindult haza.`);
+                    }
+                } else if ((targetPlanet.owner_id === null || targetPlanet.owner_id === 'neutral') && targetPlanet.planet_type === 'colony') {
+                    // Semleges Kolónia bolygó: Csak akkor kolonizálható, ha van legalább 1 Kolóniahajó ÉS nincs elérve az 5 kolónia limit!
+                    db.scoutPlanet(targetPlanet.id, fleet.owner_id);
+                    if (fleet.ships.colony_ship > 0) {
+                        const colLimit = db.getPlayerColonyCount(fleet.owner_id);
+                        if (!colLimit.canColonizeMore) {
+                            _returnFleetToOrigin(fleet, targetPlanet, nextTick, `[⚠️ KOLÓNIA LIMIT (5/5)] Elérted a maximális 5 kolónia limitet a Főbolygón kívül! A flotta visszafordult.`);
+                        } else {
+                            fleet.ships.colony_ship -= 1; // A kolóniahajó feláldozza magát az új kolónia alapításához
+                            targetPlanet.owner_id = fleet.owner_id;
+                            db.db.prepare('UPDATE planets SET owner_id = ?, size_slots = 10, terraform_level = 0, scouted_by_player = 1 WHERE id = ?').run(fleet.owner_id, targetPlanet.id);
+                            db.checkAndUnlockDeadColonies(false);
+                            const sizeLabel = targetPlanet.colony_size === 'large' ? 'Nagy (+6 slot/fejl.)' : (targetPlanet.colony_size === 'medium' ? 'Közepes (+5 slot/fejl.)' : 'Kicsi (+4 slot/fejl.)');
+                            const msg = `[🌍 KOLONIZÁCIÓ SIKERES] ${fleet.name} telepes bárkája benépesítette a(z) ${targetPlanet.name} (${sizeLabel}) kolóniát!`;
+                            recentAIActions.push(msg);
+                            console.log(msg);
+                            // Mivel az új kolónián még nincs Hajódokk, a kísérő flotta egyből hazaindul!
+                            _returnFleetToOrigin(fleet, targetPlanet, nextTick, `[⚓ HAJÓDOKK HIÁNYA] Mivel az új ${targetPlanet.name} kolónián még nincs Hajódokk, a kísérő flotta elindult vissza a bázisra.`);
+                        }
+                    } else {
+                        _returnFleetToOrigin(fleet, targetPlanet, nextTick, `[FELDERÍTÉS] ${fleet.name} elérte a(z) ${targetPlanet.name} semleges kolóniát (Kolóniahajó nélkül nem foglalható el, a flotta hazaindul).`);
+                    }
+                } else if (targetPlanet.is_bot || targetPlanet.planet_type === 'artifact' || targetPlanet.planet_type === 'technology') {
+                    // Artifact bolygó, Technológia bolygó vagy Boss elleni csata
+                    db.scoutPlanet(targetPlanet.id, fleet.owner_id);
                     _resolveBotPlanetBattle(fleet, targetPlanet, nextTick);
                 } else {
-                    // Ellenséges bolygó: Csatamechanika!
+                    // Ellenséges játékos bolygója: Csatamechanika!
+                    db.scoutPlanet(targetPlanet.id, fleet.owner_id);
                     _resolvePlanetBattle(fleet, targetPlanet, nextTick);
                 }
             }
-            // Tranzit törlése
+            // Beérkezett tranzit törlése
             db.db.prepare('DELETE FROM fleet_ships WHERE fleet_id = ?').run(fleet.id);
             db.db.prepare('DELETE FROM fleets WHERE id = ?').run(fleet.id);
         } else {
@@ -381,12 +414,13 @@ function processTick() {
     // 3. Autonóm MI döntések lefutása (csak ha a Vektor-9 MI irányítású és nem emberi játékos)
     const enemyPlayer = db.getPlayer('enemy');
     if (enemyPlayer && enemyPlayer.is_ai) {
-        recentAIActions = ai.evaluateTick(nextTick);
-        if (recentAIActions.length > 0) {
-            recentAIActions.forEach(a => console.log(`  ${a}`));
+        const aiActs = ai.evaluateTick(nextTick);
+        if (aiActs && aiActs.length > 0) {
+            aiActs.forEach(a => {
+                console.log(`  ${a}`);
+                recentAIActions.push(a);
+            });
         }
-    } else {
-        recentAIActions = [];
     }
 
     // 4/A. Ütemezett Szövetségi Hadműveletek Automatikus Indítása
@@ -400,6 +434,48 @@ function processTick() {
     _evaluateMissions();
 
     return { tick: nextTick, aiActions: recentAIActions };
+}
+
+function _returnFleetToOrigin(fleet, fromPlanet, curTick, reasonMsg) {
+    let totalShips = 0;
+    for (const st of ALL_SHIP_TYPES) {
+        totalShips += (fleet.ships[st] || 0);
+    }
+    if (reasonMsg) {
+        recentAIActions.push(reasonMsg);
+        console.log(reasonMsg);
+    }
+    if (totalShips <= 0) return;
+
+    const allPlanets = db.getAllPlanets();
+    let origin = allPlanets.find(p => p.id === fleet.origin_planet_id && p.owner_id === fleet.owner_id && (p.has_ship_dock || p.is_homeworld));
+    if (!origin) {
+        origin = allPlanets.find(p => p.owner_id === fleet.owner_id && p.is_homeworld) || allPlanets.find(p => p.owner_id === fleet.owner_id);
+    }
+    if (!origin) return;
+
+    if (origin.id === fromPlanet.id) {
+        _mergeFleetIntoPlanet(fleet, origin);
+        return;
+    }
+
+    const travelTicks = db.calculateRingTravelTicks(fromPlanet, origin);
+    const retFleetId = `f_ret_${fleet.owner_id}_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+    const retName = `${fleet.name} (Hazatérő)`;
+
+    db.db.prepare(`
+        INSERT INTO fleets (id, owner_id, name, current_x, current_y, dest_x, dest_y, origin_planet_id, target_planet_id, departure_tick, arrival_tick, state)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'in_transit')
+    `).run(retFleetId, fleet.owner_id, retName, fromPlanet.pos_x, fromPlanet.pos_y, origin.pos_x, origin.pos_y, fromPlanet.id, origin.id, curTick, curTick + travelTicks);
+
+    const insShip = db.db.prepare(`INSERT INTO fleet_ships (id, fleet_id, ship_type, count, current_hull_total, current_shield_total) VALUES (?, ?, ?, ?, ?, ?)`);
+    for (const st of ALL_SHIP_TYPES) {
+        const count = fleet.ships[st] || 0;
+        if (count > 0) {
+            const spec = SHIP_SPECS[st] || { hull: 100, shield: 0 };
+            insShip.run(`${retFleetId}_${st}`, retFleetId, st, count, count * spec.hull, count * spec.shield);
+        }
+    }
 }
 
 function _stationAlliedDefense(fleet, targetPlanet, tick) {
@@ -640,55 +716,55 @@ function _mergeFleetIntoPlanet(fleet, planet) {
 function _resolveScoutMission(fleet, targetPlanet, tick) {
     const scoutCount = fleet.ships.scout || 1;
     const upg = db.getShipUpgrades(fleet.owner_id);
-    const sensorLvl = (upg.scout && upg.scout.sensors) || 0;
     const stealthLvl = (upg.scout && upg.scout.stealth) || 0;
     const hullLvl = (upg.scout && upg.scout.hull) || 0;
 
-    const reconPowerPerScout = 1 + sensorLvl;
-    const totalReconPower = scoutCount * reconPowerPerScout;
+    // A szonda mindig felfedi a bolygó típusát és (kolónia esetén) a méretét!
+    db.scoutPlanet(targetPlanet.id, fleet.owner_id);
 
-    let requiredPower = 6;
-    if (targetPlanet.bot_type === 'boss') requiredPower = 90;
-    else if (targetPlanet.difficulty_tier === 3) requiredPower = 35;
-    else if (targetPlanet.difficulty_tier === 2) requiredPower = 18;
-    else if (targetPlanet.difficulty_tier === 1) requiredPower = 6;
-    else if (targetPlanet.owner_id && targetPlanet.owner_id !== fleet.owner_id) requiredPower = 25;
-
-    const isSuccess = totalReconPower >= requiredPower;
-    const stealthChance = Math.min(0.98, 0.40 + stealthLvl * 0.06);
-    const undetected = Math.random() <= stealthChance;
+    let typeDesc = 'Kolónia bolygó';
+    if (targetPlanet.planet_type === 'colony') {
+        const sizeMap = { small: 'Kicsi (+4 slot/fejl.)', medium: 'Közepes (+5 slot/fejl.)', large: 'Nagy (+6 slot/fejl.)' };
+        const bonusMap = { metal: 'Fém bónusz', energy: 'Energia bónusz', isotope: 'Izotóp bónusz', data: 'Adat bónusz' };
+        typeDesc = `Kolónia bolygó — Méret: ${sizeMap[targetPlanet.colony_size] || 'Kicsi'}`;
+        if (targetPlanet.colony_size === 'large' && targetPlanet.bonus_resource) {
+            typeDesc += ` [${bonusMap[targetPlanet.bonus_resource] || targetPlanet.bonus_resource}]`;
+        }
+    } else if (targetPlanet.planet_type === 'dead_colony') {
+        typeDesc = 'Halott Kolónia bolygó (Inaktív, nem kolonizálható)';
+    } else if (targetPlanet.planet_type === 'artifact') {
+        const tierMap = { small: 'Kicsi Ereklye (Boss 1 kulcs)', medium: 'Közepes Ereklye (Boss 2 kulcs)', large: 'Nagy Ereklye (Boss 3 kulcs)' };
+        typeDesc = `Artifact bolygó — ${tierMap[targetPlanet.artifact_tier] || 'Ősi Ereklye'}`;
+    } else if (targetPlanet.planet_type === 'technology') {
+        const bName = (targetPlanet.loot_data && targetPlanet.loot_data.name) || 'Technológiai Bónusz';
+        const bDur = (targetPlanet.loot_data && targetPlanet.loot_data.durationTicks) || 10;
+        typeDesc = `Technológia bolygó — Bónusz: ${bName} (${bDur} körig)`;
+    }
 
     let survivingScouts = scoutCount;
-    if (!undetected) {
-        const lost = Math.min(scoutCount, Math.max(1, Math.floor(scoutCount * (0.35 - hullLvl * 0.02))));
-        survivingScouts = Math.max(0, scoutCount - lost);
+    if (targetPlanet.is_bot && (targetPlanet.planet_type === 'artifact' || targetPlanet.planet_type === 'technology')) {
+        const stealthChance = Math.min(0.98, 0.55 + stealthLvl * 0.06);
+        const undetected = Math.random() <= stealthChance;
+        if (!undetected && scoutCount > 1) {
+            const lost = Math.min(scoutCount - 1, Math.max(1, Math.floor(scoutCount * (0.25 - hullLvl * 0.02))));
+            survivingScouts = Math.max(1, scoutCount - lost);
+        }
     }
 
-    if (isSuccess) {
-        db.scoutPlanet(targetPlanet.id, fleet.owner_id);
-        const lootDesc = targetPlanet.loot_type ? (targetPlanet.loot_type === 'artifact' ? 'Ősi Ereklye' : (targetPlanet.loot_type === 'glory' ? 'Kozmikus Dicsőség' : 'Nyersanyag Raktár')) : 'Ismeretlen';
-        const msg = `[🕵️ TACHION FELDERÍTÉS SIKERES] ${scoutCount} db szonda feltárta a(z) ${targetPlanet.name} világot! (Erő: ${totalReconPower}/${requiredPower}) • Felfedett kincs: ${lootDesc} • Túlélő szondák: ${survivingScouts}/${scoutCount}`;
-        recentAIActions.push(msg);
-        console.log(msg);
-    } else {
-        const msg = `[⚠️ FELDERÍTÉS SIKERTELEN] A szondák nem tudták áttörni az interferenciát ${targetPlanet.name} felett! (Elért erő: ${totalReconPower}, szükséges: ${requiredPower}) • Túlélők: ${survivingScouts}/${scoutCount}`;
-        recentAIActions.push(msg);
-        console.log(msg);
-    }
+    const msg = `[🛰️ SZONDA FELDERÍTÉS] Feltárt bolygó: ${targetPlanet.name} (${targetPlanet.ring_index}. gyűrű) -> ${typeDesc} • Túlélő szondák: ${survivingScouts}/${scoutCount}`;
+    recentAIActions.push(msg);
+    console.log(msg);
 
     // Túlélő szondák visszatérése a kiindulási bolygóra
-    if (survivingScouts > 0 && fleet.origin_planet_id) {
-        const origin = db.getAllPlanets().find(p => p.id === fleet.origin_planet_id);
-        if (origin) {
-            fleet.ships.scout = survivingScouts;
-            _mergeFleetIntoPlanet(fleet, origin);
-        }
+    if (survivingScouts > 0) {
+        fleet.ships.scout = survivingScouts;
+        _returnFleetToOrigin(fleet, targetPlanet, tick, null);
     }
 }
 
 function _evaluateMissions(targetPlayerId = 'player') {
     const allPlanets = db.getAllPlanets();
-    const playerPlanets = allPlanets.filter(p => p.owner_id === targetPlayerId);
+    const playerPlanets = allPlanets.filter(p => p.owner_id === targetPlayerId && p.planet_type === 'colony');
     const missions = db.getMissions();
     const player = db.getPlayer(targetPlayerId) || db.getPlayer('player');
     const glory = player ? (player.glory_points || 0) : 0;
@@ -700,13 +776,13 @@ function _evaluateMissions(targetPlayerId = 'player') {
         let completed = false;
         if (m.id === 'm1') {
             const p1 = playerPlanets.find(p => p.id === 'p1');
-            if (p1 && p1.structures.some(s => s.structure_type === 'industrial_hub' && s.level >= 2)) {
+            if (p1 && (p1.structures.some(s => s.level >= 2) || p1.structures.length >= 3)) {
                 completed = true;
             }
         } else if (m.id === 'm2') {
             const scoutCount = playerPlanets.reduce((acc, p) => acc + (p.stationedFleet.scout || 0), 0);
-            const p2 = allPlanets.find(p => p.id === 'p2');
-            if (scoutCount >= 1 || (p2 && p2.stationedFleet.scout >= 1)) {
+            const scoutedAny = allPlanets.some(p => p.id !== 'p1' && p.id !== 'station_trade' && p.scouted_by_player === 1);
+            if (scoutCount >= 1 || scoutedAny) {
                 completed = true;
             }
         } else if (m.id === 'm3') {
@@ -766,7 +842,7 @@ function _resolveBotPlanetBattle(attackerFleet, planet, tick) {
         for (let i = 0; i < cnt; i++) fb.ships.push(new ShipInstance(st, [], {}, []));
     }
 
-    // Ha ez a 3 Fő Boss egyike, bevonjuk a Boss旗舰/kolosszust is
+    // Ha ez a 3 Fő Boss egyike, bevonjuk a Boss kolosszust is
     if (planet.bot_type === 'boss') {
         const bossState = db.getBossState(planet.id);
         if (bossState && bossState.state !== 'defeated') {
@@ -785,17 +861,38 @@ function _resolveBotPlanetBattle(attackerFleet, planet, tick) {
 
     let lootResult = null;
     if (battleResult.winnerId === attackerFleet.owner_id) {
-        // Támadó győzött: Rejtett zsákmány felfedése és jóváírása!
+        // Támadó győzött: Artifact vagy Technológiai bónusz megszerzése!
         lootResult = db.claimBotLoot(planet.id, attackerFleet.owner_id);
         const winName = attackerFleet.owner_id === 'player' ? 'Kronos Parancsnok' : 'Vektor-9 Parancsnok';
-        const msg = `[💥 GYŐZELEM & ZSÁKMÁNY] ${winName} megtörte a(z) ${planet.name} védelmét! Zsákmány: ${lootResult ? lootResult.rewardSummary : 'Ismeretlen'}`;
+        const msg = `[💥 GYŐZELEM & ZSÁKMÁNY] ${winName} bevette a(z) ${planet.name} (${planet.planet_type === 'artifact' ? 'Artifact' : 'Technológia'}) világot! Zsákmány: ${lootResult ? lootResult.rewardSummary : 'Ismeretlen'}`;
         recentAIActions.push(msg);
         console.log(msg);
 
-        // Bolygó státusz frissítése
-        db.db.prepare("UPDATE planets SET owner_id = ?, status = 'looted', loot_revealed = 1 WHERE id = ?").run(attackerFleet.owner_id, planet.id);
+        // Bolygó státusz frissítése (nem számít kolóniának, de a zsákmányt megszerezték)
+        db.db.prepare("UPDATE planets SET owner_id = ?, status = 'looted', loot_revealed = 1, scouted_by_player = 1 WHERE id = ?").run(attackerFleet.owner_id, planet.id);
+
+        // Védő helyőrség lenullázása
+        for (const st of ALL_SHIP_TYPES) {
+            db.db.prepare('UPDATE fleet_ships SET count = 0 WHERE fleet_id = ? AND ship_type = ?').run(defenderFleet.fleetId, st);
+        }
+
+        // Túlélő támadó hajók hazaküldése a kiindulási bolygóra (mivel Artifact/Tech bolygón nincs Hajódokk)
+        const survShips = {};
+        for (const st of ALL_SHIP_TYPES) {
+            survShips[st] = fa.countByType(st);
+        }
+        attackerFleet.ships = survShips;
+        _returnFleetToOrigin(attackerFleet, planet, tick, null);
     } else {
         recentAIActions.push(`[⚔️ VISSZAVERVE] A(z) ${planet.name} védelmi erői visszaverték a támadást!`);
+        // Védő túlélők szinkronizálása
+        for (const st of ALL_SHIP_TYPES) {
+            const count = fb.countByType(st);
+            const row = db.db.prepare('SELECT id FROM fleet_ships WHERE fleet_id = ? AND ship_type = ?').get(defenderFleet.fleetId, st);
+            if (row) {
+                db.db.prepare('UPDATE fleet_ships SET count = ? WHERE fleet_id = ? AND ship_type = ?').run(count, defenderFleet.fleetId, st);
+            }
+        }
     }
 
     // Csatariport mentése
@@ -809,18 +906,6 @@ function _resolveBotPlanetBattle(attackerFleet, planet, tick) {
         attackerFleet.owner_id, planet.owner_id || 'bot_hostile', battleResult.winnerId,
         extraLog, battleResult.salvageMetal, battleResult.salvageIsotope
     );
-
-    // Túlélő hajók szinkronizálása
-    for (const st of ALL_SHIP_TYPES) {
-        const count = battleResult.winnerId === attackerFleet.owner_id ? fa.countByType(st) : fb.countByType(st);
-        const row = db.db.prepare('SELECT id FROM fleet_ships WHERE fleet_id = ? AND ship_type = ?').get(defenderFleet.fleetId, st);
-        if (row) {
-            db.db.prepare('UPDATE fleet_ships SET count = ? WHERE fleet_id = ? AND ship_type = ?').run(count, defenderFleet.fleetId, st);
-        } else if (count > 0) {
-            db.db.prepare('INSERT INTO fleet_ships (id, fleet_id, ship_type, count, current_hull_total, current_shield_total) VALUES (?, ?, ?, ?, ?, ?)')
-                .run(`${defenderFleet.fleetId}_${st}`, defenderFleet.fleetId, st, count, count * (SHIP_SPECS[st]?.hull || 100), 0);
-        }
-    }
 }
 
 function _resolvePlanetBattle(attackerFleet, planet, tick) {
@@ -877,13 +962,6 @@ function _resolvePlanetBattle(attackerFleet, planet, tick) {
         battleResult.log, battleResult.salvageMetal, battleResult.salvageIsotope
     );
 
-    // Bolygó és állomásozó flotta frissítése
-    const winningFleet = battleResult.winnerId === attackerFleet.owner_id ? fa : fb;
-    if (battleResult.winnerId === attackerFleet.owner_id) {
-        // Támadó győzött: Bolygó elfoglalása!
-        db.db.prepare('UPDATE planets SET owner_id = ? WHERE id = ?').run(attackerFleet.owner_id, planet.id);
-    }
-
     const updateShip = (shipType, count) => {
         const row = db.db.prepare('SELECT id FROM fleet_ships WHERE fleet_id = ? AND ship_type = ?').get(defenderFleet.fleetId, shipType);
         if (row) {
@@ -894,9 +972,30 @@ function _resolvePlanetBattle(attackerFleet, planet, tick) {
         }
     };
 
-    for (const st of ALL_SHIP_TYPES) {
-        const surv = winningFleet.countByType(st);
-        updateShip(st, surv);
+    if (battleResult.winnerId === attackerFleet.owner_id) {
+        // Támadó győzött! Ellenőrizzük a max 5 kolónia limitet (ha nem főbolygó)
+        const colLimit = db.getPlayerColonyCount(attackerFleet.owner_id);
+        if (planet.is_homeworld || colLimit.canColonizeMore) {
+            db.db.prepare('UPDATE planets SET owner_id = ?, scouted_by_player = 1 WHERE id = ?').run(attackerFleet.owner_id, planet.id);
+        } else {
+            db.db.prepare("UPDATE planets SET owner_id = 'neutral' WHERE id = ?").run(planet.id);
+        }
+
+        if (planet.has_ship_dock || planet.is_homeworld) {
+            for (const st of ALL_SHIP_TYPES) {
+                updateShip(st, fa.countByType(st));
+            }
+        } else {
+            for (const st of ALL_SHIP_TYPES) {
+                updateShip(st, 0);
+                attackerFleet.ships[st] = fa.countByType(st);
+            }
+            _returnFleetToOrigin(attackerFleet, planet, tick, `[⚓ HAJÓDOKK HIÁNYA] A meghódított ${planet.name} bolygón nincs Hajódokk, így a győztes flotta visszaindult a bázisra.`);
+        }
+    } else {
+        for (const st of ALL_SHIP_TYPES) {
+            updateShip(st, fb.countByType(st));
+        }
     }
 }
 
@@ -981,6 +1080,9 @@ const server = http.createServer((req, res) => {
             allianceOperations: db.getAllianceByPlayer(playerObj.id) ? db.getAllianceOperations(db.getAllianceByPlayer(playerObj.id).id) : [],
             tradeExpeditions: db.getActiveTradeExpeditions(playerObj.id),
             tradeCargo: db.getDockedTradeFleetCargo(playerObj.id),
+            buildingSpecs: BUILDING_SPECS,
+            galaxyCenter: GALAXY_CENTER,
+            colonyLimits: db.getPlayerColonyCount(playerObj.id),
             recentAIActions
         };
         res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -1366,14 +1468,65 @@ const server = http.createServer((req, res) => {
         return;
     }
 
-    if (pathname === '/api/upgrade-structure' && req.method === 'POST') {
+    if (pathname === '/api/build-structure' && req.method === 'POST') {
         _parseJsonBody(req, res, body => {
-            const { planetId, slotIndex } = body;
-            const result = db.upgradeStructure(planetId, slotIndex);
+            const playerId = _getReqPlayerId(req, parsedUrl, body);
+            const { planetId, structureType } = body;
+            if (!planetId || !structureType) {
+                return _errorResponse(res, 400, "Hiányzó bolygó vagy épülettípus!");
+            }
+            const result = db.buildStructure(planetId, structureType, playerId);
             if (result.error) {
                 return _errorResponse(res, 400, result.error);
             }
-            _evaluateMissions();
+            _evaluateMissions(playerId);
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify(result));
+        });
+        return;
+    }
+
+    if (pathname === '/api/upgrade-structure' && req.method === 'POST') {
+        _parseJsonBody(req, res, body => {
+            const playerId = _getReqPlayerId(req, parsedUrl, body);
+            const { planetId, slotIndex } = body;
+            const result = db.upgradeStructure(planetId, slotIndex, playerId);
+            if (result.error) {
+                return _errorResponse(res, 400, result.error);
+            }
+            _evaluateMissions(playerId);
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify(result));
+        });
+        return;
+    }
+
+    if (pathname === '/api/demolish-structure' && req.method === 'POST') {
+        _parseJsonBody(req, res, body => {
+            const playerId = _getReqPlayerId(req, parsedUrl, body);
+            const { planetId, slotIndex } = body;
+            const result = db.demolishStructure(planetId, slotIndex, playerId);
+            if (result.error) {
+                return _errorResponse(res, 400, result.error);
+            }
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify(result));
+        });
+        return;
+    }
+
+    if (pathname === '/api/unlock-dead-colony' && req.method === 'POST') {
+        _parseJsonBody(req, res, body => {
+            const { planetId, autoUnlock } = body;
+            let result;
+            if (planetId) {
+                result = db.unlockDeadColonyById(planetId);
+            } else {
+                result = db.checkAndUnlockDeadColonies(Boolean(autoUnlock));
+            }
+            if (result.error) {
+                return _errorResponse(res, 400, result.error);
+            }
             res.writeHead(200, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify(result));
         });
@@ -1432,18 +1585,22 @@ const server = http.createServer((req, res) => {
 
     if (pathname === '/api/build-ship' && req.method === 'POST') {
         _parseJsonBody(req, res, body => {
+            const playerId = _getReqPlayerId(req, parsedUrl, body);
             const { planetId, shipType } = body;
-            const player = db.getPlayer('player');
+            const player = db.getPlayer(playerId) || db.getPlayer('player');
             const spec = SHIP_SPECS[shipType];
             if (!spec) return _errorResponse(res, 400, "Ismeretlen hajótípus!");
             const planets = db.getAllPlanets();
             const planet = planets.find(p => p.id === planetId);
 
-            if (!planet || planet.owner_id !== 'player') {
+            if (!planet || planet.owner_id !== player.id) {
                 return _errorResponse(res, 400, "Csak saját bolygón építhetsz hajót!");
             }
+            if (!planet.has_ship_dock && !planet.is_homeworld) {
+                return _errorResponse(res, 400, "Ezen a kolónián még nincs megépítve a Hajódokk! Építs Hajódokkot a hajógyártáshoz és flották állomásoztatásához.");
+            }
 
-            const playerTechs = db.getPlayerResearch('player');
+            const playerTechs = db.getPlayerResearch(player.id);
             const reqTech = SHIP_TECH_REQUIREMENTS[shipType];
             if (reqTech && !playerTechs.includes(reqTech)) {
                 const tSpec = TECH_TREE[reqTech];
@@ -1462,9 +1619,9 @@ const server = http.createServer((req, res) => {
             player.metal -= costMetal;
             player.energy -= spec.cost_energy;
             player.isotope -= spec.cost_isotope;
-            db.updatePlayerResources('player', player.metal, player.energy, player.isotope, player.data_points);
+            db.updatePlayerResources(player.id, player.metal, player.energy, player.isotope, player.data_points);
 
-            const playerUpgrades = db.getShipUpgrades('player');
+            const playerUpgrades = db.getShipUpgrades(player.id);
             const installed = playerUpgrades[shipType] || [];
             const dummyShip = new ShipInstance(shipType, playerTechs, installed);
             const initialHull = dummyShip.maxHull;
@@ -1485,7 +1642,7 @@ const server = http.createServer((req, res) => {
                 `).run(`${planet.stationedFleet.fleetId}_${shipType}`, planet.stationedFleet.fleetId, shipType, initialHull, initialShield);
             }
 
-            _evaluateMissions();
+            _evaluateMissions(player.id);
             res.writeHead(200, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ success: true, message: `${spec.name} elkészült!` }));
         });
@@ -1516,10 +1673,22 @@ const server = http.createServer((req, res) => {
             }
             if (totalCount === 0) return _errorResponse(res, 400, "Válassz ki legalább 1 hajót az indításhoz!");
 
+            const isPureScout = ((ships.scout || 0) > 0) && ((ships.scout || 0) === totalCount);
+
+            // Halott kolónia bolygó ellenőrzés (ha már felderítették)
+            if (target.planet_type === 'dead_colony' && target.scouted_by_player && !isPureScout) {
+                return _errorResponse(res, 400, "Ez egy Halott Kolónia bolygó! Nem végezhető rajta semmilyen művelet, amíg fel nem oldódik.");
+            }
+
+            // Kolónia limit ellenőrzés (Főbolygón kívül max 5 kolónia)
+            if ((ships.colony_ship || 0) > 0 && target.planet_type === 'colony' && (!target.owner_id || target.owner_id === 'neutral')) {
+                const colLimit = db.getPlayerColonyCount(playerId);
+                if (!colLimit.canColonizeMore) {
+                    return _errorResponse(res, 400, `Elérted a maximális ${MAX_COLONIES_PER_PLAYER} kolónia limitet (a Főbolygón kívül)!`);
+                }
+            }
+
             const playerTechs = db.getPlayerResearch(playerId);
-            const playerBuffs = db.getPlayerBuffs(playerId);
-            const playerUpgrades = db.getShipUpgrades(playerId);
-            const dist = Math.hypot(target.pos_x - origin.pos_x, target.pos_y - origin.pos_y);
             let totalFuelWeight = 0;
 
             for (const st of ALL_SHIP_TYPES) {
@@ -1529,33 +1698,10 @@ const server = http.createServer((req, res) => {
                 }
             }
 
-            // Egységes alapmenetidő: 5 kör
-            // Fejlesztésekkel lefaragható:
-            // - Ionhajtómű: -1 kör
-            // - Hipertér / Kvantum-kapu: -1 kör
-            // - Sebesség buff: -1 kör
-            // - Motor alrendszer fejlettség: -1 kör
-            const baseTravelTicks = 5;
-            let speedDiscount = 0;
-            if (playerTechs.includes('ion_thrusters')) speedDiscount += 1;
-            if (playerTechs.includes('hyperspace_gate')) speedDiscount += 1;
-            if (playerBuffs.some(b => b.buff_type === 'speed_boost')) speedDiscount += 1;
-
-            let hasEngineUpg = false;
-            for (const st of ALL_SHIP_TYPES) {
-                if ((ships[st] || 0) > 0) {
-                    const upg = playerUpgrades[st] || {};
-                    if ((upg.engine || 0) >= 2) hasEngineUpg = true;
-                }
-            }
-            if (hasEngineUpg) speedDiscount += 1;
-
-            let travelHours = Math.max(1, baseTravelTicks - speedDiscount);
-            if (target.id === 'station_trade' || target.is_trade_station) {
-                travelHours = Math.max(1, Math.round(travelHours * 0.5));
-            }
+            // Körgyűrű alapú menetidő: minden körgyűrű +1 kör elérni!
+            const travelHours = db.calculateRingTravelTicks(origin, target);
             const fuelMultiplier = playerTechs.includes('isotope_compression') ? 0.70 : 1.0;
-            const fuelCost = Math.max(5, Math.ceil(totalFuelWeight * 2 * fuelMultiplier));
+            const fuelCost = Math.max(3, Math.ceil(totalFuelWeight * (1 + travelHours * 0.25) * fuelMultiplier));
 
             if (player.isotope < fuelCost) {
                 return _errorResponse(res, 400, `Nincs elég Izotóp üzemanyag (${fuelCost} szükséges)!`);
@@ -1575,7 +1721,9 @@ const server = http.createServer((req, res) => {
 
             const curTick = db.getGameState();
             const fleetId = `f_${player.id}_trans_${Date.now()}`;
-            const fleetName = player.id === 'player' ? 'Kronos Armada' : 'Vektor-9 Armada';
+            const fleetName = isPureScout
+                ? `${player.username || 'Birodalmi'} Felderítő Szonda`
+                : (player.id === 'player' ? 'Kronos Armada' : 'Vektor-9 Armada');
             db.db.prepare(`
                 INSERT INTO fleets (id, owner_id, name, current_x, current_y, dest_x, dest_y, origin_planet_id, target_planet_id, departure_tick, arrival_tick, state)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'in_transit')
@@ -1590,9 +1738,14 @@ const server = http.createServer((req, res) => {
                 }
             }
 
-            _evaluateMissions();
+            _evaluateMissions(player.id);
             res.writeHead(200, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ success: true, message: "Flotta sikeresen útnak indítva!" }));
+            res.end(JSON.stringify({
+                success: true,
+                travelTicks: travelHours,
+                fuelCost,
+                message: `Flotta sikeresen útnak indítva (${travelHours} kör menetidő a(z) ${target.ring_index || 1}. gyűrűbe)!`
+            }));
         });
         return;
     }

@@ -23,7 +23,13 @@ CREATE TABLE IF NOT EXISTS planets (
     name TEXT NOT NULL,
     pos_x REAL NOT NULL,
     pos_y REAL NOT NULL,
-    size_slots INTEGER NOT NULL DEFAULT 4, -- 3 és 6 közötti slot
+    ring_index INTEGER NOT NULL DEFAULT 1, -- 0: Belső mag (Főbolygó), 1..10: Koncentrikus körgyűrűk
+    planet_type TEXT NOT NULL DEFAULT 'colony', -- 'colony', 'dead_colony', 'artifact', 'technology', 'boss', 'trade_station'
+    colony_size TEXT NULL DEFAULT 'small', -- 'small' (+4 slot), 'medium' (+5 slot), 'large' (+6 slot)
+    bonus_resource TEXT NULL, -- 'metal', 'energy', 'isotope', 'data' (nagy bolygók nyersanyag bónusza)
+    is_homeworld INTEGER NOT NULL DEFAULT 0, -- 1 ha a játékos főbolygója
+    size_slots INTEGER NOT NULL DEFAULT 10, -- Alapból 10 slot, Terraformálóval bővíthető
+    terraform_level INTEGER NOT NULL DEFAULT 0, -- Terraformáló Állomás szintje (0..5)
     owner_id TEXT REFERENCES players(id) ON DELETE SET NULL,
     base_metal_rate REAL NOT NULL DEFAULT 25.0,  -- Fém/óra alaphozam
     base_energy_rate REAL NOT NULL DEFAULT 10.0, -- Energia/óra alaphozam
@@ -32,8 +38,9 @@ CREATE TABLE IF NOT EXISTS planets (
     railgun_count INTEGER NOT NULL DEFAULT 0,
     status TEXT NOT NULL DEFAULT 'normal', -- 'normal', 'under_siege', 'consolidating', 'looted', 'defeated'
     is_bot INTEGER NOT NULL DEFAULT 0,
-    bot_type TEXT NULL, -- 'outpost', 'boss'
-    loot_type TEXT NULL, -- 'resources', 'artifact', 'glory'
+    bot_type TEXT NULL, -- 'artifact', 'technology', 'boss', 'outpost'
+    artifact_tier TEXT NULL, -- 'small', 'medium', 'large'
+    loot_type TEXT NULL, -- 'resources', 'artifact', 'glory', 'tech_buff'
     loot_data TEXT NULL, -- JSON data
     loot_revealed INTEGER NOT NULL DEFAULT 0,
     defeated_by_player_id TEXT NULL,
@@ -47,12 +54,15 @@ CREATE TABLE IF NOT EXISTS planet_structures (
     id TEXT PRIMARY KEY,
     planet_id TEXT NOT NULL REFERENCES planets(id) ON DELETE CASCADE,
     slot_index INTEGER NOT NULL,
-    branch_type TEXT NOT NULL, -- 'economy', 'defense', 'infrastructure'
+    branch_type TEXT NOT NULL, -- 'terraformer', 'dock', 'metal', 'energy', 'isotope', 'data'
     structure_type TEXT NOT NULL, 
     -- Lehetséges értékek:
-    -- economy: 'industrial_hub' (Ipari Központ) VAGY 'trade_network' (Kereskedelmi Hálózat)
-    -- defense: 'planetary_shield' (Planetáris Pajzs) VAGY 'orbital_railgun' (Orbitális Railgun)
-    -- infrastructure: 'automated_dock' (Automatizált Dokk) VAGY 'sensor_array' (Szenzorállomás)
+    -- 'terraformer' (Terraformáló Állomás Lv.1-5)
+    -- 'ship_dock' (Hajódokk)
+    -- Fém: 'surface_mine' (Felszíni bányatelep, 1 slot) / 'deep_core_drill' (Mélységi Mag-fúró, 2 slot)
+    -- Energia: 'solar_farm' (Szolár-farm, 1 slot) / 'fusion_plant' (Fúziós Erőmű, 2 slot)
+    -- Izotóp: 'isotope_filter' (Izotóp szűrő állomás, 1 slot) / 'enrichment_complex' (Dúsító Komplexum, 2 slot)
+    -- Adat: 'relay_station' (Reléállomás, 1 slot) / 'quantum_server_park' (Kvantum Szerverpark, 2 slot)
     level INTEGER NOT NULL DEFAULT 1,
     construction_finish_tick INTEGER NULL,
     UNIQUE(planet_id, slot_index)

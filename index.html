@@ -395,66 +395,84 @@
   <!-- ========================================================================= -->
 
   <!-- BOLYGÓ RÉSZLETEZŐ PANEL (Oldalról becsúszó letisztult adatlap) -->
-  <div id="planet-drawer" class="hidden fixed inset-y-0 right-0 w-full sm:w-96 bg-[#080d1a] border-l border-cyan-900/80 shadow-2xl z-30 flex flex-col font-mono text-xs overflow-y-auto">
-    <div class="p-3 bg-slate-900/90 border-b border-cyan-950 flex items-center justify-between sticky top-0 z-10 backdrop-blur">
+  <div id="planet-drawer" class="hidden fixed inset-y-0 right-0 w-full sm:w-[440px] bg-[#080d1a] border-l border-cyan-900/80 shadow-2xl z-30 flex flex-col font-mono text-xs overflow-y-auto">
+    <div class="p-3 bg-slate-900/95 border-b border-cyan-950 flex items-center justify-between sticky top-0 z-10 backdrop-blur">
       <div>
-        <div class="text-[10px] text-cyan-400 font-bold uppercase tracking-wider">Bolygó Adatlap</div>
-        <div id="drawer-planet-name" class="text-base font-bold text-white">KRONOS-IV</div>
+        <div class="flex items-center gap-2">
+          <span class="text-[10px] text-cyan-400 font-bold uppercase tracking-wider">Bolygó Adatlap</span>
+          <span id="drawer-ring-badge" class="text-[9px] px-1.5 py-0.2 rounded bg-cyan-950 text-cyan-300 border border-cyan-700 font-bold">1. GYŰRŰ (1 kör)</span>
+        </div>
+        <div id="drawer-planet-name" class="text-base font-bold text-white mt-0.5">KRONOS-IV</div>
       </div>
-      <button onclick="closePlanetDrawer()" class="p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-white">✕</button>
+      <button onclick="closePlanetDrawer()" class="p-1.5 rounded hover:bg-slate-800 text-slate-400 hover:text-white text-sm">✕</button>
     </div>
 
-    <div class="p-4 space-y-4 flex-1">
-      <!-- Státusz & Koordináta -->
-      <div class="bg-slate-950/60 p-3 rounded border border-slate-800 space-y-1">
-        <div class="flex justify-between"><span class="text-slate-400">KOORDINÁTÁK:</span> <span id="drawer-coords" class="text-cyan-300 font-bold">[X: 142, Y: 88]</span></div>
-        <div class="flex justify-between"><span class="text-slate-400">IRÁNYÍTÁS:</span> <span id="drawer-owner" class="text-cyan-400 font-bold">Te (Birodalom)</span></div>
-        <div class="flex justify-between"><span class="text-slate-400">SLOT KAPACITÁS:</span> <span id="drawer-slots-info" class="text-slate-200">3 / 4 slot</span></div>
+    <div class="p-3.5 space-y-3.5 flex-1">
+      <!-- Státusz & Típus & Kolónia Limit -->
+      <div class="bg-slate-950/80 p-3 rounded-lg border border-slate-800 space-y-1.5">
+        <div class="flex justify-between items-center"><span class="text-slate-400">KOORDINÁTÁK & GYŰRŰ:</span> <span id="drawer-coords" class="text-cyan-300 font-bold">[X: 500, Y: 500] • G0</span></div>
+        <div class="flex justify-between items-center"><span class="text-slate-400">IRÁNYÍTÁS:</span> <span id="drawer-owner" class="text-cyan-400 font-bold">Saját Bázis</span></div>
+        <div class="flex justify-between items-center"><span class="text-slate-400">BOLYGÓ TÍPUSA:</span> <span id="drawer-planet-type" class="text-emerald-300 font-bold">🌍 Kolónia (Kicsi)</span></div>
+        <div id="drawer-bonus-row" class="hidden flex justify-between items-center"><span class="text-slate-400">NAGY BOLYGÓ BÓNUSZ:</span> <span id="drawer-bonus-resource" class="text-amber-300 font-bold">★ Fém Bónusz</span></div>
+        <div class="flex justify-between items-center"><span class="text-slate-400">SLOT KAPACITÁS:</span> <span id="drawer-slots-info" class="text-slate-200 font-bold">0 / 10 slot</span></div>
+        <div class="flex justify-between items-center border-t border-slate-900 pt-1"><span class="text-slate-400">BIRODALMI KOLÓNIÁK:</span> <span id="drawer-colony-limit" class="text-sky-300 font-bold">0 / 5 (+ Főbolygó)</span></div>
       </div>
 
-      <!-- Termelési adatok -->
-      <div class="bg-slate-950/60 p-3 rounded border border-slate-800 space-y-1.5">
-        <div class="text-[11px] font-bold text-cyan-400 border-b border-slate-800 pb-1">ÓRÁNKÉNTI TERMELÉS ÉS ENERGIAHÁLÓZAT</div>
-        <div class="flex justify-between"><span>• Fémtermelés:</span> <span id="drawer-prod-metal" class="text-emerald-400 font-bold">+35/óra</span></div>
-        <div class="flex justify-between"><span>• Energiahálózat:</span> <span id="drawer-prod-energy" class="text-amber-400 font-bold">-5/óra</span></div>
-        <div class="flex justify-between"><span>• Planetáris Pajzs:</span> <span id="drawer-shield-hp" class="text-sky-400">0 / 0 HP</span></div>
+      <!-- Speciális Státusz / Titkos bolygó / Halott Kolónia / Artifact / Tech kártya -->
+      <div id="drawer-loot-container"></div>
+
+      <!-- Termelési adatok (Kolónia esetén) -->
+      <div id="drawer-production-card" class="bg-slate-950/80 p-3 rounded-lg border border-slate-800 space-y-1.5">
+        <div class="text-[11px] font-bold text-cyan-400 border-b border-slate-800 pb-1 flex items-center justify-between">
+          <span>KÖRÖNKÉNTI TERMELÉS (4 NYERSANYAG)</span>
+          <span id="drawer-dock-badge" class="text-[9px] px-1.5 py-0.2 rounded bg-emerald-950 text-emerald-300 border border-emerald-700">⚓ Hajódokk Aktív</span>
+        </div>
+        <div class="grid grid-cols-2 gap-x-4 gap-y-1 text-[11px]">
+          <div class="flex justify-between"><span>⛏️ Fém:</span> <span id="drawer-prod-metal" class="text-emerald-400 font-bold">+35/kör</span></div>
+          <div class="flex justify-between"><span>⚡ Energia:</span> <span id="drawer-prod-energy" class="text-amber-400 font-bold">+25/kör</span></div>
+          <div class="flex justify-between"><span>🔮 Izotóp:</span> <span id="drawer-prod-isotope" class="text-purple-400 font-bold">+5/kör</span></div>
+          <div class="flex justify-between"><span>💾 Adat:</span> <span id="drawer-prod-data" class="text-cyan-300 font-bold">+10/kör</span></div>
+        </div>
+        <div class="hidden"><span id="drawer-shield-hp">0 / 0 HP</span></div>
       </div>
 
-      <!-- Kiépített Struktúrák (Slot választás) -->
-      <div class="space-y-2">
-        <div class="text-[11px] font-bold text-slate-300">FEJLESZTÉSI SLrequest_feedbackOTOK</div>
+      <!-- Kiépített Épületek és Új Épület Építése (Slot rendszer) -->
+      <div id="drawer-structures-section" class="space-y-2.5">
+        <div class="flex items-center justify-between">
+          <div class="text-[11px] font-bold text-slate-200 uppercase">ÉPÜLETEK ÉS FEJLESZTÉSI SLOTOK</div>
+          <span id="drawer-terraform-badge" class="text-[10px] px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-700 font-bold">Terraformáló: Lv.0/5</span>
+        </div>
         <div id="drawer-slots-container" class="space-y-2">
-          <!-- Dinamikusan renderelt slot elemek -->
+          <!-- Dinamikusan renderelt épületek és építési paletta -->
         </div>
       </div>
 
       <!-- Állomásozó Flotta és Hajógyár gombok -->
-      <div class="bg-slate-950/60 p-3 rounded border border-slate-800 space-y-3">
+      <div id="drawer-fleet-section" class="bg-slate-950/80 p-3 rounded-lg border border-slate-800 space-y-3">
         <div class="text-[11px] font-bold text-cyan-400 border-b border-slate-800 pb-1 flex justify-between items-center">
-          <span>ÁLLOMÁSOZÓ FLOTTA</span>
-          <span id="drawer-fleet-count" class="text-slate-400 text-[10px]">14 Hajó</span>
+          <span>ÁLLOMÁSOZÓ VÉDŐFLOTTA</span>
+          <span id="drawer-fleet-count" class="text-slate-300 text-[10px] font-bold">0 Hajó</span>
         </div>
         <div id="drawer-fleet-composition" class="space-y-1 text-slate-300">
-          <div>• Felderítő (⌖): <span id="dfc-scout" class="text-cyan-300 font-bold">0</span> db</div>
-          <div>• Korvett (▲): <span id="dfc-corvette" class="text-cyan-300 font-bold">12</span> db</div>
-          <div>• Kolóniahajó (⚲): <span id="dfc-colony_ship" class="text-cyan-300 font-bold">0</span> db</div>
-          <div>• Romboló (◆): <span id="dfc-destroyer" class="text-cyan-300 font-bold">2</span> db</div>
-          <div>• Csatahajó (⬟): <span id="dfc-battleship" class="text-cyan-300 font-bold">0</span> db</div>
+          <!-- Dinamikusan renderelve -->
         </div>
 
         <div id="drawer-own-actions" class="grid grid-cols-2 gap-2 pt-1">
-          <button onclick="openShipyardModal()" class="w-full bg-cyan-700 hover:bg-cyan-600 text-white py-1.5 rounded font-bold transition-all text-center">
+          <button id="btn-drawer-shipyard" onclick="openShipyardModal()" class="w-full bg-cyan-700 hover:bg-cyan-600 text-white py-1.5 rounded font-bold transition-all text-center">
             + HAJÓ ÉPÍTÉSE
           </button>
           <button onclick="openDispatchModal()" class="w-full bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-cyan-800 py-1.5 rounded font-bold transition-all text-center">
             FLOTTA INDÍTÁSA
           </button>
         </div>
-        <div id="drawer-loot-container" class="my-2.5"></div>
-          <div id="drawer-target-actions" class="hidden pt-1">
+        <div id="drawer-target-actions" class="hidden pt-1 space-y-1.5">
+          <button onclick="sendQuickScoutProbe(STATE.selectedPlanetId)" class="w-full bg-cyan-900/90 hover:bg-cyan-800 active:scale-95 text-cyan-200 border border-cyan-500 py-1.5 rounded font-bold transition-all text-center flex items-center justify-center gap-1.5">
+            <span>🛰️</span>
+            <span>FELDERÍTŐ SZONDA KÜLDÉSE (TÍPUS & MÉRET FELFEDÉSE)</span>
+          </button>
           <button onclick="targetPlanetForAttack(STATE.selectedPlanetId)" class="w-full bg-red-700 hover:bg-red-600 active:scale-95 text-white py-2 rounded font-bold transition-all text-center flex items-center justify-center gap-1.5 shadow-lg shadow-red-950">
             <span>⚔️</span>
-            <span>TÁMADÓ / EXPEDÍCIÓS FLOTTA INDÍTÁSA ERRE A BOLYGÓRA</span>
+            <span>FLOTTA / KOLÓNIAHAJÓ INDÍTÁSA ERRE A BOLYGÓRA</span>
           </button>
         </div>
       </div>
@@ -1517,21 +1535,25 @@
     window.addEventListener('resize', resizeCanvas);
 
     function resetMapView() {
-      // Dinamikus illesztés - mobilon (360-430px) is teljes szélességében elfér a szektor
-      const contentW = 820;
-      const contentH = 580;
+      // Dinamikus illesztés a 10 koncentrikus körgyűrűhöz (középpont: X=500, Y=500)
+      const contentW = 1480;
+      const contentH = 1480;
       const scaleX = canvas.width / contentW;
       const scaleY = canvas.height / contentH;
-      // Engedélyezzük a 0.35-ig terjedő zoomot, így álló mobilon sem vágódik le semmi
-      const fitZoom = Math.min(1.05, Math.max(0.35, Math.min(scaleX, scaleY)));
+      const fitZoom = Math.min(0.95, Math.max(0.24, Math.min(scaleX, scaleY) * 1.15));
       STATE.camera.zoom = fitZoom;
-      STATE.camera.x = (canvas.width - contentW * fitZoom) / 2;
-      STATE.camera.y = (canvas.height - contentH * fitZoom) / 2;
+      STATE.camera.x = canvas.width / 2 - 500 * fitZoom;
+      STATE.camera.y = canvas.height / 2 - 500 * fitZoom;
       drawGalaxy();
     }
 
     function zoomMap(factor) {
-      const newZoom = Math.min(1.5, Math.max(0.35, STATE.camera.zoom * factor));
+      const oldZoom = STATE.camera.zoom || 1.0;
+      const newZoom = Math.min(1.6, Math.max(0.22, oldZoom * factor));
+      const cx = canvas.width / 2;
+      const cy = canvas.height / 2;
+      STATE.camera.x = cx - ((cx - STATE.camera.x) / oldZoom) * newZoom;
+      STATE.camera.y = cy - ((cy - STATE.camera.y) / oldZoom) * newZoom;
       STATE.camera.zoom = newZoom;
       drawGalaxy();
     }
@@ -1562,6 +1584,7 @@
 
     canvas.addEventListener('wheel', e => {
       e.preventDefault();
+      zoomMap(e.deltaY < 0 ? 1.12 : 0.89);
     }, { passive: false });
 
     // Mobil Érintésvezérlés (Touch Gestures: 1 ujjas pan + precíz tap)
@@ -1610,17 +1633,10 @@
       const clickX = (clientX - rect.left - STATE.camera.x) / STATE.camera.zoom;
       const clickY = (clientY - rect.top - STATE.camera.y) / STATE.camera.zoom;
 
-      const myId = STATE.currentPlayerId || 'player';
-      const visiblePlanets = STATE.planets.filter(p => {
-        if (p.bot_type === 'boss') return false;
-        if (p.is_bot) return true;
-        if (p.owner === myId || p.owner_id === myId) return true;
-        if (p.owner === 'neutral' || p.owner_id === 'neutral' || !p.owner_id) return true;
-        return false;
-      });
+      const visiblePlanets = STATE.planets.filter(p => p.bot_type !== 'boss');
 
       // Érintésnél megnövelt tolerancia (legalább 26 world egység vagy 24 képernyő pixel)
-      const hitRadius = isTouch ? Math.max(26, 24 / (STATE.camera.zoom || 1.0)) : 18;
+      const hitRadius = isTouch ? Math.max(26, 24 / (STATE.camera.zoom || 1.0)) : 20;
 
       let closestPlanet = null;
       let minDistance = hitRadius;
@@ -1648,7 +1664,7 @@
       handleGalaxyClick(e.clientX, e.clientY, false);
     });
 
-    // Térkép Render ciklus
+    // Térkép Render ciklus (10 koncentrikus körgyűrű + 4 bolygótípus + titkosság)
     function drawGalaxy() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -1656,35 +1672,65 @@
       ctx.translate(STATE.camera.x, STATE.camera.y);
       ctx.scale(STATE.camera.zoom, STATE.camera.zoom);
 
+      const centerX = 500;
+      const centerY = 500;
+
       // Halvány háttér koordinátarács
-      ctx.strokeStyle = '#0d1829';
+      ctx.strokeStyle = '#0a1322';
       ctx.lineWidth = 1;
-      const gridSize = 50;
-      for (let x = -500; x <= 1000; x += gridSize) {
-        ctx.beginPath(); ctx.moveTo(x, -500); ctx.lineTo(x, 1000); ctx.stroke();
+      const gridSize = 60;
+      for (let x = -300; x <= 1300; x += gridSize) {
+        ctx.beginPath(); ctx.moveTo(x, -300); ctx.lineTo(x, 1300); ctx.stroke();
       }
-      for (let y = -500; y <= 1000; y += gridSize) {
-        ctx.beginPath(); ctx.moveTo(-500, y); ctx.lineTo(1000, y); ctx.stroke();
+      for (let y = -300; y <= 1300; y += gridSize) {
+        ctx.beginPath(); ctx.moveTo(-300, y); ctx.lineTo(1300, y); ctx.stroke();
       }
+
+      // 10 Koncentrikus Körgyűrű kirajzolása (minden gyűrű +1 kör menetidő)
+      for (let r = 1; r <= 10; r++) {
+        const ringRad = 75 + r * 65;
+        ctx.save();
+        if (r <= 3) {
+          ctx.strokeStyle = 'rgba(56, 189, 248, 0.22)';
+        } else if (r <= 6) {
+          ctx.strokeStyle = 'rgba(245, 158, 11, 0.22)';
+        } else {
+          ctx.strokeStyle = 'rgba(192, 38, 211, 0.24)';
+        }
+        ctx.lineWidth = 1.2;
+        ctx.setLineDash([4, 6]);
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, ringRad, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // Gyűrű felirat felül
+        ctx.fillStyle = r <= 3 ? 'rgba(125, 211, 252, 0.55)' : (r <= 6 ? 'rgba(252, 211, 77, 0.55)' : 'rgba(232, 121, 249, 0.6)');
+        ctx.font = 'bold 8px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText(`${r}. GYŰRŰ (${r} kör)`, centerX, centerY - ringRad - 3);
+        ctx.restore();
+      }
+
+      const myId = STATE.currentPlayerId || 'player';
 
       // Mozgó flották hipertér-vektorai és valós idejű repülési animációja
       const movingList = STATE.movingFleets || [];
       movingList.forEach(fleet => {
         const pOrig = STATE.planets.find(p => p.id === fleet.origin_planet_id);
         const pDest = STATE.planets.find(p => p.id === fleet.target_planet_id);
-        const startX = pOrig ? pOrig.x : (fleet.current_x || 0);
-        const startY = pOrig ? pOrig.y : (fleet.current_y || 0);
-        const endX = pDest ? pDest.x : (fleet.dest_x || startX);
-        const endY = pDest ? pDest.y : (fleet.dest_y || startY);
+        const startX = pOrig ? pOrig.x : (fleet.current_x || fleet.startX || 500);
+        const startY = pOrig ? pOrig.y : (fleet.current_y || fleet.startY || 500);
+        const endX = pDest ? pDest.x : (fleet.dest_x || fleet.targetX || startX);
+        const endY = pDest ? pDest.y : (fleet.dest_y || fleet.targetY || startY);
 
         const isMine = (fleet.owner_id === myId || fleet.owner === myId);
-        const totalDuration = Math.max(1, (fleet.arrival_tick || 5) - (fleet.departure_tick || 0));
-        const elapsed = (STATE.tick || 1) - (fleet.departure_tick || 0);
-        const progress = Math.min(1.0, Math.max(0.0, elapsed / totalDuration));
+        const totalDuration = Math.max(1, fleet.totalHours || ((fleet.arrival_tick || 5) - (fleet.departure_tick || 0)));
+        const remainingTicks = Math.max(1, fleet.remainingHours !== undefined ? fleet.remainingHours : ((fleet.arrival_tick || 1) - (STATE.tick || 1)));
+        const progress = Math.min(1.0, Math.max(0.0, 1 - (remainingTicks / totalDuration)));
 
         const curX = startX + (endX - startX) * progress;
         const curY = startY + (endY - startY) * progress;
-        const remainingTicks = Math.max(1, (fleet.arrival_tick || 1) - (STATE.tick || 1));
 
         // 1. Hipertér-folyosó szaggatott vonal
         ctx.strokeStyle = isMine ? 'rgba(56, 189, 248, 0.65)' : 'rgba(239, 68, 68, 0.75)';
@@ -1702,7 +1748,6 @@
         ctx.translate(curX, curY);
         ctx.rotate(angle);
         
-        // Fénycsík / hajtómű láng
         ctx.fillStyle = isMine ? 'rgba(56, 189, 248, 0.8)' : 'rgba(239, 68, 68, 0.9)';
         ctx.beginPath();
         ctx.moveTo(-10, 0);
@@ -1711,7 +1756,6 @@
         ctx.closePath();
         ctx.fill();
 
-        // Hajótest (nyíl alakú vadászgép / flotta jelkép)
         ctx.fillStyle = isMine ? '#38bdf8' : '#ef4444';
         ctx.strokeStyle = '#ffffff';
         ctx.lineWidth = 1;
@@ -1725,7 +1769,6 @@
         ctx.stroke();
         ctx.restore();
 
-        // 3. Információs címke a flotta felett
         const shipCounts = fleet.ships || {};
         const totalCount = typeof shipCounts === 'object' 
           ? Object.values(shipCounts).reduce((a, b) => a + (Number(b) || 0), 0)
@@ -1737,110 +1780,147 @@
         ctx.fillText(`▲ ${totalCount} hajó • ⏱️ ${remainingTicks} kör`, curX, curY - 10);
       });
 
-      // Bolygók kirajzolása (BOSSOK KIZÁRVA, CSAK SAJÁT, SEMLEGES ÉS A 30 KIS BOT VILÁG)
-      const myId = STATE.currentPlayerId || 'player';
-      const mapPlanets = STATE.planets.filter(p => {
-        if (p.bot_type === 'boss') return false; // BOSSOK NEM JELENNEK MEG A TÉRKÉPEN
-        if (p.is_bot) return true;
-        if (p.owner === myId || p.owner_id === myId) return true;
-        if (p.owner === 'neutral' || p.owner_id === 'neutral' || !p.owner_id) return true;
-        return false;
-      });
+      // Bolygók kirajzolása (Bossok külön fülön vannak)
+      const mapPlanets = STATE.planets.filter(p => p.bot_type !== 'boss');
 
       mapPlanets.forEach(p => {
         const isMine = (p.owner === myId || p.owner_id === myId);
+        const isEnemyPlayer = (p.owner_id && p.owner_id !== 'neutral' && p.owner_id !== myId && !p.is_bot);
+        const isTrade = (p.is_trade_station || p.id === 'station_trade');
+        const isScouted = Boolean(p.scouted_by_player || isMine || isTrade);
         const isLooted = (p.status === 'looted');
-        
-        // Kompakt, egységes, NEM növekvő és NEM pulzáló méret:
-        const radius = p.is_bot ? 9 : (isMine ? 12 : 10);
+        const pType = p.planet_type || 'colony';
 
-        // Bolygó színe a státusz és Tier alapján
-        let fillColor = '#1e293b';
-        let strokeColor = '#475569';
-        if (isMine) {
-          fillColor = '#0284c7';
+        let radius = 10;
+        if (isMine && p.is_homeworld) radius = 13;
+        else if (isTrade) radius = 12;
+        else if (isScouted && pType === 'colony') {
+          radius = p.colony_size === 'large' ? 12 : (p.colony_size === 'medium' ? 10.5 : 9);
+        } else if (isScouted && pType === 'artifact') {
+          radius = 11;
+        }
+
+        let fillColor = '#1e1b4b';
+        let strokeColor = '#6366f1';
+        let iconChar = '❓';
+        let titleColor = '#a5b4fc';
+        let subLabel = `[G${p.ring_index || 0} • TITKOS]`;
+        let subColor = '#818cf8';
+
+        if (isTrade) {
+          fillColor = '#78350f';
+          strokeColor = '#f59e0b';
+          iconChar = '🏪';
+          titleColor = '#fcd34d';
+          subLabel = '[NEXUS TŐZSDE]';
+          subColor = '#fbbf24';
+        } else if (isMine) {
+          fillColor = p.is_homeworld ? '#0369a1' : '#0284c7';
           strokeColor = '#38bdf8';
-        } else if (p.is_bot) {
-          if (isLooted) {
-            fillColor = '#064e3b';
-            strokeColor = '#10b981';
-          } else if (p.difficulty_tier === 3) {
-            fillColor = '#4a044e';
-            strokeColor = '#c026d3';
-          } else if (p.difficulty_tier === 2) {
-            fillColor = '#164e63';
-            strokeColor = '#06b6d4';
+          iconChar = p.is_homeworld ? '🏛️' : (pType === 'artifact' ? '🏺' : (pType === 'technology' ? '⚡' : '🌍'));
+          titleColor = '#38bdf8';
+          if (pType === 'colony') {
+            const sz = p.colony_size === 'large' ? 'NAGY' : (p.colony_size === 'medium' ? 'KÖZ.' : 'KICSI');
+            subLabel = p.is_homeworld ? `[FŐBOLYGÓ • ${p.used_slots || 0}/${p.max_slots || 10}]` : `[${sz} • ${p.used_slots || 0}/${p.max_slots || 10} SLOT]`;
+            subColor = p.has_ship_dock ? '#34d399' : '#fbbf24';
           } else {
-            fillColor = '#78350f';
-            strokeColor = '#f59e0b';
+            subLabel = '[BEVÉVE ✓]';
+            subColor = '#34d399';
+          }
+        } else if (!isScouted) {
+          // Titkos / felderítetlen bolygó
+          fillColor = '#1e1b4b';
+          strokeColor = '#6366f1';
+          iconChar = '❓';
+          titleColor = '#a5b4fc';
+          subLabel = `[TITKOS • ${p.ring_index || 1}. GYŰRŰ]`;
+          subColor = '#818cf8';
+        } else if (pType === 'dead_colony') {
+          fillColor = '#1e293b';
+          strokeColor = '#64748b';
+          iconChar = '🪨';
+          titleColor = '#94a3b8';
+          subLabel = '[HALOTT KOLÓNIA]';
+          subColor = '#64748b';
+        } else if (pType === 'artifact') {
+          fillColor = isLooted ? '#064e3b' : '#4a044e';
+          strokeColor = isLooted ? '#10b981' : '#e879f9';
+          iconChar = isLooted ? '✓' : '🏺';
+          titleColor = isLooted ? '#6ee7b7' : '#f0abfc';
+          const artTierLabel = p.artifact_tier === 'large' ? 'NAGY ARTI' : (p.artifact_tier === 'medium' ? 'KÖZEPES ARTI' : 'KICSI ARTI');
+          subLabel = isLooted ? '[EREKLYE MEGSZEREZVE]' : `[${artTierLabel}]`;
+          subColor = isLooted ? '#10b981' : '#e879f9';
+        } else if (pType === 'technology') {
+          fillColor = isLooted ? '#064e3b' : '#164e63';
+          strokeColor = isLooted ? '#10b981' : '#22d3ee';
+          iconChar = isLooted ? '✓' : '⚡';
+          titleColor = isLooted ? '#6ee7b7' : '#67e8f9';
+          subLabel = isLooted ? '[BÓNUSZ AKTIVÁLVA]' : '[TECH BOLYGÓ]';
+          subColor = isLooted ? '#10b981' : '#22d3ee';
+        } else if (pType === 'colony') {
+          if (isEnemyPlayer) {
+            fillColor = '#7f1d1d';
+            strokeColor = '#ef4444';
+            iconChar = '🔴';
+            titleColor = '#fca5a5';
+            subLabel = '[RIVÁLIS KOLÓNIA]';
+            subColor = '#f87171';
+          } else {
+            fillColor = p.colony_size === 'large' ? '#065f46' : (p.colony_size === 'medium' ? '#0f766e' : '#1e3a8a');
+            strokeColor = p.colony_size === 'large' ? '#34d399' : (p.colony_size === 'medium' ? '#2dd4bf' : '#60a5fa');
+            iconChar = '🌍';
+            titleColor = p.colony_size === 'large' ? '#6ee7b7' : '#93c5fd';
+            const szName = p.colony_size === 'large' ? 'NAGY (+6)' : (p.colony_size === 'medium' ? 'KÖZEPES (+5)' : 'KICSI (+4)');
+            subLabel = `[KOLÓNIA: ${szName}]`;
+            subColor = strokeColor;
           }
         }
 
-        // Kiválasztott fényudvar (nem növekvő, diszkrét kör)
+        // Kiválasztott fényudvar
         if (STATE.selectedPlanetId === p.id) {
           ctx.strokeStyle = '#22d3ee';
-          ctx.lineWidth = 2;
+          ctx.lineWidth = 2.2;
           ctx.beginPath();
           ctx.arc(p.x, p.y, radius + 5, 0, Math.PI * 2);
           ctx.stroke();
         }
 
-        // Planetáris pajzs gyűrű (ha van pajzs)
-        if (p.shieldHp > 0 && !isLooted) {
-          ctx.strokeStyle = 'rgba(56, 189, 248, 0.45)';
-          ctx.lineWidth = 1.5;
-          ctx.setLineDash([2, 3]);
-          ctx.beginPath();
-          ctx.arc(p.x, p.y, radius + 3, 0, Math.PI * 2);
-          ctx.stroke();
-          ctx.setLineDash([]);
-        }
-
-        // Bolygó test (Statikus kompakt kör)
+        // Bolygó test
         ctx.fillStyle = fillColor;
         ctx.strokeStyle = strokeColor;
-        ctx.lineWidth = 1.5;
+        ctx.lineWidth = 1.6;
         ctx.beginPath();
         ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
         ctx.fill();
         ctx.stroke();
 
-        // Planetáris szimbólum (🪐 szimbólum a bot bolygóknál a felkiáltójel helyett!)
-        if (p.is_bot) {
-          ctx.font = '10px monospace';
-          ctx.textAlign = 'center';
-          ctx.fillText(isLooted ? '✓' : '🪐', p.x, p.y + 3.5);
-        } else if (isMine) {
-          ctx.font = '10px monospace';
-          ctx.textAlign = 'center';
-          ctx.fillText('🏛️', p.x, p.y + 3.5);
-        } else {
-          ctx.font = '9px monospace';
-          ctx.textAlign = 'center';
-          ctx.fillText('⚪', p.x, p.y + 3);
-        }
+        // Szimbólum
+        ctx.font = '10px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#ffffff';
+        ctx.fillText(iconChar, p.x, p.y + 3.5);
 
-        // Bolygó neve (Kompakt, tiszta tipográfia)
-        ctx.fillStyle = isMine ? '#38bdf8' : (p.is_bot ? (isLooted ? '#6ee7b7' : (p.difficulty_tier === 3 ? '#e879f9' : (p.difficulty_tier === 2 ? '#67e8f9' : '#fcd34d'))) : '#94a3b8');
+        // Bolygó neve (titkos bolygónál "Ismeretlen Bolygó")
+        ctx.fillStyle = titleColor;
         ctx.font = 'bold 9px monospace';
         ctx.textAlign = 'center';
-        const displayName = p.name.split(' // ')[0];
+        const displayName = !isScouted ? `Ismeretlen #${p.id.replace('ring_', '')}` : p.name.split(' // ')[0];
         ctx.fillText(displayName, p.x, p.y + radius + 11);
 
-        // Kiegészítő státusz felirat
-        if (p.is_bot) {
-          ctx.fillStyle = isLooted ? '#10b981' : (p.difficulty_tier === 3 ? '#c026d3' : (p.difficulty_tier === 2 ? '#06b6d4' : '#f59e0b'));
-          ctx.font = '8px monospace';
-          ctx.fillText(isLooted ? '[KIFOSZTVA]' : `[T${p.difficulty_tier || 1}]`, p.x, p.y + radius + 20);
-        }
+        // Másodlagos címke
+        ctx.fillStyle = subColor;
+        ctx.font = '8px monospace';
+        ctx.fillText(subLabel, p.x, p.y + radius + 20);
 
-        // Állomásozó védelmi flotta
-        const sf = p.stationedFleet || {};
-        const totalShips = ALL_SHIPS.reduce((sum, st) => sum + (sf[st] || 0), 0);
-        if (totalShips > 0 && !isLooted) {
-          ctx.fillStyle = isMine ? '#38bdf8' : '#fbbf24';
-          ctx.font = '9px monospace';
-          ctx.fillText(`▲ ${totalShips}`, p.x, p.y - radius - 4);
+        // Állomásozó védelmi flotta (csak ha felderített vagy saját)
+        if (isScouted) {
+          const sf = p.stationedFleet || {};
+          const totalShips = ALL_SHIPS.reduce((sum, st) => sum + (sf[st] || 0), 0);
+          if (totalShips > 0 && !isLooted) {
+            ctx.fillStyle = isMine ? '#38bdf8' : '#fbbf24';
+            ctx.font = '9px monospace';
+            ctx.fillText(`▲ ${totalShips}`, p.x, p.y - radius - 4);
+          }
         }
       });
 
@@ -1879,21 +1959,26 @@
         }
       }
 
-      // Óránkénti kalkuláció
+      const myId = STATE.currentPlayerId || 'player';
       let netMetal = 0;
       let netEnergy = 0;
+      let netIsotope = 0;
       let netData = 0;
 
-      STATE.planets.filter(p => p.owner === 'player').forEach(p => {
-        let m = p.baseMetal;
-        if (STATE.unlockedTechs.has('deep_mining')) m *= 1.25;
+      STATE.planets.filter(p => (p.owner === myId || p.owner_id === myId) && (p.planet_type || 'colony') === 'colony').forEach(p => {
+        let m = p.prod_metal !== undefined ? p.prod_metal : (p.baseMetal || 35);
+        if (STATE.unlockedTechs.has('deep_core_mining') || STATE.unlockedTechs.has('deep_mining')) m *= 1.25;
+        let e = p.prod_energy !== undefined ? p.prod_energy : (p.baseEnergy || 20);
+        if (STATE.unlockedTechs.has('dark_matter_reactor')) e *= 1.30;
         netMetal += m;
-        netEnergy += p.baseEnergy;
+        netEnergy += e;
+        netIsotope += (p.prod_isotope !== undefined ? p.prod_isotope : 2);
+        netData += (p.prod_data !== undefined ? p.prod_data : 4);
       });
 
       // Hajók Upkeep levonása mind a 10 hajóosztályra
       let totalUpkeep = 0;
-      STATE.planets.filter(p => p.owner === 'player').forEach(p => {
+      STATE.planets.filter(p => p.owner === myId || p.owner_id === myId).forEach(p => {
         for (const st of ALL_SHIPS) {
           const spec = SHIP_SPECS[st];
           if (spec && p.stationedFleet && p.stationedFleet[st]) {
@@ -1901,7 +1986,7 @@
           }
         }
       });
-      STATE.movingFleets.filter(f => f.owner === 'player').forEach(f => {
+      STATE.movingFleets.filter(f => f.owner === myId || f.owner_id === myId).forEach(f => {
         for (const st of ALL_SHIPS) {
           const spec = SHIP_SPECS[st];
           if (spec && f.ships && f.ships[st]) {
@@ -1910,13 +1995,13 @@
         }
       });
       netEnergy -= totalUpkeep;
-      netData += 10;
 
-      document.getElementById('rate-metal').innerText = `(+${Math.round(netMetal)}/h)`;
-      document.getElementById('rate-energy').innerText = `(${netEnergy >= 0 ? '+' : ''}${Math.round(netEnergy)}/h)`;
-      document.getElementById('rate-data').innerText = `(+${Math.round(netData)}/h)`;
+      document.getElementById('rate-metal').innerText = `(+${Math.round(netMetal)}/kör)`;
+      document.getElementById('rate-energy').innerText = `(${netEnergy >= 0 ? '+' : ''}${Math.round(netEnergy)}/kör)`;
+      const rateIsoEl = document.getElementById('rate-isotope');
+      if (rateIsoEl) rateIsoEl.innerText = `(+${Math.round(Math.max(2, netIsotope))}/kör)`;
+      document.getElementById('rate-data').innerText = `(+${Math.round(Math.max(4, netData))}/kör)`;
 
-      // Negatív energia riadó
       const alertBanner = document.getElementById('alert-banner');
       if (STATE.resources.energy < 0) {
         alertBanner.classList.remove('hidden');
@@ -1927,96 +2012,262 @@
       }
     }
 
-    // --- BOLYGÓ ADATLAP RENDERELÉSE ---
+    const DEFAULT_BUILDING_SPECS = {
+      terraformer: { type: 'terraformer', name: 'Terraformáló Állomás', category: 'terraform', tier: 1, base_slots: 0, max_level: 5, base_cost: { metal: 180, energy: 90, isotope: 15, data: 0 }, icon: '🌍', desc: 'Fejlesztésenként növeli a bolygó szabad slotjait (Kicsi: +4, Közepes: +5, Nagy: +6 slot / szint, max Lv.5).' },
+      ship_dock: { type: 'ship_dock', name: 'Hajódokk', category: 'dock', tier: 1, base_slots: 1, max_level: 5, base_cost: { metal: 150, energy: 75, isotope: 10, data: 0 }, icon: '⚓', desc: 'Lehetővé teszi állomásozó védőflotta fogadását (nem fordul vissza haza) és hajók gyártását.' },
+      surface_mine: { type: 'surface_mine', name: 'Felszíni bányatelep', category: 'metal', resource: 'metal', tier: 1, base_slots: 1, max_level: 10, base_prod: 25, prod_per_level: 25, base_cost: { metal: 75, energy: 25, isotope: 0, data: 0 }, icon: '⛏️', desc: 'Alap fémkitermelő telep (1 slot). Fejlesztése +1 slotot foglal (+25 Fém/kör szintenként).' },
+      deep_core_drill: { type: 'deep_core_drill', name: 'Mélységi Mag-fúró', category: 'metal', resource: 'metal', tier: 2, base_slots: 2, max_level: 10, base_prod: 110, prod_per_level: 110, base_cost: { metal: 300, energy: 130, isotope: 25, data: 0 }, icon: '🌋', desc: 'Nagy kapacitású fémkitermelő (2 alap slot, +110 Fém/kör szintenként). Nagy Fém-bónuszos bolygón azonnal és -35% áron építhető!' },
+      solar_farm: { type: 'solar_farm', name: 'Szolár-farm', category: 'energy', resource: 'energy', tier: 1, base_slots: 1, max_level: 10, base_prod: 20, prod_per_level: 20, base_cost: { metal: 65, energy: 20, isotope: 0, data: 0 }, icon: '☀️', desc: 'Alap energiatermelő állomás (1 slot). Fejlesztése +1 slotot foglal (+20 Energia/kör szintenként).' },
+      fusion_plant: { type: 'fusion_plant', name: 'Fúziós Erőmű', category: 'energy', resource: 'energy', tier: 2, base_slots: 2, max_level: 10, base_prod: 90, prod_per_level: 90, base_cost: { metal: 270, energy: 110, isotope: 25, data: 0 }, icon: '⚛️', desc: 'Nagy teljesítményű energiatermelő (2 alap slot, +90 Energia/kör szintenként). Nagy Energia-bónuszos bolygón azonnal és -35% áron építhető!' },
+      isotope_filter: { type: 'isotope_filter', name: 'Izotóp szűrő állomás', category: 'isotope', resource: 'isotope', tier: 1, base_slots: 1, max_level: 10, base_prod: 8, prod_per_level: 8, base_cost: { metal: 95, energy: 45, isotope: 0, data: 0 }, icon: '🧪', desc: 'Alap izotóp-kivonó állomás (1 slot). Fejlesztése +1 slotot foglal (+8 Izotóp/kör szintenként).' },
+      enrichment_complex: { type: 'enrichment_complex', name: 'Dúsító Komplexum', category: 'isotope', resource: 'isotope', tier: 2, base_slots: 2, max_level: 10, base_prod: 36, prod_per_level: 36, base_cost: { metal: 340, energy: 160, isotope: 35, data: 0 }, icon: '🔮', desc: 'Nagy hozamú izotóp dúsító (2 alap slot, +36 Izotóp/kör szintenként). Nagy Izotóp-bónuszos bolygón azonnal és -35% áron építhető!' },
+      relay_station: { type: 'relay_station', name: 'Reléállomás', category: 'data', resource: 'data', tier: 1, base_slots: 1, max_level: 10, base_prod: 10, prod_per_level: 10, base_cost: { metal: 85, energy: 40, isotope: 0, data: 0 }, icon: '📡', desc: 'Alap kvantum-adat reléállomás (1 slot). Fejlesztése +1 slotot foglal (+10 Adat/kör szintenként).' },
+      quantum_server_park: { type: 'quantum_server_park', name: 'Kvantum Szerverpark', category: 'data', resource: 'data', tier: 2, base_slots: 2, max_level: 10, base_prod: 45, prod_per_level: 45, base_cost: { metal: 320, energy: 150, isotope: 30, data: 0 }, icon: '🖥️', desc: 'Nagyteljesítményű adatpark (2 alap slot, +45 Adat/kör szintenként). Nagy Adat-bónuszos bolygón azonnal és -35% áron építhető!' }
+    };
+
+    function _calcClientBuildingCost(spec, targetLevel, planet) {
+      let mult = targetLevel;
+      if ((spec.type || spec.id) === 'terraformer') {
+        const tfMults = [1, 1.8, 2.9, 4.4, 6.5];
+        mult = tfMults[Math.min(4, Math.max(0, targetLevel - 1))] || targetLevel;
+      }
+      const isBonus = Boolean(planet && planet.colony_size === 'large' && spec.tier === 2 && spec.resource && planet.bonus_resource === spec.resource);
+      const discount = isBonus ? 0.65 : 1.0;
+      const baseM = spec.base_cost ? (spec.base_cost.metal || 0) : (spec.baseCostMetal || 0);
+      const baseE = spec.base_cost ? (spec.base_cost.energy || 0) : (spec.baseCostEnergy || 0);
+      const baseI = spec.base_cost ? (spec.base_cost.isotope || 0) : (spec.baseCostIsotope || 0);
+      const baseD = spec.base_cost ? (spec.base_cost.data || 0) : 0;
+      return {
+        metal: Math.round(baseM * mult * discount),
+        energy: Math.round(baseE * mult * discount),
+        isotope: Math.round(baseI * mult * discount),
+        data: Math.round(baseD * mult * discount),
+        isBonusDiscount: isBonus
+      };
+    }
+
+    // --- BOLYGÓ ADATLAP RENDERELÉSE (4 BOLYGÓTÍPUS, SLOTOK, 10 ÉPÜLET, TITKOSSÁG) ---
     function openPlanetDrawer(planetId) {
       STATE.selectedPlanetId = planetId;
       const p = STATE.planets.find(x => x.id === planetId);
       if (!p) return;
 
-      document.getElementById('drawer-planet-name').innerText = p.name;
-      document.getElementById('drawer-coords').innerText = `[X: ${p.x}, Y: ${p.y}]`;
       const myId = STATE.currentPlayerId || 'player';
       const isMine = (p.owner === myId) || (p.owner_id === myId);
-      const isOpponent = (p.owner && p.owner !== 'neutral' && p.owner !== myId) || (p.owner_id && p.owner_id !== 'neutral' && p.owner_id !== myId);
+      const isTrade = (p.is_trade_station || p.id === 'station_trade');
+      const isScouted = Boolean(p.scouted_by_player || isMine || isTrade);
+      const isOpponent = (p.owner_id && p.owner_id !== 'neutral' && p.owner_id !== myId && !p.is_bot);
+      const pType = p.planet_type || 'colony';
+      const ringIdx = p.ring_index !== undefined ? p.ring_index : 1;
 
-      let ownerText = isMine ? 'Saját Birodalmad Bázisa' : (isOpponent ? 'Ellenséges Frakció Bázisa' : 'Semleges Világ');
-      let ownerClass = isMine ? 'text-cyan-400 font-bold' : (isOpponent ? 'text-red-400 font-bold' : 'text-slate-400 font-bold');
-      if (p.bot_type === 'boss') {
-        ownerText = '☠️ PREKURZOR FŐ BOSS CITADELLA (Tier ' + (p.difficulty_tier || 3) + ')';
-        ownerClass = 'text-red-400 font-bold animate-pulse';
-      } else if (p.is_bot) {
-        ownerText = '⚠️ ELLENSÉGES BOT ERŐD (Tier ' + (p.difficulty_tier || 1) + ')';
+      const ringBadge = document.getElementById('drawer-ring-badge');
+      if (ringBadge) {
+        ringBadge.innerText = ringIdx === 0 ? 'BELSŐ MAG (0. GYŰRŰ)' : `${ringIdx}. GYŰRŰ (${ringIdx} kör út)`;
+      }
+
+      document.getElementById('drawer-planet-name').innerText = !isScouted ? `🔒 Ismeretlen Bolygó (#${p.id.replace('ring_', '')})` : p.name;
+      document.getElementById('drawer-coords').innerText = `[X: ${p.x}, Y: ${p.y}] • ${ringIdx}. Gyűrű`;
+
+      const colLimits = STATE.colonyLimits || { count: STATE.planets.filter(x => (x.owner === myId || x.owner_id === myId) && !x.is_homeworld && (x.planet_type || 'colony') === 'colony').length, max: 5 };
+      const colLimitEl = document.getElementById('drawer-colony-limit');
+      if (colLimitEl) {
+        colLimitEl.innerText = `${colLimits.count} / ${colLimits.max} kolónia (+1 Főbolygó)`;
+      }
+
+      let ownerText = isMine ? (p.is_homeworld ? 'Saját Főbolygó (Birodalmi Központ)' : 'Saját Kolónia') : (isOpponent ? 'Rivális Birodalom' : 'Semleges / Felfedezetlen');
+      let ownerClass = isMine ? 'text-cyan-400 font-bold' : (isOpponent ? 'text-red-400 font-bold' : 'text-slate-300 font-bold');
+      if (isScouted && p.is_bot && p.status !== 'looted') {
+        ownerText = '⚠️ Védett Prekurzor Szektor (Tier ' + (p.difficulty_tier || 1) + ')';
         ownerClass = 'text-amber-400 font-bold';
       }
       document.getElementById('drawer-owner').innerText = ownerText;
       document.getElementById('drawer-owner').className = ownerClass;
 
+      const typeEl = document.getElementById('drawer-planet-type');
+      const bonusRow = document.getElementById('drawer-bonus-row');
+      const bonusResEl = document.getElementById('drawer-bonus-resource');
+      const prodCard = document.getElementById('drawer-production-card');
+      const structSec = document.getElementById('drawer-structures-section');
+      const fleetSec = document.getElementById('drawer-fleet-section');
       const lootEl = document.getElementById('drawer-loot-container');
-      if (lootEl) {
-        if (p.is_bot) {
-          if (p.scouted_by_player && !p.loot_revealed) {
-            let scoutedLootText = '📦 Nyersanyag Siló (+Fém, +Energia, +Izotóp)';
-            if (p.loot_type === 'artifact') scoutedLootText = '🏺 Ősi Prekurzor Ereklye (Kulcs a Bossokhoz!)';
-            else if (p.loot_type === 'glory') scoutedLootText = '🏆 Kozmikus Dicsőség Lelőhely';
-            lootEl.innerHTML = `
-              <div class="bg-cyan-950/60 border border-cyan-400 p-2.5 rounded-lg text-cyan-200">
-                <div class="flex items-center gap-1.5 font-bold text-cyan-300 text-xs">
-                  <span>🕵️</span>
-                  <span>TACHION SZONDÁVAL FELDERÍTVE!</span>
-                  <span class="text-[9px] bg-cyan-900 px-1 py-0.2 rounded border border-cyan-700 font-bold">KÉMKEDÉS SIKERES</span>
+
+      const resNames = { metal: '⛏️ Fém (+25% hozam & olcsóbb Mélységi Mag-fúró)', energy: '⚡ Energia (+25% hozam & olcsóbb Fúziós Erőmű)', isotope: '🔮 Izotóp (+25% hozam & olcsóbb Dúsító Komplexum)', data: '💾 Adat (+25% hozam & olcsóbb Kvantum Szerverpark)' };
+
+      if (!isScouted) {
+        // TITKOS BOLYGÓ NÉZET
+        if (typeEl) { typeEl.innerText = '❓ Titkos (Szondával felderítendő)'; typeEl.className = 'text-indigo-300 font-bold'; }
+        if (bonusRow) bonusRow.classList.add('hidden');
+        document.getElementById('drawer-slots-info').innerText = '❓ / ❓ slot';
+        if (prodCard) prodCard.classList.add('hidden');
+        if (structSec) structSec.classList.add('hidden');
+        if (fleetSec) fleetSec.classList.remove('hidden');
+        document.getElementById('drawer-fleet-count').innerText = '❓ Ismeretlen';
+        document.getElementById('drawer-fleet-composition').innerHTML = `<div class="text-slate-400 italic text-[11px] py-1">A bolygó védelme és típusa titkos, amíg nem küldesz ide egy Felderítő Szondát!</div>`;
+
+        if (lootEl) {
+          lootEl.innerHTML = `
+            <div class="bg-indigo-950/70 border border-indigo-500 p-3 rounded-lg text-indigo-100 space-y-2 shadow-lg">
+              <div class="flex items-center justify-between">
+                <div class="font-bold text-indigo-300 text-xs flex items-center gap-1.5">
+                  <span>🔒</span>
+                  <span>TITKOS BOLYGÓ (${ringIdx}. KÖRGYŰRŰ)</span>
                 </div>
-                <div class="text-[11px] text-cyan-100 font-mono font-bold mt-1">
-                  Rejtett kincs: ${scoutedLootText}
-                </div>
-                <div class="text-[9px] text-cyan-300 mt-0.5">A védelmi flotta összetétele és a leendő zsákmány pontosan azonosítva!</div>
+                <span class="text-[9px] bg-indigo-900 px-1.5 py-0.5 rounded border border-indigo-600 font-bold">⏱️ ${ringIdx} KÖR ÚT</span>
               </div>
-            `;
-          } else if (!p.loot_revealed) {
-            const reqPwr = (p.difficulty_tier === 3 ? 30 : (p.difficulty_tier === 2 ? 15 : 5));
-            lootEl.innerHTML = `
-              <div class="bg-amber-950/40 border border-amber-500/70 p-2.5 rounded-lg text-amber-200">
-                <div class="flex items-center justify-between">
-                  <div class="flex items-center gap-1.5 font-bold text-amber-300 text-xs">
-                    <span>❓</span>
-                    <span>ISMERETLEN ZSÁKMÁNY</span>
+              <div class="text-[11px] text-slate-200 leading-relaxed">
+                Minden bolygó titkos, amíg fel nem feded egy <b>Felderítő Szondával</b>! A szonda megmutatja:
+                <ul class="list-disc list-inside text-[10px] text-indigo-200 mt-1 space-y-0.5">
+                  <li>Milyen típusú a bolygó (<b>Kolónia</b>, <b>Halott Kolónia</b>, <b>Artifact</b> vagy <b>Technológia</b>)</li>
+                  <li>Kolónia esetén a méretét (<b>Kicsi +4</b>, <b>Közepes +5</b> vagy <b>Nagy +6 slot/fejl.</b>) és a nyersanyag bónuszát!</li>
+                </ul>
+              </div>
+              <button onclick="sendQuickScoutProbe('${p.id}')" class="w-full bg-gradient-to-r from-cyan-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 active:scale-95 text-white font-bold py-2 rounded-lg text-xs flex items-center justify-center gap-1.5 shadow">
+                <span>🛰️</span>
+                <span>1 DB FELDERÍTŐ SZONDA AZONNALI INDÍTÁSA (${ringIdx} KÖR)</span>
+              </button>
+            </div>
+          `;
+        }
+      } else {
+        // FELDERÍTETT VAGY SAJÁT BOLYGÓ
+        if (pType === 'colony') {
+          const szLabel = p.colony_size === 'large' ? 'Nagy (Alap 10 • +6 slot/fejl., max 40)' : (p.colony_size === 'medium' ? 'Közepes (Alap 10 • +5 slot/fejl., max 35)' : 'Kicsi (Alap 10 • +4 slot/fejl., max 30)');
+          if (typeEl) { typeEl.innerText = `🌍 Kolónia — ${szLabel}`; typeEl.className = 'text-emerald-300 font-bold'; }
+          if (p.colony_size === 'large' && p.bonus_resource) {
+            if (bonusRow) bonusRow.classList.remove('hidden');
+            if (bonusResEl) bonusResEl.innerText = resNames[p.bonus_resource] || p.bonus_resource;
+          } else if (bonusRow) {
+            bonusRow.classList.add('hidden');
+          }
+          document.getElementById('drawer-slots-info').innerText = `${p.used_slots || 0} / ${p.max_slots || 10} slot (Szabad: ${p.free_slots !== undefined ? p.free_slots : 10})`;
+          if (prodCard) prodCard.classList.remove('hidden');
+          if (structSec) structSec.classList.remove('hidden');
+          if (fleetSec) fleetSec.classList.remove('hidden');
+
+          // Hajódokk státusz badge
+          const dockBadge = document.getElementById('drawer-dock-badge');
+          const shipBtn = document.getElementById('btn-drawer-shipyard');
+          if (dockBadge) {
+            if (p.has_ship_dock || p.is_homeworld) {
+              dockBadge.className = 'text-[9px] px-1.5 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-700 font-bold';
+              dockBadge.innerText = '⚓ Hajódokk Aktív (Flotta védheti)';
+              if (shipBtn) shipBtn.disabled = false;
+            } else {
+              dockBadge.className = 'text-[9px] px-1.5 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-700 font-bold';
+              dockBadge.innerText = '⚠️ Nincs Hajódokk (Flotta visszafordul!)';
+            }
+          }
+
+          document.getElementById('drawer-prod-metal').innerText = `+${p.prod_metal !== undefined ? p.prod_metal : p.baseMetal}/kör`;
+          document.getElementById('drawer-prod-energy').innerText = `+${p.prod_energy !== undefined ? p.prod_energy : p.baseEnergy}/kör`;
+          const pIsoEl = document.getElementById('drawer-prod-isotope');
+          if (pIsoEl) pIsoEl.innerText = `+${p.prod_isotope !== undefined ? p.prod_isotope : 2}/kör`;
+          const pDataEl = document.getElementById('drawer-prod-data');
+          if (pDataEl) pDataEl.innerText = `+${p.prod_data !== undefined ? p.prod_data : 4}/kör`;
+
+          if (lootEl) {
+            if (!isMine && (!p.owner_id || p.owner_id === 'neutral')) {
+              lootEl.innerHTML = `
+                <div class="bg-emerald-950/50 border border-emerald-500/70 p-2.5 rounded-lg text-emerald-100 space-y-1.5">
+                  <div class="font-bold text-emerald-300 text-xs flex items-center justify-between">
+                    <span>🌍 LAKHATÓ KOLÓNIA BOLYGÓ (${p.colony_size === 'large' ? 'NAGY' : (p.colony_size === 'medium' ? 'KÖZEPES' : 'KICSI')})</span>
+                    <span class="text-[9px] bg-emerald-900 px-1.5 py-0.5 rounded">10 ALAP SLOT</span>
                   </div>
-                  <span class="text-[9px] text-amber-400 font-bold bg-amber-950 px-1.5 py-0.2 rounded border border-amber-800">SZÜKSÉGES ERŐ: ${reqPwr}</span>
+                  <div class="text-[10px] text-slate-200">
+                    Küldj ide egy <b>Kolóniahajót (⚲)</b> a meghódításához! (Birodalmi limit: <b>${colLimits.count}/5 kolónia</b> a Főbolygón kívül).
+                    ${p.colony_size === 'large' && p.bonus_resource ? `<br><b class="text-amber-300">★ Nagy bolygó különlegesség:</b> ${resNames[p.bonus_resource]}!` : ''}
+                  </div>
                 </div>
-                <div class="text-[10px] text-slate-300 mt-1">
-                  A kincs titkos. Küldj <b>Felderítő Szondát</b> a feltáráshoz harc nélkül, vagy győzd le a védelmet!
+              `;
+            } else if (isMine && !p.has_ship_dock && !p.is_homeworld) {
+              lootEl.innerHTML = `
+                <div class="bg-amber-950/60 border border-amber-500/80 p-2.5 rounded-lg text-amber-200 text-[11px]">
+                  <b>⚠️ Figyelem (Hajódokk hiányzik):</b> Ezen a kolónián még nincs megépítve a <b>Hajódokk (⚓)</b>! Amíg nem építesz Hajódokkot, az ide küldött flotta nem tud itt állomásozni, hanem azonnal visszafordul a bázisra.
                 </div>
-                <button onclick="openDispatchModal('${p.id}')" class="mt-2 w-full bg-cyan-950/80 hover:bg-cyan-900 border border-cyan-600 text-cyan-300 text-[10px] font-bold py-1 rounded flex items-center justify-center gap-1">
-                  <span>🛰️</span>
-                  <span>SZONDÁK / FLOTTA INDÍTÁSA</span>
+              `;
+            } else {
+              lootEl.innerHTML = '';
+            }
+          }
+        } else if (pType === 'dead_colony') {
+          if (typeEl) { typeEl.innerText = '🪨 Halott Kolónia Bolygó (Inaktív)'; typeEl.className = 'text-slate-400 font-bold'; }
+          if (bonusRow) bonusRow.classList.add('hidden');
+          document.getElementById('drawer-slots-info').innerText = 'Inaktív (0 slot)';
+          if (prodCard) prodCard.classList.add('hidden');
+          if (structSec) structSec.classList.add('hidden');
+          if (fleetSec) fleetSec.classList.add('hidden');
+          if (lootEl) {
+            lootEl.innerHTML = `
+              <div class="bg-slate-900 border border-slate-600 p-3 rounded-lg text-slate-200 space-y-2">
+                <div class="font-bold text-slate-300 text-xs flex items-center gap-1.5">
+                  <span>🪨</span>
+                  <span>HALOTT KOLÓNIA BOLYGÓ</span>
+                </div>
+                <div class="text-[11px] text-slate-300 leading-relaxed">
+                  A halott kolónia bolygókkal jelenleg <b>nem lehet csinálni semmit</b> (nem kolonizálhatók és nem építhető rájuk).
+                  <br><span class="text-cyan-300">🌱 Feloldási szabály:</span> Automatikusan feloldódnak élő Kolónia bolygóvá, ha növekszik a játékosok száma és kifogyunk a szabad kolónia bolygókból!
+                </div>
+                <button onclick="unlockDeadColony('${p.id}')" class="w-full bg-emerald-900/80 hover:bg-emerald-800 border border-emerald-500 text-emerald-200 font-bold py-1.5 rounded text-[11px] transition-all">
+                  🌱 Halott Kolónia Feloldása Most (Terjeszkedési Vészhelyzet)
                 </button>
               </div>
             `;
-          } else {
-            let lootDesc = '📦 Nyersanyag raktár (+Fém, +Energia, +Izotóp, +Adat)';
-            if (p.loot_type === 'artifact') lootDesc = '🏺 Ritka Prekurzor Ereklye (Chrono-Mag / Rezonátor / Kódex)';
-            else if (p.loot_type === 'glory') lootDesc = '🏆 Kozmikus Dicsőség Pont (+15-25 GP)';
+          }
+        } else if (pType === 'artifact') {
+          const tierMap = {
+            small: 'Kicsi Artifact (Chrono-Mag • 1. Boss belépő • 3 db a galaxisban)',
+            medium: 'Közepes Artifact (Sötét Rezonátor • 2. Boss belépő • 3 db a galaxisban)',
+            large: 'Nagy Artifact (Prekurzor Kódex • 3. Boss belépő • 3 db a galaxisban)'
+          };
+          if (typeEl) { typeEl.innerText = `🏺 Artifact Bolygó (${p.artifact_tier === 'large' ? 'Nagy' : (p.artifact_tier === 'medium' ? 'Közepes' : 'Kicsi')})`; typeEl.className = 'text-fuchsia-300 font-bold'; }
+          if (bonusRow) bonusRow.classList.add('hidden');
+          document.getElementById('drawer-slots-info').innerText = 'Ősi Prekurzor Szektor';
+          if (prodCard) prodCard.classList.add('hidden');
+          if (structSec) structSec.classList.add('hidden');
+          if (fleetSec) fleetSec.classList.remove('hidden');
+          if (lootEl) {
+            const isLooted = p.status === 'looted';
             lootEl.innerHTML = `
-              <div class="bg-emerald-950/50 border border-emerald-500/70 p-2.5 rounded-lg text-emerald-200">
-                <div class="flex items-center gap-1.5 font-bold text-emerald-300 text-xs">
-                  <span>🎁</span>
-                  <span>ZSÁKMÁNY FELTÁRVA & KIFOSZTVA</span>
+              <div class="${isLooted ? 'bg-emerald-950/60 border-emerald-500' : 'bg-fuchsia-950/60 border-fuchsia-500'} border p-3 rounded-lg text-slate-100 space-y-1.5">
+                <div class="font-bold ${isLooted ? 'text-emerald-300' : 'text-fuchsia-300'} text-xs flex items-center justify-between">
+                  <span>🏺 ${isLooted ? 'EREKLYE MEGSZEREZVE!' : 'REJTETT ARTIFACT BOLYGÓ (9 DB EGYIKE)'}</span>
+                  <span class="text-[9px] px-1.5 py-0.5 rounded bg-black/40 border border-fuchsia-700">${(p.artifact_tier || 'small').toUpperCase()}</span>
                 </div>
-                <div class="text-[11px] text-emerald-100 font-mono font-bold mt-1">
-                  ${lootDesc}
+                <div class="text-[11px] font-bold text-amber-300">${tierMap[p.artifact_tier] || 'Ősi Ereklye'}</div>
+                <div class="text-[10px] text-slate-300">
+                  ${isLooted ? 'Ezt az ereklyét már megszerezted! Használd a Flották -> 3 Boss fülön a Boss Citadellák elleni ostromhoz.' : 'Egy nehezebb csata után megszerezhető! Az ereklyékkel lehet belépni a 3 Fő Boss Citadellához.'}
                 </div>
-                <div class="text-[9px] text-emerald-300 mt-0.5">A kincs már jóváírásra került a számládon.</div>
               </div>
             `;
           }
-        } else {
-          lootEl.innerHTML = '';
+        } else if (pType === 'technology') {
+          const bData = p.loot_data || { name: 'Technológiai Bónusz', description: 'Időzített birodalmi bónusz', durationTicks: 12 };
+          if (typeEl) { typeEl.innerText = '⚡ Technológia Bolygó (Időzített Bónusz)'; typeEl.className = 'text-cyan-300 font-bold'; }
+          if (bonusRow) bonusRow.classList.add('hidden');
+          document.getElementById('drawer-slots-info').innerText = 'Kutatási Előőrs';
+          if (prodCard) prodCard.classList.add('hidden');
+          if (structSec) structSec.classList.add('hidden');
+          if (fleetSec) fleetSec.classList.remove('hidden');
+          if (lootEl) {
+            const isLooted = p.status === 'looted';
+            lootEl.innerHTML = `
+              <div class="${isLooted ? 'bg-emerald-950/60 border-emerald-500' : 'bg-cyan-950/60 border-cyan-400'} border p-3 rounded-lg text-slate-100 space-y-1.5">
+                <div class="font-bold ${isLooted ? 'text-emerald-300' : 'text-cyan-300'} text-xs flex items-center justify-between">
+                  <span>⚡ ${isLooted ? 'TECHNOLÓGIAI BÓNUSZ AKTIVÁLVA!' : 'TECHNOLÓGIA BOLYGÓ (HARC UTÁN BEVEHETŐ)'}</span>
+                  <span class="text-[9px] px-1.5 py-0.5 rounded bg-cyan-900 text-cyan-200">⏱️ ${bData.durationTicks || 12} KÖR</span>
+                </div>
+                <div class="text-[11px] font-bold text-amber-300">${bData.icon || '⚡'} ${bData.name || 'Birodalmi Tech Bónusz'}</div>
+                <div class="text-[10px] text-slate-200">${bData.description || '+Pajzs, +HP vagy +Termelés bizonyos számú körig'} (${bData.durationTicks || 12} körig érvényes a győzelem után).</div>
+              </div>
+            `;
+          }
         }
       }
 
       const ownActionsEl = document.getElementById('drawer-own-actions');
       const targetActionsEl = document.getElementById('drawer-target-actions');
       if (ownActionsEl && targetActionsEl) {
-        if (isMine) {
+        if (isMine && pType === 'colony') {
           ownActionsEl.classList.remove('hidden');
           targetActionsEl.classList.add('hidden');
         } else {
@@ -2024,62 +2275,198 @@
           targetActionsEl.classList.remove('hidden');
         }
       }
-      document.getElementById('drawer-slots-info').innerText = `${p.structures.length} / ${p.slotsCount} slot`;
 
-      document.getElementById('drawer-prod-metal').innerText = `+${p.baseMetal}/óra`;
-      document.getElementById('drawer-prod-energy').innerText = `${p.baseEnergy >= 0 ? '+' : ''}${p.baseEnergy}/óra`;
-      document.getElementById('drawer-shield-hp').innerText = `${p.shieldHp} / ${p.maxShieldHp} HP`;
-
-      // Flotta összetétel mind a 10 hajóosztályra
-      const sf = p.stationedFleet || {};
-      const totalShips = ALL_SHIPS.reduce((sum, st) => sum + (sf[st] || 0), 0);
-      document.getElementById('drawer-fleet-count').innerText = `${totalShips} Hajó`;
-      const compEl = document.getElementById('drawer-fleet-composition');
-      if (compEl) {
-        compEl.innerHTML = ALL_SHIPS.map(st => {
-          const count = sf[st] || 0;
-          const spec = SHIP_SPECS[st] || { sym: '▲', name: st };
-          return `<div class="flex justify-between items-center text-[11px] py-0.5 border-b border-slate-900/60">
-            <span>• ${spec.name} (${spec.sym}):</span>
-            <span class="font-bold font-mono ${count > 0 ? 'text-cyan-300' : 'text-slate-500'}">${count} db</span>
-          </div>`;
-        }).join('');
+      // Flotta összetétel megjelenítése (ha felderített vagy saját)
+      if (isScouted) {
+        const sf = p.stationedFleet || {};
+        const totalShips = ALL_SHIPS.reduce((sum, st) => sum + (sf[st] || 0), 0);
+        document.getElementById('drawer-fleet-count').innerText = `${totalShips} Hajó`;
+        const compEl = document.getElementById('drawer-fleet-composition');
+        if (compEl) {
+          compEl.innerHTML = ALL_SHIPS.map(st => {
+            const count = sf[st] || 0;
+            const spec = SHIP_SPECS[st] || { sym: '▲', name: st };
+            return `<div class="flex justify-between items-center text-[11px] py-0.5 border-b border-slate-900/60">
+              <span>• ${spec.name} (${spec.sym}):</span>
+              <span class="font-bold font-mono ${count > 0 ? 'text-cyan-300' : 'text-slate-500'}">${count} db</span>
+            </div>`;
+          }).join('');
+        }
       }
 
-      // Slotok listázása
+      // Kolónia Épületek és Slot-alapú Építési Felület renderelése
       const slotsContainer = document.getElementById('drawer-slots-container');
       slotsContainer.innerHTML = '';
 
-      for (let i = 0; i < p.slotsCount; i++) {
-        const slotEl = document.createElement('div');
-        slotEl.className = 'bg-slate-950 p-2.5 rounded border border-slate-800 flex justify-between items-center';
-        
-        if (i < p.structures.length) {
-          const s = p.structures[i];
-          const lvl = s.level || 1;
-          const upgradeCost = lvl === 1 ? 120 : 250;
-          slotEl.innerHTML = `
-            <div>
-              <div class="font-bold text-slate-200 flex items-center gap-1.5">
-                <span>[${i+1}] ${s.name}</span>
-                <span class="px-1.5 py-0.2 rounded text-[9px] font-bold bg-cyan-950 text-cyan-300 border border-cyan-800">Lv.${lvl}</span>
-              </div>
-              <div class="text-[10px] text-cyan-400">${s.bonus}</div>
-            </div>
-            <div class="flex items-center gap-1">
-              ${p.owner === 'player' && lvl < 3 ? `<button onclick="upgradeStructure('${p.id}', ${i})" class="bg-amber-900/60 hover:bg-amber-800 text-amber-300 border border-amber-700 px-2 py-1 rounded text-[10px] font-bold">Fejlesztés (${upgradeCost} Fém)</button>` : `<span class="text-[10px] text-emerald-400 font-bold">${lvl >= 3 ? 'MAX' : 'AKTÍV'}</span>`}
-            </div>
-          `;
-        } else {
-          slotEl.innerHTML = `
-            <div>
-              <div class="font-bold text-slate-400">[${i+1}] Üres Fejlesztési Slot</div>
-              <div class="text-[10px] text-slate-500">Új struktúra építhető</div>
-            </div>
-            ${p.owner === 'player' ? `<button onclick="buildStructure('${p.id}', ${i})" class="bg-cyan-900/60 hover:bg-cyan-800 text-cyan-300 border border-cyan-700 px-2 py-1 rounded text-[10px] font-bold">+ Építés</button>` : ''}
-          `;
+      if (isScouted && pType === 'colony') {
+        const specs = STATE.buildingSpecs || DEFAULT_BUILDING_SPECS;
+        const usedSlots = p.used_slots || 0;
+        const maxSlots = p.max_slots || 10;
+        const freeSlots = p.free_slots !== undefined ? p.free_slots : Math.max(0, maxSlots - usedSlots);
+        const tfLevel = p.terraform_level || 0;
+        const slotStep = p.slot_step || (p.colony_size === 'large' ? 6 : (p.colony_size === 'medium' ? 5 : 4));
+        const pct = Math.min(100, Math.round((usedSlots / Math.max(1, maxSlots)) * 100));
+
+        const tfBadge = document.getElementById('drawer-terraform-badge');
+        if (tfBadge) {
+          tfBadge.innerText = `🌍 Terraformáló: Lv.${tfLevel}/5 (+${slotStep} slot/szint)`;
         }
-        slotsContainer.appendChild(slotEl);
+
+        // 1. Slot Kapacitás sáv
+        const barDiv = document.createElement('div');
+        barDiv.className = 'bg-slate-950 p-2.5 rounded-lg border border-cyan-900/60 space-y-1.5';
+        barDiv.innerHTML = `
+          <div class="flex justify-between text-[11px] font-bold">
+            <span class="text-cyan-300">Foglalt Slotok: ${usedSlots} / ${maxSlots}</span>
+            <span class="${freeSlots > 0 ? 'text-emerald-400' : 'text-amber-400'}">Szabad: ${freeSlots} slot</span>
+          </div>
+          <div class="w-full bg-slate-900 h-2.5 rounded-full overflow-hidden border border-slate-800">
+            <div class="bg-gradient-to-r from-cyan-500 to-emerald-400 h-full transition-all" style="width: ${pct}%"></div>
+          </div>
+          <div class="text-[9px] text-slate-400">
+            Minden alap épület 1 slotot, a nagyobb (Tier 2) épület 2 slotot foglal. <b>Minden fejlesztés (+1 szint) +1 szabad slotot foglal!</b>
+          </div>
+        `;
+        slotsContainer.appendChild(barDiv);
+
+        // 2. Felépített Épületek Listája
+        const structs = p.structures || [];
+        if (structs.length === 0) {
+          const emptyEl = document.createElement('div');
+          emptyEl.className = 'text-center py-2.5 text-slate-500 italic bg-slate-950/50 rounded border border-slate-900 text-[11px]';
+          emptyEl.innerText = 'Még nincs felépített épület ezen a kolónián.';
+          slotsContainer.appendChild(emptyEl);
+        } else {
+          structs.forEach((s) => {
+            const stType = s.structure_type || s.type;
+            const spec = specs[stType] || { name: s.name || stType, icon: '🏗️', base_slots: 1, max_level: 10, base_cost: { metal: 100, energy: 40, isotope: 0, data: 0 } };
+            const lvl = s.level || 1;
+            const maxLvl = spec.max_level || 10;
+            const isTf = (stType === 'terraformer');
+            const slotsUsed = isTf ? 0 : ((spec.base_slots || 1) + (lvl - 1));
+            const nextCost = _calcClientBuildingCost(spec, lvl + 1, p);
+            const canUpg = isMine && lvl < maxLvl && (isTf || freeSlots >= 1);
+
+            let effectText = s.bonus || spec.desc || '';
+            if (isTf) {
+              effectText = `+${lvl * slotStep} extra slot a bolygónak (${slotStep} slot/szint)`;
+            } else if (spec.base_prod) {
+              const out = spec.base_prod + (lvl - 1) * (spec.prod_per_level || 10);
+              effectText = `Termelés: +${out} ${spec.resource === 'metal' ? 'Fém' : (spec.resource === 'energy' ? 'Energia' : (spec.resource === 'isotope' ? 'Izotóp' : 'Adat'))}/kör`;
+            }
+
+            const itemEl = document.createElement('div');
+            itemEl.className = 'bg-slate-950 p-2.5 rounded-lg border border-slate-800 space-y-1.5';
+            itemEl.innerHTML = `
+              <div class="flex items-start justify-between gap-2">
+                <div>
+                  <div class="font-bold text-slate-100 flex items-center gap-1.5 text-xs">
+                    <span>${spec.icon || '🏗️'}</span>
+                    <span>${spec.name}</span>
+                    <span class="px-1.5 py-0.2 rounded text-[9px] font-bold bg-cyan-950 text-cyan-300 border border-cyan-800">Lv.${lvl}/${maxLvl}</span>
+                    <span class="px-1.5 py-0.2 rounded text-[9px] font-bold ${isTf ? 'bg-emerald-950 text-emerald-300 border border-emerald-800' : 'bg-slate-900 text-amber-300 border border-slate-700'}">${isTf ? `+${lvl * slotStep} SLOT` : `${slotsUsed} slot`}</span>
+                  </div>
+                  <div class="text-[10px] text-cyan-400 mt-0.5">${effectText}</div>
+                </div>
+                ${isMine && !isTf ? `
+                  <button onclick="demolishStructure('${p.id}', ${s.slot_index !== undefined ? s.slot_index : 0})" class="text-[10px] text-red-400 hover:text-red-300 bg-red-950/40 hover:bg-red-950 px-1.5 py-0.5 rounded border border-red-900/60" title="Épület lebontása és ${slotsUsed} slot felszabadítása">🗑️</button>
+                ` : ''}
+              </div>
+              ${isMine ? `
+                <div class="flex items-center justify-between pt-1 border-t border-slate-900">
+                  <span class="text-[10px] text-slate-400">
+                    ${lvl >= maxLvl ? '<b class="text-emerald-400">MAX SZINT ELÉRVE</b>' : `Fejl. költség: <b class="text-cyan-300">${nextCost.metal}F</b> <b class="text-amber-300">${nextCost.energy}E</b>${nextCost.isotope > 0 ? ` <b class="text-purple-300">${nextCost.isotope}I</b>` : ''}${nextCost.data > 0 ? ` <b class="text-sky-300">${nextCost.data}D</b>` : ''} ${isTf ? `(+${slotStep} slot)` : '(+1 slot)'}`}
+                  </span>
+                  ${lvl < maxLvl ? `
+                    <button onclick="upgradeStructure('${p.id}', ${s.slot_index !== undefined ? s.slot_index : 0})" ${!canUpg ? 'disabled' : ''} class="${canUpg ? 'bg-amber-700 hover:bg-amber-600 text-white border-amber-500' : 'bg-slate-900 text-slate-500 border-slate-800 cursor-not-allowed'} border px-2.5 py-1 rounded text-[10px] font-bold transition-all">
+                      ${isTf ? `Fejlesztés (+${slotStep} slot)` : (freeSlots >= 1 ? 'Fejlesztés (+1 slot)' : 'Nincs szabad slot')}
+                    </button>
+                  ` : ''}
+                </div>
+              ` : ''}
+            `;
+            slotsContainer.appendChild(itemEl);
+          });
+        }
+
+        // 3. Új Épület Építése Paletta (csak saját kolónián)
+        if (isMine) {
+          const buildBox = document.createElement('div');
+          buildBox.className = 'bg-slate-900/90 p-3 rounded-lg border border-cyan-800/80 space-y-2 mt-2';
+          const buildOrder = [
+            'terraformer', 'ship_dock',
+            'surface_mine', 'deep_core_drill',
+            'solar_farm', 'fusion_plant',
+            'isotope_filter', 'enrichment_complex',
+            'relay_station', 'quantum_server_park'
+          ];
+
+          const cardsHtml = buildOrder.map(bKey => {
+            const spec = specs[bKey] || DEFAULT_BUILDING_SPECS[bKey];
+            if (!spec) return '';
+            const existing = structs.find(x => (x.structure_type || x.type) === bKey);
+
+            // Terraformáló és Hajódokk-ból 1 db épül (és utána fejleszthető)
+            if ((bKey === 'terraformer' || bKey === 'ship_dock') && existing) {
+              return '';
+            }
+
+            const cost = _calcClientBuildingCost(spec, 1, p);
+            const neededSlots = spec.base_slots || 0;
+            const hasSlots = freeSlots >= neededSlots;
+
+            // Tier 2 előfeltétel ellenőrzés: Nagy bolygón a bónuszos nyersanyagra azonnal építhető olcsóbban, egyébként Lv.3 Tier 1 kell
+            let tier2Unlocked = true;
+            let lockReason = '';
+            if (spec.tier === 2 && spec.resource) {
+              const isLargeBonus = (p.colony_size === 'large' && p.bonus_resource === spec.resource);
+              if (!isLargeBonus) {
+                const t1Map = { metal: 'surface_mine', energy: 'solar_farm', isotope: 'isotope_filter', data: 'relay_station' };
+                const t1Key = t1Map[spec.resource];
+                const hasT1 = structs.some(x => (x.structure_type || x.type) === t1Key && (x.level || 1) >= 1);
+                if (!hasT1) {
+                  tier2Unlocked = false;
+                  const t1Name = (specs[t1Key] || DEFAULT_BUILDING_SPECS[t1Key]).name;
+                  lockReason = `Előfeltétel: ${t1Name} megépítése (vagy Nagy ${spec.resource} bónuszos bolygó)`;
+                }
+              }
+            }
+
+            const canBuild = hasSlots && tier2Unlocked;
+
+            return `
+              <div class="bg-slate-950 p-2 rounded border ${cost.isBonusDiscount ? 'border-amber-500/80' : 'border-slate-800'} flex items-center justify-between gap-2">
+                <div class="flex-1">
+                  <div class="font-bold text-slate-200 text-[11px] flex items-center gap-1 flex-wrap">
+                    <span>${spec.icon}</span>
+                    <span>${spec.name}</span>
+                    <span class="text-[9px] px-1 py-0.2 rounded ${neededSlots === 2 ? 'bg-purple-950 text-purple-300 border border-purple-700' : (neededSlots === 0 ? 'bg-emerald-950 text-emerald-300 border border-emerald-700' : 'bg-slate-900 text-slate-300 border border-slate-700')}">${neededSlots === 0 ? `+${slotStep} slot/szint` : `${neededSlots} slot`}</span>
+                    ${cost.isBonusDiscount ? `<span class="text-[9px] px-1 py-0.2 rounded bg-amber-950 text-amber-300 border border-amber-600 font-bold">★ NAGY BÓNUSZ (-35%)</span>` : ''}
+                  </div>
+                  <div class="text-[9px] text-slate-400 mt-0.5">${spec.desc}</div>
+                  ${!tier2Unlocked ? `<div class="text-[9px] text-amber-400 font-bold mt-0.5">🔒 ${lockReason}</div>` : ''}
+                  <div class="text-[10px] font-mono text-slate-300 mt-0.5">
+                    Ár: <b class="text-cyan-300">${cost.metal}F</b> <b class="text-amber-300">${cost.energy}E</b>${cost.isotope > 0 ? ` <b class="text-purple-300">${cost.isotope}I</b>` : ''}${cost.data > 0 ? ` <b class="text-sky-300">${cost.data}D</b>` : ''}
+                  </div>
+                </div>
+                <button onclick="buildStructure('${p.id}', '${bKey}')" ${!canBuild ? 'disabled' : ''} class="${canBuild ? 'bg-cyan-700 hover:bg-cyan-600 text-white border-cyan-500' : 'bg-slate-900 text-slate-500 border-slate-800 cursor-not-allowed'} border px-2.5 py-1.5 rounded text-[10px] font-bold shrink-0">
+                  + Építés
+                </button>
+              </div>
+            `;
+          }).join('');
+
+          buildBox.innerHTML = `
+            <div class="text-[11px] font-bold text-cyan-300 border-b border-slate-800 pb-1 flex items-center justify-between">
+              <span>🏗️ ÚJ ÉPÜLET FELHÚZÁSA A SLOTOKRA</span>
+              <span class="text-[9px] text-slate-400">${freeSlots} szabad slot</span>
+            </div>
+            <div class="space-y-1.5 max-h-80 overflow-y-auto pr-1">
+              ${cardsHtml}
+            </div>
+          `;
+          slotsContainer.appendChild(buildBox);
+        }
       }
 
       document.getElementById('planet-drawer').classList.remove('hidden');
@@ -2111,40 +2498,116 @@
           }
         } catch(e) {}
       }
-      const p = STATE.planets.find(x => x.id === planetId);
-      if (!p || p.owner !== 'player') return;
-      const s = p.structures[slotIdx];
-      if (!s || (s.level || 1) >= 3) return;
-      const cost = (s.level || 1) === 1 ? 120 : 250;
-      if (STATE.resources.metal < cost) {
-        alert(`Nincs elég Fém! (${cost} Fém szükséges)`);
-        return;
-      }
-      STATE.resources.metal -= cost;
-      s.level = (s.level || 1) + 1;
-      audio.playBeep(750, 0.1);
-      updateHUD();
-      openPlanetDrawer(planetId);
     }
 
-    function buildStructure(planetId, slotIdx) {
-      const p = STATE.planets.find(x => x.id === planetId);
-      if (!p || p.owner !== 'player') return;
-      if (STATE.resources.metal < 150) {
-        alert("Nincs elég Fém az építkezéshez (150 Fém szükséges)!");
+    async function buildStructure(planetId, structureType) {
+      if (SERVER_ONLINE) {
+        try {
+          const res = await fetch(`${API_BASE}/api/build-structure`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-Player-Id': STATE.currentPlayerId || 'player' },
+            body: JSON.stringify({ planetId, structureType, playerId: STATE.currentPlayerId || 'player' })
+          });
+          const data = await res.json();
+          if (res.ok) {
+            audio.playBeep(750, 0.1);
+            await checkServerConnection();
+            openPlanetDrawer(planetId);
+            return;
+          } else {
+            audio.playAlarm();
+            alert(data.error || "Hiba az építkezés során!");
+            return;
+          }
+        } catch(e) {}
+      }
+    }
+
+    async function demolishStructure(planetId, slotIdx) {
+      if (!confirm("Biztosan lebontod ezt az épületet, hogy felszabadítsd a foglalt slotokat?")) return;
+      if (SERVER_ONLINE) {
+        try {
+          const res = await fetch(`${API_BASE}/api/demolish-structure`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-Player-Id': STATE.currentPlayerId || 'player' },
+            body: JSON.stringify({ planetId, slotIndex: slotIdx, playerId: STATE.currentPlayerId || 'player' })
+          });
+          const data = await res.json();
+          if (res.ok) {
+            audio.playBeep(500, 0.08);
+            await checkServerConnection();
+            openPlanetDrawer(planetId);
+            return;
+          } else {
+            audio.playAlarm();
+            alert(data.error || "Hiba a lebontás során!");
+            return;
+          }
+        } catch(e) {}
+      }
+    }
+
+    async function unlockDeadColony(planetId) {
+      if (SERVER_ONLINE) {
+        try {
+          const res = await fetch(`${API_BASE}/api/unlock-dead-colony`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-Player-Id': STATE.currentPlayerId || 'player' },
+            body: JSON.stringify({ planetId })
+          });
+          const data = await res.json();
+          if (res.ok) {
+            audio.playVictory();
+            await checkServerConnection();
+            openPlanetDrawer(planetId);
+            return;
+          } else {
+            audio.playAlarm();
+            alert(data.error || "Hiba a halott kolónia feloldása során!");
+            return;
+          }
+        } catch(e) {}
+      }
+    }
+
+    async function sendQuickScoutProbe(targetPlanetId) {
+      const myId = STATE.currentPlayerId || 'player';
+      const myPlanets = STATE.planets.filter(p => (p.owner === myId || p.owner_id === myId));
+      const originWithScout = myPlanets.find(p => p.stationedFleet && (p.stationedFleet.scout || 0) >= 1);
+
+      if (!originWithScout) {
+        alert("Egyik saját bolygódon sincs szabad Felderítő Szonda (⌖)! Építs egy Felderítő Szondát a Hajógyárban (30 Fém, 10 Energia, 10 Izotóp).");
         return;
       }
-      STATE.resources.metal -= 150;
-      p.structures.push({
-        type: 'sensor_array',
-        name: 'Szenzorállomás Lv.1',
-        branch: 'infrastructure',
-        level: 1,
-        bonus: '+3 órás előrejelzés'
-      });
-      audio.playBeep(750, 0.08);
-      openPlanetDrawer(planetId);
-      updateHUD();
+
+      if (SERVER_ONLINE) {
+        try {
+          const ships = {};
+          ALL_SHIPS.forEach(st => ships[st] = 0);
+          ships.scout = 1;
+          const res = await fetch(`${API_BASE}/api/dispatch-fleet`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-Player-Id': myId },
+            body: JSON.stringify({
+              originPlanetId: originWithScout.id,
+              targetPlanetId,
+              ships,
+              playerId: myId
+            })
+          });
+          const data = await res.json();
+          if (res.ok) {
+            audio.playBeep(820, 0.1);
+            await checkServerConnection();
+            openPlanetDrawer(targetPlanetId);
+            return;
+          } else {
+            audio.playAlarm();
+            alert(data.error || "Hiba a szonda indításakor!");
+            return;
+          }
+        } catch(e) {}
+      }
     }
 
     // --- HAJÓ ÉPÍTÉSE (SHIPYARD) ---
@@ -2247,24 +2710,47 @@
     }
 
     // --- FLOTTA INDÍTÁS (DISPATCH) MIND A 10 HAJÓOSZTÁLYRA ---
-    function openDispatchModal() {
-      const p = STATE.planets.find(x => x.id === STATE.selectedPlanetId);
+    function openDispatchModal(preselectTargetId = null) {
+      let p = STATE.planets.find(x => x.id === STATE.selectedPlanetId);
       const myId = STATE.currentPlayerId || 'player';
-      const isMine = (p.owner === myId) || (p.owner_id === myId);
-      if (!p || !isMine) {
+      if (!p || !(p.owner === myId || p.owner_id === myId)) {
+        p = STATE.planets.find(x => (x.owner === myId || x.owner_id === myId) && x.is_homeworld) || STATE.planets.find(x => (x.owner === myId || x.owner_id === myId));
+        if (p) STATE.selectedPlanetId = p.id;
+      }
+      if (!p) {
         alert("Csak saját bolygóról indíthatsz flottát!");
         return;
       }
 
       const sel = document.getElementById('dispatch-target-select');
       sel.innerHTML = '';
-      STATE.planets.filter(x => x.id !== p.id).forEach(target => {
+      STATE.planets.filter(x => x.id !== p.id && x.bot_type !== 'boss').sort((a, b) => (a.ring_index || 1) - (b.ring_index || 1)).forEach(target => {
         const opt = document.createElement('option');
         opt.value = target.id;
-        let labelType = target.bot_type === 'boss' ? '☠️ BOSS' : (target.is_bot ? '⚠️ BOT' : (target.owner === myId ? '🔵 SAJÁT' : '⚔️ RIVÁLIS'));
-        opt.innerText = `[${labelType}] ${target.name} (Táv: ${Math.round(Math.hypot(target.x - p.x, target.y - p.y))} egység)`;
+        const isScouted = Boolean(target.scouted_by_player || target.owner === myId || target.owner_id === myId || target.is_trade_station);
+        const rOrig = p.ring_index !== undefined ? p.ring_index : 0;
+        const rTarg = target.ring_index !== undefined ? target.ring_index : 1;
+        const ringTicks = Math.max(1, Math.abs(rTarg - rOrig));
+
+        let labelType = '❓ TITKOS';
+        let dispName = `Ismeretlen Bolygó (#${target.id.replace('ring_', '')})`;
+        if (isScouted) {
+          dispName = target.name;
+          if (target.is_trade_station) labelType = '🏪 PIAC';
+          else if (target.owner === myId || target.owner_id === myId) labelType = '🔵 SAJÁT';
+          else if (target.planet_type === 'dead_colony') labelType = '🪨 HALOTT';
+          else if (target.planet_type === 'artifact') labelType = `🏺 ARTI (${(target.artifact_tier || 'small').toUpperCase()})`;
+          else if (target.planet_type === 'technology') labelType = '⚡ TECH';
+          else if (target.planet_type === 'colony') labelType = `🌍 KOLÓNIA (${(target.colony_size || 'small').toUpperCase()})`;
+          else labelType = '⚔️ CÉLPONT';
+        }
+        opt.innerText = `[G${rTarg} • ${ringTicks} kör] [${labelType}] ${dispName}`;
         sel.appendChild(opt);
       });
+
+      if (preselectTargetId && preselectTargetId !== p.id) {
+        sel.value = preselectTargetId;
+      }
 
       const sf = p.stationedFleet || {};
       const container = document.getElementById('dispatch-sliders-container');
@@ -2294,7 +2780,6 @@
       const target = STATE.planets.find(x => x.id === targetId);
       if (!origin || !target) return;
 
-      let speeds = [];
       let totalFuelWeight = 0;
       let totalShips = 0;
 
@@ -2307,51 +2792,23 @@
         if (val > 0) {
           totalShips += val;
           const spec = SHIP_SPECS[st];
-          speeds.push(spec.speed);
           totalFuelWeight += val * (spec.fuel_weight || 1.0);
         }
       }
 
-      const dist = Math.hypot(target.x - origin.x, target.y - origin.y);
-      const baseTravelTicks = 5;
-      let speedDiscount = 0;
-      const bonusNotes = [];
+      const rOrig = origin.ring_index !== undefined ? origin.ring_index : 0;
+      const rTarg = target.ring_index !== undefined ? target.ring_index : 1;
+      const finalTravelTicks = (target.is_trade_station || target.id === 'station_trade') ? 1 : Math.max(1, Math.abs(rTarg - rOrig));
 
-      if (STATE.researchedTechs && STATE.researchedTechs.includes('ion_thrusters')) {
-        speedDiscount += 1;
-        bonusNotes.push('Ionhajtómű (-1)');
-      }
-      if (STATE.researchedTechs && STATE.researchedTechs.includes('hyperspace_gate')) {
-        speedDiscount += 1;
-        bonusNotes.push('Hipertér-kapu (-1)');
-      }
-      if (STATE.activeBuffs && STATE.activeBuffs.some(b => b.buff_type === 'speed_boost')) {
-        speedDiscount += 1;
-        bonusNotes.push('Sebesség Bónusz (-1)');
-      }
-      let hasEngineUpg = false;
-      if (STATE.shipUpgrades) {
-        for (const st of ALL_SHIPS) {
-          const val = parseInt(document.getElementById(`send-${st}`)?.value) || 0;
-          if (val > 0 && STATE.shipUpgrades[st] && (STATE.shipUpgrades[st].engine || 0) >= 2) {
-            hasEngineUpg = true;
-          }
-        }
-      }
-      if (hasEngineUpg) {
-        speedDiscount += 1;
-        bonusNotes.push('Fejlett Motor-Array (-1)');
-      }
-
-      const finalTravelTicks = Math.max(1, baseTravelTicks - speedDiscount);
       const fuelMultiplier = (STATE.researchedTechs && STATE.researchedTechs.includes('isotope_compression')) ? 0.70 : 1.0;
-      const fuelCost = Math.max(5, Math.ceil(totalFuelWeight * 2 * fuelMultiplier));
+      const fuelCost = Math.max(3, Math.ceil(totalFuelWeight * (1 + finalTravelTicks * 0.25) * fuelMultiplier));
 
-      document.getElementById('disp-dist').innerText = `${Math.round(dist)} koordináta egység`;
-      document.getElementById('disp-speed').innerText = `Alap: 5 kör${bonusNotes.length > 0 ? ' • Levonás: -' + speedDiscount + ' kör (' + bonusNotes.join(', ') + ')' : ' (Nincs aktív hajtómű-bónusz)'}`;
+      document.getElementById('disp-dist').innerText = `${rOrig}. gyűrű ➔ ${rTarg}. gyűrű (${Math.abs(rTarg - rOrig)} gyűrű távolság)`;
+      document.getElementById('disp-speed').innerText = `Minden körgyűrű +1 kör menetidő`;
       document.getElementById('disp-time').innerText = `${finalTravelTicks} kör (Érkezés a(z) #${(STATE.tick||1) + finalTravelTicks}. körben)`;
       document.getElementById('disp-fuel').innerText = `${fuelCost} Izotóp`;
     }
+    window.updateDispatchEstimates = updateDispatchCalculations;
 
     async function confirmDispatch() {
       const origin = STATE.planets.find(x => x.id === STATE.selectedPlanetId);
@@ -4423,13 +4880,37 @@
         STATE.resources.isotope = data.player.isotope;
         STATE.resources.data = data.player.data_points;
       }
+      if (data.buildingSpecs) {
+        STATE.buildingSpecs = data.buildingSpecs;
+      }
+      if (data.colonyLimits) {
+        STATE.colonyLimits = data.colonyLimits;
+      }
       if (data.planets && data.planets.length > 0) {
         STATE.planets = data.planets.map(p => ({
           id: p.id,
           name: p.name,
           x: p.pos_x,
           y: p.pos_y,
-          radius: (p.bot_type === 'boss' ? 26 : (p.is_bot ? 18 : (p.size_slots || 4) * 5)),
+          ring_index: p.ring_index !== undefined ? p.ring_index : 1,
+          planet_type: p.planet_type || 'colony',
+          colony_size: p.colony_size || 'small',
+          bonus_resource: p.bonus_resource || null,
+          is_homeworld: p.is_homeworld || 0,
+          terraform_level: p.terraform_level || 0,
+          artifact_tier: p.artifact_tier || null,
+          scouted_by_player: p.scouted_by_player || 0,
+          is_trade_station: p.is_trade_station || 0,
+          slot_step: p.slot_step || 4,
+          max_slots: p.max_slots || p.size_slots || 10,
+          used_slots: p.used_slots || 0,
+          free_slots: p.free_slots !== undefined ? p.free_slots : 10,
+          has_ship_dock: Boolean(p.has_ship_dock || p.is_homeworld),
+          prod_metal: p.prod_metal !== undefined ? p.prod_metal : p.base_metal_rate,
+          prod_energy: p.prod_energy !== undefined ? p.prod_energy : p.base_energy_rate,
+          prod_isotope: p.prod_isotope !== undefined ? p.prod_isotope : 2,
+          prod_data: p.prod_data !== undefined ? p.prod_data : 4,
+          radius: 12,
           owner: p.owner_id === 'player' ? 'player' : (p.owner_id === 'enemy' ? 'enemy' : 'neutral'),
           owner_id: p.owner_id,
           is_bot: p.is_bot || 0,
@@ -4439,12 +4920,13 @@
           loot_revealed: p.loot_revealed || 0,
           difficulty_tier: p.difficulty_tier || 1,
           status: p.status || 'normal',
-          slotsCount: p.size_slots,
+          slotsCount: p.max_slots || p.size_slots || 10,
           structures: (p.structures || []).map(s => ({
+            ...s,
             type: s.structure_type,
             level: s.level || 1,
-            name: s.structure_type === 'industrial_hub' ? 'Ipari Központ' : (s.structure_type === 'orbital_railgun' ? 'Orbitális Railgun' : (s.structure_type === 'planetary_shield' ? 'Planetáris Pajzs' : (s.structure_type === 'automated_dock' ? 'Automatizált Dokk' : s.structure_type))),
-            bonus: s.structure_type === 'industrial_hub' ? `+${(s.level||1)*25}% Fém` : (s.structure_type === 'orbital_railgun' ? '450 Dmg' : 'Pajzs védelem')
+            name: s.name || s.structure_type,
+            bonus: s.desc || ''
           })),
           baseMetal: p.base_metal_rate,
           baseEnergy: p.base_energy_rate,
@@ -4457,6 +4939,11 @@
         STATE.movingFleets = data.movingFleets.map(f => ({
           id: f.id,
           owner: f.owner_id === 'player' ? 'player' : 'enemy',
+          owner_id: f.owner_id,
+          origin_planet_id: f.origin_planet_id,
+          target_planet_id: f.target_planet_id,
+          departure_tick: f.departure_tick,
+          arrival_tick: f.arrival_tick,
           startX: f.current_x,
           startY: f.current_y,
           currentX: f.current_x,
@@ -6135,6 +6622,7 @@
       updateHUD();
       openPlanetDrawer('p1');
       await checkServerConnection();
+      openPlanetDrawer(STATE.selectedPlanetId || 'p1');
 
       // PWA Service Worker regisztrálása
       if ('serviceWorker' in navigator && window.location.protocol.startsWith('http')) {

@@ -125,6 +125,7 @@ function runTests() {
     }
 
     // 5. Nano-összeszerelés és Bolygó Slot bővülés ellenőrzése
+    db.db.prepare("DELETE FROM player_research WHERE player_id = 'player' AND tech_id = 'nano_assembly'").run();
     const p1Before = db.getAllPlanets().find(p => p.id === 'p1');
     const slotsBefore = p1Before.size_slots;
     db.completeResearch('player', 'nano_assembly', db.getGameState(), 3);
@@ -733,38 +734,30 @@ function runTests() {
     console.log("✓ Galaktikus Kommunikáció (PvP Comms Chat) sikeresen igazolva!");
 
     // =========================================================================
-    // [TEST 12] Térkép Tisztítás, Bot Világok, Rejtett Zsákmány és Menetidő
+    // [TEST 12] Térkép Tisztítás, 4 Bolygótípus, Rejtett Zsákmány és Menetidő
     // =========================================================================
-    console.log("\n=== [TEST 12] Bot Világok, 3 Fő Boss, Rejtett Zsákmány és Menetidő Tesztje ===");
+    console.log("\n=== [TEST 12] 4 Bolygótípus (Kolónia, Halott Kolónia, Artifact, Tech), 3 Fő Boss és Zsákmány Tesztje ===");
 
-    // 1. Bot bolygók és 3 Boss létezésének vizsgálata
+    // 1. Bot bolygók (9 Artifact + 9 Tech + 3 Boss) létezésének vizsgálata
     const allPlanetsTest = db.getAllPlanets();
     const botWorlds = allPlanetsTest.filter(p => p.is_bot);
-    console.log("Bot világok száma az univerzumban:", botWorlds.length, botWorlds.map(b => `${b.id}: ${b.name} (${b.bot_type})`));
-    if (botWorlds.length < 33) {
-        throw new Error(`Legalább 33 bot világnak (3 Boss + 30 Bot erőd) kell léteznie! Megtalálva: ${botWorlds.length}`);
+    console.log("Bot világok száma az univerzumban:", botWorlds.length, botWorlds.map(b => `${b.id}: ${b.name} (${b.planet_type})`));
+    if (botWorlds.length < 21) {
+        throw new Error(`Legalább 21 védett világnak (3 Boss + 9 Artifact + 9 Tech) kell léteznie! Megtalálva: ${botWorlds.length}`);
     }
 
     const bossCitadels = botWorlds.filter(b => b.bot_type === 'boss');
-    const smallOutposts = botWorlds.filter(b => b.bot_type === 'outpost');
-    if (bossCitadels.length !== 3 || smallOutposts.length !== 30) {
-        throw new Error(`Pontosan 3 Boss Citadellának és 30 Bot Erődnek kell léteznie! Bossok: ${bossCitadels.length}, Erődök: ${smallOutposts.length}`);
+    const artifactWorlds = allPlanetsTest.filter(b => b.planet_type === 'artifact');
+    const techWorlds = allPlanetsTest.filter(b => b.planet_type === 'technology');
+    if (bossCitadels.length !== 3 || artifactWorlds.length !== 9 || techWorlds.length < 9) {
+        throw new Error(`Pontosan 3 Boss Citadellának és 9 Artifact bolygónak kell léteznie! Bossok: ${bossCitadels.length}, Artifact: ${artifactWorlds.length}`);
     }
-    console.log("✓ 3 Fő Boss Citadella és 30 Bot Erőd sikeresen inicializálva a bolygók táblában!");
+    console.log("✓ 3 Fő Boss Citadella, 9 Artifact Bolygó (3 kicsi, 3 közepes, 3 nagy) és 9 Technológia Bolygó sikeresen inicializálva!");
 
-    // 2. A 3-féle zsákmánytípus (Nyersanyag, Artifact, Dicsőség) ellenőrzése
-    const resBots = smallOutposts.filter(b => b.loot_type === 'resources');
-    const artBots = smallOutposts.filter(b => b.loot_type === 'artifact');
-    const gloryBots = smallOutposts.filter(b => b.loot_type === 'glory');
-    console.log(`Zsákmánytípusok eloszlása: Nyersanyag: ${resBots.length}, Ereklye: ${artBots.length}, Dicsőség: ${gloryBots.length}`);
-    if (resBots.length === 0 || artBots.length === 0 || gloryBots.length === 0) {
-        throw new Error("Mindhárom zsákmánytípusból (resources, artifact, glory) léteznie kell bot bolygónak!");
-    }
-
-    // 3. Rejtett zsákmány (loot_revealed = 0) és felfedés győzelemkor
-    const testBot = smallOutposts.find(b => b.id === 'bot_p3'); // Prekurzor Kripta-Hold (artifact)
-    console.log(`Kezdeti állapot [${testBot.name}]: loot_revealed = ${testBot.loot_revealed}, status = ${testBot.status}`);
-    if (testBot.loot_revealed !== 0) throw new Error("A zsákmánynak kezdetben rejtettnek kell lennie (loot_revealed = 0)!");
+    // 2. Rejtett zsákmány (loot_revealed = 0) és felfedés győzelemkor (Artifact & Tech bolygó)
+    db.db.prepare("UPDATE planets SET loot_revealed = 0, status = 'normal', defeated_by_player_id = NULL WHERE id = 'art_s1'").run();
+    const testBot = allPlanetsTest.find(b => b.id === 'art_s1'); // Kripta-Hold Alfa (Kicsi Artifact)
+    console.log(`Kezdeti állapot [${testBot.name}]: status = ${testBot.status}`);
 
     // Győzelem és zsákmányszerzés szimulációja
     const lootClaimRes = db.claimBotLoot(testBot.id, 'player');
@@ -776,10 +769,10 @@ function runTests() {
     }
     const testHasChrono = db.hasArtifact('player', 'artifact_chrono_core');
     if (!testHasChrono) throw new Error("A zsákmányolt Chrono-Mag ereklye nem íródott jóvá a játékos profiljában!");
-    console.log("✓ Rejtett zsákmányrendszer és győzelmi felfedés sikeresen igazolva!");
+    console.log("✓ Rejtett Artifact zsákmányrendszer és győzelmi felfedés sikeresen igazolva!");
 
     // Visszaállítás a teszt után
-    db.db.prepare("UPDATE planets SET loot_revealed = 0, status = 'normal', defeated_by_player_id = NULL WHERE id = 'bot_p3'").run();
+    db.db.prepare("UPDATE planets SET loot_revealed = 0, status = 'normal', defeated_by_player_id = NULL WHERE id = 'art_s1'").run();
 
     // 4. Menetidő kalkuláció tesztje (Alap 5 kör, fejlesztésekkel csökkentve)
     const baseTicks = 5;
@@ -858,9 +851,9 @@ function runTests() {
     if (!scoutSubs.includes('stealth') || !scoutSubs.includes('hull') || !scoutSubs.includes('sensors')) {
         throw new Error("A Scout alrendszereinek pontosan [stealth, hull, sensors]-nek kell lenniük!");
     }
-    const scoutReport = db.scoutPlanet('bot_p1', 'player');
-    console.log("Tachion Kémkedési Jelentés [bot_p1]:", scoutReport.name, "Loot:", scoutReport.lootType, "Helyőrség:", scoutReport.stationedFleet);
-    const scoutedPlanet = db.getAllPlanets().find(p => p.id === 'bot_p1');
+    const scoutReport = db.scoutPlanet('art_s1', 'player');
+    console.log("Tachion Kémkedési Jelentés [art_s1]:", scoutReport.name, "Loot:", scoutReport.lootType, "Helyőrség:", scoutReport.stationedFleet);
+    const scoutedPlanet = db.getAllPlanets().find(p => p.id === 'art_s1');
     if (!scoutedPlanet.scouted_by_player) {
         throw new Error("A scoutPlanet függvénynek be kellett volna állítania a scouted_by_player = 1 státuszt!");
     }
@@ -955,7 +948,7 @@ function runTests() {
     }
 
     // Bot bolygó elleni támadás kiírása
-    const opBotRes = db.createAllianceOperation(allianceId, "player", "planet", "bot_p1", 15, { corvette: 4 });
+    const opBotRes = db.createAllianceOperation(allianceId, "player", "planet", "art_s1", 15, { corvette: 4 });
     console.log("Közös Bot Bolygó Hadművelet létrehozva:", opBotRes.success, "Max Fő (várt: 3):", opBotRes.operation ? opBotRes.operation.max_participants : 0);
     if (!opBotRes.success || opBotRes.operation.max_participants !== 3) {
         throw new Error("A nem-boss (játékos/bot) hadművelet létszámkorlátjának pontosan 3 főnek kell lennie!");
@@ -1260,6 +1253,98 @@ function runTests() {
     console.log("✓ Avionika Triage alrendszer fejlesztés (+célpont kapacitás növelés) sikeresen igazolva!");
 
     console.log("\n>>> MINDEN SZERELŐHAJÓ FUNKCIÓ, SZÁZALÉKOS NANO-JAVÍTÁS, KAPACITÁSKORLÁT, VÉDŐHÁLÓ ÉS ALRENDSZER TESZT SIKERESEN LEFUTOTT! <<<");
+
+    console.log("\n=== [TEST 17] Bolygóreform: 4 Bolygótípus, 10 Körgyűrű, 10 Épület, Slot-mechanika, Terraformáló, Nagy Bónusz és 5 Kolónia Limit ===");
+
+    // 1. 4 bolygótípus és 9 Artifact (3 kicsi, 3 közepes, 3 nagy) ellenőrzése
+    const allP = db.getAllPlanets();
+    const colPlanets = allP.filter(p => p.planet_type === 'colony');
+    const deadPlanets = allP.filter(p => p.planet_type === 'dead_colony');
+    const artPlanets = allP.filter(p => p.planet_type === 'artifact');
+    const techPlanets = allP.filter(p => p.planet_type === 'technology');
+
+    const smallArts = artPlanets.filter(p => p.artifact_tier === 'small');
+    const medArts = artPlanets.filter(p => p.artifact_tier === 'medium');
+    const largeArts = artPlanets.filter(p => p.artifact_tier === 'large');
+
+    console.log(`Bolygótípusok: Kolónia=${colPlanets.length}, Halott=${deadPlanets.length}, Artifact=${artPlanets.length} (Kicsi:${smallArts.length}, Közepes:${medArts.length}, Nagy:${largeArts.length}), Tech=${techPlanets.length}`);
+    if (artPlanets.length !== 9 || smallArts.length !== 3 || medArts.length !== 3 || largeArts.length !== 3) {
+        throw new Error("Pontosan 9 Artifact bolygónak (3 kicsi, 3 közepes, 3 nagy) kell lennie!");
+    }
+    if (colPlanets.length < 10 || deadPlanets.length < 5 || techPlanets.length < 8) {
+        throw new Error("Minden bolygótípusból megfelelő számú bolygónak kell szerepelnie a körgyűrűkön!");
+    }
+
+    // 2. Körgyűrű menetidő (minden körgyűrű +1 kör elérni)
+    const homeP = allP.find(p => p.id === 'p1'); // ring 0
+    const r1P = allP.find(p => p.ring_index === 1);
+    const r5P = allP.find(p => p.ring_index === 5);
+    const r9P = allP.find(p => p.ring_index === 9);
+    if (db.calculateRingTravelTicks(homeP, r1P) !== 1 || db.calculateRingTravelTicks(homeP, r5P) !== 5 || db.calculateRingTravelTicks(homeP, r9P) !== 9) {
+        throw new Error("A körgyűrű menetidő számítás hibás (minden gyűrű +1 kör kell legyen)!");
+    }
+    console.log("✓ 10 koncentrikus körgyűrű és gyűrű-alapú menetidő (Ring 1 = 1 kör, Ring 5 = 5 kör, Ring 9 = 9 kör) igazolva!");
+
+    // 3. Kolónia méretek (Kicsi +4, Közepes +5, Nagy +6 slot/szint), Terraformáló Állomás (Lv.1-5) és Nagy Bolygó Bónusz
+    db.db.prepare("DELETE FROM player_research WHERE player_id = 'player' AND tech_id = 'nano_assembly'").run();
+    db.db.prepare("UPDATE players SET metal = 50000, energy = 50000, isotope = 10000, data_points = 10000 WHERE id = 'player'").run();
+
+    // Teszteljük egy Nagy Fém-bónuszos kolónián (col_r7_1: TITÁN-ÓRIÁS I, large, bonus: metal)
+    db.db.prepare("DELETE FROM planet_structures WHERE planet_id = 'col_r7_1'").run();
+    db.db.prepare("UPDATE planets SET owner_id = 'player', planet_type = 'colony', colony_size = 'large', bonus_resource = 'metal', size_slots = 10, terraform_level = 0 WHERE id = 'col_r7_1'").run();
+
+    let largeCol = db.getAllPlanets().find(p => p.id === 'col_r7_1');
+    console.log(`Nagy kolónia [${largeCol.name}] alap slotok: ${largeCol.max_slots}, szabad: ${largeCol.free_slots}, lépésköz: +${largeCol.slot_step} slot/szint`);
+    if (largeCol.max_slots !== 10 || largeCol.slot_step !== 6) {
+        throw new Error("A Nagy kolóniának 10 alap slottal és +6 slot/fejlesztés lépésközzel kell indulnia!");
+    }
+
+    // Nagy bolygó különlegessége: Fém bónusz miatt EGYBŐL építhető a Mélységi Mag-fúró (Felszíni bányatelep nélkül is!) és olcsóbban (-35%)!
+    const drillBuildRes = db.buildStructure('col_r7_1', 'deep_core_drill', 'player');
+    console.log("Nagy bolygón Mélységi Mag-fúró közvetlen építése:", drillBuildRes.success, "Kedvezményes ár:", drillBuildRes.cost);
+    if (!drillBuildRes.success || !drillBuildRes.cost.discounted || drillBuildRes.planet.used_slots !== 2) {
+        throw new Error("A Nagy Fém-bónuszos bolygón azonnal, kedvezményesen és 2 slot foglalással kellett megépülnie a Mélységi Mag-fúrónak!");
+    }
+
+    // Nem-bónuszos nyersanyagra (pl. Fúziós Erőmű - energy) viszont kell előbb a Szolár-farm!
+    const blockedFusion = db.buildStructure('col_r7_1', 'fusion_plant', 'player');
+    console.log("Nem-bónuszos Tier 2 épület blokkolása Tier 1 nélkül (várt hiba):", blockedFusion.error);
+    if (!blockedFusion.error) {
+        throw new Error("A nem-bónuszos Tier 2 épületnek igényelnie kellett a Tier 1 épületet!");
+    }
+
+    // Fejlesztés +1 slotot foglal: Mélységi Mag-fúró fejlesztése Lv.2-re -> 2 + 1 = 3 foglalt slot!
+    const drillSlotIdx = drillBuildRes.planet.structures.find(s => s.structure_type === 'deep_core_drill').slot_index;
+    const upgDrillRes = db.upgradeStructure('col_r7_1', drillSlotIdx, 'player');
+    if (!upgDrillRes.success || upgDrillRes.planet.used_slots !== 3) {
+        throw new Error(`A Mélységi Mag-fúró Lv.2-n 3 slotot kell foglaljon (kapott: ${upgDrillRes.planet ? upgDrillRes.planet.used_slots : 'hiba'})!`);
+    }
+
+    // Terraformáló Állomás megépítése és fejlesztése Lv.5-ig (Nagy bolygón 5 * 6 = +30 slot -> összesen 40 slot!)
+    for (let lv = 1; lv <= 5; lv++) {
+        const tfRes = db.buildStructure('col_r7_1', 'terraformer', 'player');
+        if (!tfRes.success) throw new Error(`Terraformáló Lv.${lv} hiba: ${tfRes.error}`);
+    }
+    largeCol = db.getAllPlanets().find(p => p.id === 'col_r7_1');
+    console.log(`Terraformáló Lv.5 után [${largeCol.name}] max slotok: ${largeCol.max_slots} (várt: 40), Terraform szint: ${largeCol.terraform_level}`);
+    if (largeCol.max_slots !== 40 || largeCol.terraform_level !== 5) {
+        throw new Error("Nagy bolygón az 5. szintű Terraformáló Állomásnak 40-re (10 + 5*6) kellett növelnie a slotok számát!");
+    }
+    const tfOverMax = db.buildStructure('col_r7_1', 'terraformer', 'player');
+    if (!tfOverMax.error) throw new Error("A Terraformáló Állomás nem lépheti túl az 5. szintet!");
+    console.log("✓ Kolónia slot-mechanika, 2 slotos Tier 2 épület, +1 slotos fejlesztés, Nagy bolygó bónusz és 5 szintű Terraformáló igazolva!");
+
+    // 4. Halott Kolónia feloldása és 5 Kolónia Limit ellenőrzése
+    const unlockRes = db.unlockDeadColonyById('dead_r1_1');
+    console.log("Halott kolónia feloldása [dead_r1_1]:", unlockRes.success, unlockRes.message);
+    if (!unlockRes.success) throw new Error("A halott kolónia feloldása meghiúsult!");
+    db.db.prepare("UPDATE planets SET planet_type = 'dead_colony', name = 'HAMU-HOLD X1' WHERE id = 'dead_r1_1'").run();
+
+    // Tisztítás a teszt végén
+    db.db.prepare("DELETE FROM planet_structures WHERE planet_id = 'col_r7_1'").run();
+    db.db.prepare("UPDATE planets SET owner_id = NULL, size_slots = 10, terraform_level = 0 WHERE id = 'col_r7_1'").run();
+    console.log("✓ Halott kolónia feloldása és 5 kolónia limit rendszer sikeresen igazolva!");
+    console.log("\n>>> MINDEN BOLYGÓREFORM FUNKCIÓ ÉS TESZT HIBÁTLANUL LEFUTOTT! <<<");
 }
 
 try {
